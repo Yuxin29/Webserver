@@ -1,8 +1,10 @@
 #pragma once
+#include <signal.h>
 #include <vector>
 #include <string>
 #include <iostream>
 #include <arpa/inet.h>
+#include <errno.h>
 #include <poll.h>
 #include "Config.hpp"
 #include "Request.hpp"
@@ -19,8 +21,10 @@ class Server{
 		};
 
 	private:
+		int						_listenFd;
 		std::vector<Request>	_requests;
 		Configuration			_servConfig;
+		struct sockaddr_in		_addr;
 		bool					_running;
 
 	public:
@@ -36,6 +40,5 @@ class Server{
 		void handleRequest();
 		void acceptNewRequests();
 		void closeRequests();
-		void processCGI();
-
+		const std::string& processCGI(const std::string& filename);
 };
