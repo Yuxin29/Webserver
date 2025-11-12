@@ -188,6 +188,38 @@ The CGI class handles script execution separately. Everything runs in a single n
 
 ## Key Design Principles
 
+### Why Http Creates Request (Not Server)?
+
+**The Question**: Why does `Http` create the `Request` object? Why not create it in `Server`?
+
+**The Answer**: **Separation of concerns** - each class should have ONE responsibility.
+
+**Server's Responsibility (Network Layer)**:
+- Handle sockets and raw bytes
+- `recv()` to read data, `send()` to write data
+- Doesn't understand what the bytes mean
+- Just knows: "Data arrived on socket, pass it along"
+
+**Http's Responsibility (Protocol Layer)**:
+- Understand HTTP protocol syntax
+- Parse raw bytes into structured data (Request object)
+- Know about methods, headers, status codes
+- Doesn't touch sockets
+
+**How Server Reads Request Data**:
+Server doesn't need to! Here's the flow:
+1. Server reads raw bytes from socket
+2. Server passes bytes to Http: `http.processRequest(rawData)`
+3. Http creates Request internally and processes it
+4. Http returns formatted response string
+5. Server sends response bytes to socket
+
+**Think of it like a restaurant**:
+- **Server** = Waiter (takes order slip, delivers food - doesn't read the order)
+- **Http** = Chef (reads order slip, creates recipe card = Request object)
+
+Server never needs to access Request directly - it just moves bytes in and out.
+
 ### Separation of Concerns:
 - **WebServer**: Orchestration and lifecycle
 - **Server**: Network I/O and connection management

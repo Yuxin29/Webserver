@@ -40,5 +40,4 @@ class Server{
 		void handleRequest();
 		void acceptNewRequests();
 		void closeRequests();
-		const std::string& processCGI(const std::string& filename);
 };
