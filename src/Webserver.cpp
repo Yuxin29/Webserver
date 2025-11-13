@@ -16,18 +16,13 @@ int Webserver::createServers(const Configuration& file){
 }
 
 int Webserver::runServers(){
-	for (size_t i = 0; i < _servers.size(); i++){
-		if (_servers[i].startServer() != _servers[i].START_SUCCESS){
-			return utils::FAILURE;
-		}
-	}
-
+	
 	return utils::SUCCESS;
 }
 
 // Stop all the servers at error or when the program ends
 void Webserver::stopServers(){
 	for (size_t i = 0; i < _servers.size(); i++){
-		_servers[i].stopServer();
+		_servers[i].shutdown();
 	}
 }

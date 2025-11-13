@@ -13,6 +13,7 @@
 class Webserver {
 	
 	private:
+		std::vector<pollfd>	_pollFds;
 		std::vector<Server> _servers;
 
 		void handleSignal();

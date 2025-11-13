@@ -8,6 +8,7 @@
 #include "Request.hpp"
 #include "Http.hpp"
 
+// Server can be called only by passing a configuration object that will be its attributes
 class Server{
 
 	public:
@@ -20,10 +21,9 @@ class Server{
 
 	private:
 		int						_listenFd;
-		std::vector<Request>	_requests;
+		std::vector<int>		_clientFds;
 		Configuration::data		_servConfig;
 		struct sockaddr_in		_addr;
-		bool					_running;
 
 	public:
 		Server() = delete;
@@ -32,10 +32,15 @@ class Server{
 		Server& operator=(const Server& other) = delete;
 		~Server();
 
-		StartResult startServer();
-		void runServer();
-		void stopServer();
-		void handleRequest();
-		void acceptNewRequests();
-		void closeRequests();
+		// Setup and cleanup
+		StartResult start();
+		void shutdown();
+
+		// Called by Webserver on demand
+		int acceptConnection();
+		void handleClient(int fd);
+
+		// Get
+		int getListenFd() const;
+		bool ownsClient(int fd) const;
 };
