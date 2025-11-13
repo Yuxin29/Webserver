@@ -5,7 +5,6 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <errno.h>
-#include <poll.h>
 #include "Config.hpp"
 #include "Request.hpp"
 #include "Http.hpp"
