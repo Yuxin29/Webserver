@@ -4,30 +4,25 @@
 #include "Request.hpp"
 #include "CGI.hpp"
 #include "Config.hpp"
+#include "utils.hpp"
 #include <poll.h>
 #include <signal.h>
 #include <iostream>
-
-// General exit codes
-#define SUCCESS 0
-#define FAILURE 1
-
-// macros for error codes 
-enum error_macros{
-		WRONG_ARGUMENTS = 1,
-		FAILED_TO_START_SERVER
-};
-
-int exitWithError(int errorCode);
+#include <vector>
 
 class Webserver {
 	
 	private:
-		std::vector<Server> servers;
+		std::vector<Server> _servers;
 
 	public:
-		int startServers();
-		void run();
+		explicit Webserver();
+		Webserver(const Webserver& other) = delete;
+		Webserver& operator=(const Webserver& other) = delete;
+		~Webserver();
+
+		int createServers(const Configuration& file);
+		int runServers();
 		void stopServers();
 };
 

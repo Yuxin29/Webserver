@@ -1,19 +1,24 @@
 #include "Webserver.hpp"
+#include "Config.hpp"
+#include "utils.hpp"
 
 int main(int argc, char **argv){
-	if (argc != 2)
-		return (exitWithError(WRONG_ARGUMENTS));
+	if (argc != 2){
+		return utils::returnErrorMessage(utils::WRONG_ARGUMENTS);
+	}
+	Configuration configFile;
 	/* Maybe a:
-		validateConfFile()
+		validateFile()
 		parseFile()
-		
+		validateDataInFile()
 	*/
 	Webserver miniNginx;
-	if (miniNginx.startServers() != 0){
-		miniNginx.stopServers();
-		return (exitWithError(FAILED_TO_START_SERVER));
+	if (miniNginx.createServers(configFile) == utils::FAILURE){
+		return utils::returnErrorMessage(utils::FAILED_TO_CREATE_SERVERS);
 	}
-	miniNginx.run();
+	if (miniNginx.runServers() == utils::FAILURE){
+		return utils::returnErrorMessage(utils::ERROR_RUNNING_SERVERS);
+	}
 	miniNginx.stopServers();
-	return SUCCESS;
+	return utils::SUCCESS;
 }

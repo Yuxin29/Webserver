@@ -1,5 +1,4 @@
 #pragma once
-#include <signal.h>
 #include <vector>
 #include <string>
 #include <iostream>
