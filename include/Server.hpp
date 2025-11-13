@@ -40,7 +40,7 @@ class Server{
 		int acceptConnection();
 		void handleClient(int fd);
 
-		// Get
+		// Getters and checking Fds
 		int getListenFd() const;
 		bool ownsClient(int fd) const;
 };
