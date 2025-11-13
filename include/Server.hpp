@@ -21,7 +21,7 @@ class Server{
 	private:
 		int						_listenFd;
 		std::vector<Request>	_requests;
-		Configuration			_servConfig;
+		Configuration::data		_servConfig;
 		struct sockaddr_in		_addr;
 		bool					_running;
 

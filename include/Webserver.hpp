@@ -15,6 +15,8 @@ class Webserver {
 	private:
 		std::vector<Server> _servers;
 
+		void handleSignal();
+
 	public:
 		explicit Webserver();
 		Webserver(const Webserver& other) = delete;

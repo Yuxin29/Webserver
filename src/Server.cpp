@@ -1,18 +1,12 @@
 #include "Server.hpp"
 
-Server::Server(const Configuration& config)
-	: _servConfig(config), _running(false){
-}
+Server::Server(const Configuration& config){}
 
 Server::~Server(){
 	stopServer();
 }
 
-Server::StartResult Server::startServer(){
-	std::cout << "Server " << _servConfig.getName() 
-			  << " listening to port: " << _servConfig.getPort() 
-			  << " started succesfully" << std::endl;
-}
+Server::StartResult Server::startServer(){}
 
 void Server::stopServer(){}
 

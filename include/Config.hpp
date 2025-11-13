@@ -4,8 +4,12 @@
 //Placeholder class to be obtained from parsed config file
 class Configuration{
 	
+	public:
+		typedef struct data {
+			std::string _name;
+		};
+
 	private:
-		std::string _name;
 		std::string _port;
 
 	public:
