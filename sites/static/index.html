@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static File Server - Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .feature-box {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+
+        .server-info {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .server-info strong {
+            color: #2196F3;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .link-box {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #28a745;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Welcome to Webserver <span class="badge">Running</span></h1>
+        
+        <div class="server-info">
+            <strong>Server:</strong> Static File Server<br>
+            <strong>Port:</strong> 8080<br>
+            <strong>Type:</strong> Static Content Only
+        </div>
+
+        <p>
+            This is a <strong>static file server</strong> built for the 42 Webserv project. 
+            It demonstrates clean architecture with separation of concerns and non-blocking I/O.
+        </p>
+
+        <div class="feature-box">
+            <h3>✨ Features</h3>
+            <ul>
+                <li>HTTP/1.1 protocol support</li>
+                <li>Multiple server blocks (virtual hosts)</li>
+                <li>Non-blocking event loop with poll()</li>
+                <li>Static file serving</li>
+                <li>Directory listing (configurable)</li>
+                <li>Custom error pages</li>
+                <li>File uploads (POST method)</li>
+                <li>URL redirections</li>
+            </ul>
+        </div>
+
+        <h2>📂 Available Pages</h2>
+        <div class="link-box">
+            <ul>
+                <li><a href="/">Home (this page)</a></li>
+                <li><a href="/about.html">About This Project</a></li>
+                <li><a href="/files">File Directory</a> - Directory listing example</li>
+                <li><a href="/uploads">Upload Area</a> - File upload testing</li>
+            </ul>
+        </div>
+
+        <h2>🔗 Other Servers</h2>
+        <div class="link-box">
+            <ul>
+                <li><a href="http://localhost:8081">CGI Server (Port 8081)</a> - Dynamic content with CGI scripts</li>
+                <li><a href="http://localhost:8081/cgi-bin/hello.py?name=World">CGI Example</a> - Python CGI demo</li>
+            </ul>
+        </div>
+
+        <h2>🧪 Test Endpoints</h2>
+        <p>Try these to test different features:</p>
+        <ul>
+            <li><code>GET /</code> - This homepage</li>
+            <li><code>GET /files</code> - Directory listing</li>
+            <li><code>POST /uploads</code> - Upload a file</li>
+            <li><code>DELETE /uploads/filename.txt</code> - Delete a file</li>
+            <li><code>GET /old-page</code> - Test redirect (→ /new-page.html)</li>
+            <li><code>GET /nonexistent</code> - Test 404 error page</li>
+        </ul>
+
+        <div class="feature-box">
+            <h3>🏗️ Architecture</h3>
+            <p><strong>WebServer Manager</strong> → Creates multiple <strong>Server</strong> instances → 
+            Each uses <strong>Http</strong> handler → Processes <strong>Request</strong> objects → 
+            Calls <strong>CGI</strong> when needed</p>
+        </div>
+
+        <p style="text-align: center; margin-top: 40px; color: #999;">
+            Built with ❤️ for 42 School | Check out the <a href="http://localhost:8081/cgi-bin/hello.py">CGI server</a>
+        </p>
+    </div>
+</body>
+</html>
