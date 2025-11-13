@@ -11,8 +11,9 @@ namespace utils {
 	enum error_macros{
 			WRONG_ARGUMENTS = 1,
 			FAILED_TO_CREATE_SERVERS,
-			ERROR_RUNNING_SERVERS
+			ERROR_RUNNING_SERVERS,
+			PARSE_ERROR
 	};
-
+	
 	int returnErrorMessage(int errorCode);
 }

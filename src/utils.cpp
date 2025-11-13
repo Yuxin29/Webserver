@@ -14,6 +14,9 @@ namespace utils {
 			case 3:
 				errorMessage = "One or more servers could not be started";
 				break;
+			case 4:
+				errorMessage = "Some parsing error for Lin to check";
+				break;
 		}
 		std::cout << "Error: " << errorMessage << std::endl;
 		return FAILURE;
