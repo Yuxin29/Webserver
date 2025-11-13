@@ -3,12 +3,13 @@
 #include <string>
 #include <iostream>
 #include <arpa/inet.h>
-#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "Config.hpp"
 #include "Request.hpp"
 #include "Http.hpp"
 
-// Server can be called only by passing a configuration object that will be its attributes
+// Server can only be constructed by passing a configuration
 class Server{
 
 	public:
@@ -20,14 +21,13 @@ class Server{
 		};
 
 	private:
-		int						_listenFd;
-		std::vector<int>		_clientFds;
-		Configuration::data		_servConfig;
-		struct sockaddr_in		_addr;
+		int							_listenFd;
+		Configuration::ServerBlock	_servConfig;
+		struct sockaddr_in			_addr;
 
 	public:
 		Server() = delete;
-		explicit Server(const Configuration& config);
+		explicit Server(const Configuration::ServerBlock& serverBlock);
 		Server(const Server& other) = delete;
 		Server& operator=(const Server& other) = delete;
 		~Server();
@@ -36,11 +36,13 @@ class Server{
 		StartResult start();
 		void shutdown();
 
-		// Called by Webserver on demand
+		// Return the new client fd, or -1 on error
 		int acceptConnection();
+
+		// Process a client request
 		void handleClient(int fd);
 
-		// Getters and checking Fds
+		// Getters
 		int getListenFd() const;
-		bool ownsClient(int fd) const;
+		int getPort() const;
 };

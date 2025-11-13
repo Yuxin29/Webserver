@@ -21,9 +21,9 @@ int main(int argc, char **argv){
 	if (miniNginx.createServers(configFile) == utils::FAILURE){
 		return utils::returnErrorMessage(utils::FAILED_TO_CREATE_SERVERS);
 	}
-	if (miniNginx.runServers() == utils::FAILURE){
+	if (miniNginx.runWebserver() == utils::FAILURE){
 		return utils::returnErrorMessage(utils::ERROR_RUNNING_SERVERS);
 	}
-	miniNginx.stopServers();
+	miniNginx.stopWebserver();
 	return utils::SUCCESS;
 }

@@ -1,8 +1,5 @@
 #pragma once
 #include "Server.hpp"
-#include "Http.hpp"
-#include "Request.hpp"
-#include "CGI.hpp"
 #include "Config.hpp"
 #include "utils.hpp"
 #include <poll.h>
@@ -13,8 +10,9 @@
 class Webserver {
 	
 	private:
-		std::vector<pollfd>	_pollFds;
-		std::vector<Server> _servers;
+		std::vector<pollfd>		_pollFds;
+		std::vector<Server> 	_servers;
+		std::map<int, size_t> 	_clientFdToServerIndex;
 
 		void handleSignal();
 
@@ -24,8 +22,8 @@ class Webserver {
 		Webserver& operator=(const Webserver& other) = delete;
 		~Webserver();
 
-		int createServers(const Configuration& file);
-		int runServers();
-		void stopServers();
+		int createServers(const Configuration& config);
+		int runWebserver();
+		void stopWebserver();
 };
 
