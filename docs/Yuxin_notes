@@ -1,2 +1,140 @@
 Yuxin\s notes
 
+
+=========================== Git Git Repo ===========================
+-Lucio started the repo and invided me, we will have 3 different branch there, I ren amed it team 
+-I have a remote link repo origin 
+- then at team repo, I git remote add origin https://github.com/Yuxin29/Webserver.git 
+- I will work in shared team repo, and git push origin my_branch / main normally there 
+- to update it to my personal redo, I do git push -u origin my_branch / main there 
+- when project is over, I WILL git remote remove team
+
+=========================== Git Git Repo ===========================
+                 ┌────────────────────┐
+                 │     Client         │
+                 └─────────┬──────────┘
+                           │  HTTP request
+                           ▼
+             ┌───────────────────────────────────┐
+             │       A: Network & I/O Manager    │
+             │---------------------------------- │
+             │ - Accepts connections             │
+             │ - poll/select/epoll monitors FDs  │
+             │ - Non-blocking read/write         │
+             └───────────┬───────────────────────┘
+                         │ raw bytes
+                         ▼
+            ┌─────────────────────────────────────┐
+            │   B: HTTP Request/Response Handler  │
+            │-------------------------------------│
+            │ - Parse HTTP request                │
+            │ - Apply HTTP rules                  │
+            │ - Determines action (static/CGI/etc)│
+            └──────────┬───────────────┬──────────┘
+                       │               │
+           asks for config rules   needs CGI process
+                       │               │
+                       ▼               ▼
+     ┌──────────────────────────────────────────────┐
+     │        C: Configuration & CGI Manager        │
+     │----------------------------------------------│
+     │ - server.conf parser                         │
+     │ - location/root/index/error_pages            │
+     │ - CGI execution (execve)                     │
+     │ - file path resolution                       │
+     └──────────────────┬───────────────────────────┘
+                        │ response data (file/CGI output)
+                        ▼
+            ┌─────────────────────────────────────┐
+            │    B builds full HTTP response      │
+            └──────────────────┬──────────────────┘
+                               │ final bytes
+                               ▼
+             ┌────────────────────────────────────┐
+             │    A: Sends response to client     │
+             └────────────────────────────────────┘
+
+=========================== Lin ===========================
+A|Network & I/O Manager |- Set up listening sockets		
+-Handle poll() / select() / epoll()
+-Manage client connections and file descriptors | - Implement non-blocking I/O logic
+-Manage read/write events
+-Prevent blocking to ensure responsiveness | - Optimize performance under heavy load
+-Handle signals and interruptions
+Conduct stress tests (e.g., with ab, wrk) |
+
+B | HTTP Request/Response Handler | - Implement HTTP request parser (start-line, headers, body)
+-Build HTTP response generator (status line, headers, body)
+-Handle basic GET requests | - Add support for POST and DELETE
+-Ensure HTTP/1.1 compliance
+-Implement proper status codes and headers | - Fine-tune keep-alive behavior
+-Match browser and NGINX behavior
+-(Optional??) Handle chunked transfer encoding |
+
+C | Configuration & CGI Manager | - Design and implement server.conf parser
+-Support directives: server, location, listen, root, index, etc. | - Implement CGI execution (e.g., via execve)
+-Add file upload support
+-Route requests and handle custom error pages | - Add bonus features: autoindex, redirects
+-Prepare demo config files for defense
+-Polish docs, error handling, testing scripts |
+
+=========================== HTTP form ===========================
+type of http request:
+GET     POST    PUT         PATCH           DELETE  HEAD                            OPTIONS         CONNECT         TRACE
+read    create  replace     partial update  delete  like get, but not return body   check methods   build router    for testing
+requred by suj: GET, POST, and DELETE
+
+----> a normal http request form
+<start-line>\r\n
+<header1: value>\r\n
+<header2: value>\r\n
+...\r\n
+\r\n
+<body>
+------
+1. <start-line>\r\n
+Method sp _path sp version crlf(Carriage Return and Line Feed)
+Get /index.html HTTP/1.1\r\n
+------
+2. <header1: value>\r\n
+Host: example.com\r\n                ← Headers
+User-Agent: curl/7.64.1\r\n
+Content-Length: 5\r\n
+------
+3. empty line
+\r\n 
+------
+4. Body, only for POST, PUT
+hello 
+
+----> a normal http response form
+<status-line>\r\n
+<header1: value>\r\n
+...\r\n
+\r\n
+<body>
+------
+1.<status-line>\r\n
+VERSION SP STATUS_CODE SP REASON_PHRASE CRLF
+HTTP/1.1 200 OK\r\needs
+2.<headern: value>\r\n
+Content-Type: text/html\r\n
+Content-Length: 13\r\n
+3. empty line
+\r\need
+4. body:
+a string: like "hello world"
+
+=========================== MAP container that stores key–value pairs ===========================
+#include <map>
+--> std::map
+- ordered assoiative container
+- automateically keeps the keys sorted
+- each key must be unique
+- Lookup, insertion and deletion are all O(log n)
+For example
+std::map<std::string, std::string> headers; 
+headers["Host"] = "localhost:8080";
+headers["User-Agent"] = "curl/7.68.0";
+headers["Accept"] = "*/*";
+headers["Content-Length"] = "12";
