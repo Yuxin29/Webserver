@@ -1,7 +1,7 @@
 Yuxin\s notes
 
 
-=========================== Git Git Repo ===========================
+====================================================== Git Repo ======================================================
 -Lucio started the repo and invided me, we will have 3 different branch there, I ren amed it team 
 -I have a remote link repo origin 
 - then at team repo, I git remote add origin https://github.com/Yuxin29/Webserver.git 
@@ -9,7 +9,7 @@ Yuxin\s notes
 - to update it to my personal redo, I do git push -u origin my_branch / main there 
 - when project is over, I WILL git remote remove team
 
-=========================== Git Git Repo ===========================
+====================================================== Teamwork flow ======================================================
                  ┌────────────────────┐
                  │     Client         │
                  └─────────┬──────────┘
@@ -54,7 +54,7 @@ Yuxin\s notes
              │    A: Sends response to client     │
              └────────────────────────────────────┘
 
-=========================== Lin ===========================
+====================================================== Lin sent from wahtsapp ======================================================
 A|Network & I/O Manager |- Set up listening sockets		
 -Handle poll() / select() / epoll()
 -Manage client connections and file descriptors | - Implement non-blocking I/O logic
@@ -78,7 +78,7 @@ C | Configuration & CGI Manager | - Design and implement server.conf parser
 -Prepare demo config files for defense
 -Polish docs, error handling, testing scripts |
 
-=========================== HTTP form ===========================
+====================================================== HTTP form ======================================================
 type of http request:
 GET     POST    PUT         PATCH           DELETE  HEAD                            OPTIONS         CONNECT         TRACE
 read    create  replace     partial update  delete  like get, but not return body   check methods   build router    for testing
@@ -125,7 +125,7 @@ Content-Length: 13\r\n
 4. body:
 a string: like "hello world"
 
-=========================== MAP container that stores key–value pairs ===========================
+====================================================== MAP container that stores key–value pairs ======================================================
 #include <map>
 --> std::map
 - ordered assoiative container

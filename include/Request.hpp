@@ -13,11 +13,12 @@
 //  ├─ Headers.hpp              // utility header functions
 //  ├─ MimeTypes.hpp            // text/html, image/png, etc.
 
-enum Method{
-    GET
-    POST
-    DELETE
-};
+// method required by this subject: 
+// enum Method{
+//     GET,
+//     POST,
+//     DELETE
+// };
 
 // a Request class: method, target/path, version, headers map, body buffer, maybe query params and parsed cookies.
 // <start-line>\r\n
@@ -31,14 +32,18 @@ enum Method{
 // Get /index.html HTTP/1.1\r\n
 class HttpRequest{
 private:
-    std::string                         _method;
-    std::string                         _requestPath;
-    std::string                         _version;
-    std::map<std::string, std::string>  _requestHeaders;
-    std::string                         _body;
+    const std::string                         _method;
+    const std::string                         _requestPath;
+    const std::string                         _version;
+    const std::string                         _body;
+    const std::map<std::string, std::string>  _requestHeaders;
 
 public:
     //Orthodox * 4 
+    HttpRequest(const std::string& method, const std::string& requestpath, const std::string& version, const std::string& body, const std::map<std::string, std::string>& requestHeaders);
+    HttpRequest(const HttpRequest& other);               
+    HttpRequest& operator=(const HttpRequest &other);
+    ~HttpRequest();
 
     //getters
     std::string                         getMethod();
@@ -51,7 +56,7 @@ public:
 //Accepts raw bytes (from non-blocking reads) and advances through states:
 class HttpParser
 {
-
+//what do I do here?? is the parsing beheviour happenning here???
 }
 
 // <status-line>\r\n
@@ -59,21 +64,28 @@ class HttpParser
 // ...\r\n
 // \r\n
 // <body>
+// 1.<status-line>\r\n
+// VERSION SP STATUS_CODE SP REASON_PHRASE CRLF
+// HTTP/1.1 200 OK\r\needs
 class HttpResponse{
 private:
-    std::string                         _method;
-    std::string                         _requestPath;
     std::string                         _version;
+    std::string                         _status;
+    std::string                         _phase;
     std::map<std::string, std::string>  _responseHeaders;
     std::string                         _body;
 
 public:
     //Orthodox * 4 
+    HttpResponse(const std::HttpResponse& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& requestHeaders);
+    HttpResponse(const HttpResponse& other);               
+    HttpResponse& operator=(const HttpResponse &other);
+    ~HttpResponse();
 
     //getters
-    std::string                         getMethod();
-    std::string                         getrequestPath();
     std::string                         getVersion();
+    std::string                         getStatus();
+    std::string                         getPhase();
     std::map<std::string, std::string>  getrequestHeaders;
     std::string                         getBody();
 };
