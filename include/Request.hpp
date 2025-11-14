@@ -81,19 +81,19 @@ private:
     std::map<std::string, std::string>  _responseHeaders;
     std::string                         _body;
     //buffering here
-    std::string                         buffer;
-    size_t                              buffer_length;
+    std::string                         _buffer;
+    size_t                              _bufferLength;
 
     void parseStartLine(const std::string& startline);
     void parseHeaderLine(const std::string& headerline);
 
 public:
-    State   _state:
-    
-    HttpParser() : state(START_LINE), buffer_length(0){};
+    State   _state;
+    //default construction ft. _buffer("") is not necessary
+    HttpParser() : _state(START_LINE), _buffer(""), _bufferLength(0){};
 
     HttpRequest parseHttpRequest(const std::string& rawLine);
-}
+};
 
 // -----------------------------------------------------------------------------------------------------
 
