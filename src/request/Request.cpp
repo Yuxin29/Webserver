@@ -35,7 +35,26 @@ std::string HttpRequest::getBody(){
 }
 /*  ******************************HttpRequest********************************  */
 
-/*  ******************************HttpRequest********************************  */
+/*  ******************************HttpRequest Parsing********************************  */
+//here is the actual parsing process
+HttpRequest HttpResponse::parseHttpRequest(const std::string& rawLine)
+{
+    // while it is startline / headers
+    // {
+    //     if (is startline)
+    //         parse startline
+    //     if (is header)
+    //         [parse header]
+    // }
+    // if (it is EMPTY)
+    //     change to BODY
+    // parse body and change to end;
+    // if it is end.
+    //     return this HttpRequest;
+}
+/*  ******************************HttpRequest Parsing********************************  */
+
+/*  ******************************Response Request********************************  */
 HttpResponse::HttpResponse(const std::string& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& responseHeaders)
     :_version(version), _status(status), _phase(phase), _body(body), _responseHeaders(responseHeaders){
 }
@@ -68,4 +87,4 @@ std::map<std::string, std::string>  HttpResponse::getrequestHeaders(){
 std::string HttpResponse::getBody(){
     return _responseHeaders;
 }
-/*  ******************************HttpRequest********************************  */
+/*  ******************************Response Request********************************  */

@@ -139,74 +139,106 @@ headers["User-Agent"] = "curl/7.68.0";
 headers["Accept"] = "*/*";
 headers["Content-Length"] = "12";
 
-====================================================== MAP container that stores key–value pairs ======================================================
-🗓 第 1 周 — HTTP 请求解析基础
-第 1 天 — 学基础 + 建立结构
-学习：HTTP/1.1 格式, 请求行（方法、路径、版本, Header 规则, CRLF
-实现：创建 HttpRequest / HttpParser / HttpResponse 框架
-测试： 无
+====================================================== State Machine ======================================================
+State Machine / Finite State Machine(FSM). it has 3 elements.
+1. State,
+2. Event / Input   
+3. Transition
+check state -> get input -> do a thin -> change to next state
+---> why do we use state machine in http request parsing
+- raw Line comes with a certain order 
+- it can avoid lots of if / else if, the step is tracable
+- the might be interruption / waiting time between input
 
-第 2 天 — 解析请求行
-学习：GET/POST/DELETE, URL 简单处理
+====================================================== MAP container that stores key–value pairs ======================================================
+第 1 周：HTTP Parser + Request Handling
+目标：能解析完整的 HTTP 请求（start-line、headers、body）
+Day 1 — 架构搭建 + HTTP 基础复习
+学习：HTTP/1.1 结构, Request-Line, Headers, CRLF, Body（Content-Length）
+实现：HttpRequest, HttpParser 类骨架
+
+Day 2 — parseRequestLine()
+学习：方法 GET/POST/DELETE, URL 格式, HTTP version 校验
 实现：parseRequestLine()
 测试：printf "GET / HTTP/1.1\r\n\r\n" | nc localhost 8080
+Person A 会把收到的数据传给你。
 
-第 3 天 — 解析 Headers
-学习： key:value 格式. 不区分大小写
-实现：parseHeaders() → 存入 map
-测试：重复字段, 缺少 CRLF
+Day 3 — parseHeaders()
+学习：key:value, 大小写不敏感, header 合并规则, Host 必须存在（HTTP/1.1 规范）
+实现：parseHeaders()
+测试：重复 header, 缺少 CRLF
+Day 4 — parseBody()（Content-Length）
+学习：Content-Length, body 大小限制（防止 413）
+实现：parseBody()
+测试：curl -d "hello" localhost:8080
+Day 5 — 状态机（非阻塞需要）
+学习状态机： START_LINE, HEADERS, BODY, DONE
+实现： HttpParser::consume(buffer), 能够分段解析（防止 slowloris）
+测试：切分的 TCP 包，逐字节输入, 模拟慢速攻击
 
-第 4 天 — 基础 body（Content-Length）
-实现：按 Content-Length 读 body
-测试：curl -d "hello" http://localhost:8080
+⭐ 第 2 周：HTTP Response + 各种方法
+目标：能正确生成 HTTP/1.1 响应
 
-第 5 天 — 状态机解析（非阻塞必需）
-学习：START_LINE → HEADERS → BODY → DONE
-实现：HttpParser::consume(buffer)
-测试：分包解析, 模拟慢速攻击（slowloris）
+Day 6 — Response Builder
+学习：status line, headers, Content-Length, Connection
+实现：HttpResponse::buildResponse()
+测试：与 NGINX 对比：curl -v localhost:8080
 
-🗓 第 2 周 — 响应生成 + 各种方法
-第 6 天 — Response 基础
-实现：status line, header set
-测试：与 nginx 对比
+Day 7 — GET（静态文件）
+学习：MIME types, 文件权限, index 文件（可选）
+实现：GET handler
+测试：curl -v localhost:8080/test.txt
 
-第 7 天 — 实现 GET（静态文件）
-学习：MIME types, 文件权限
-测试：curl -v http://localhost:8080/file.txt
+Day 8 — POST
+学习：保存 body, safe path, parent directory traversal attacks（避免 ../）
+实现：POST handler → 写入文件
+测试：curl -X POST -d "x=y" localhost:8080
 
-第 8 天 — 实现 POST
-实现：保存 body, 返回 200/201
-测试：curl -X POST -d "x=y" http://localhost:8080
+Day 9 — DELETE
+学习：权限检查, 文件不存在返回 404, 如果是目录返回 403（和 NGINX 一样）
+实现：DELETE handler
+测试：curl -X DELETE localhost:8080/file.txt
 
-第 9 天 — 实现 DELETE
-实现：删除文件 + 权限检查
-测试：curl -X DELETE http://localhost:8080/a.txt
+Day 10 — 错误处理
+学习：
+400（Bad Request）
+404（Not Found）
+413（Payload Too Large）
+414（URI Too Long）
+500（Internal Server Error）
+实现：
+buildErrorResponse()
 
-第 10 天 — 错误页面 + 验证
-实现：400 / 413 / 414 / 500, 自动生成错误返回
-测试：非法请求, 超长 URL, body 超大
+测试：
+所有非法输入、超长 URL、大 body。
 
-🗓 第 3 周 — Keep-alive、浏览器行为、压力测试
-第 11 天 — Keep-Alive
-学习：Connection: close, HTTP/1.0 行为差异
-实现：shouldCloseConnection()
-测试： curl / Chrome
+⭐ 第 3 周：HTTP 行为、浏览器兼容、压力测试（你的部分）
+Day 11 — Keep-Alive 行为
 
-第 12 天 — 对齐 NGINX 行为
-学习： Host 缺失, 多余空格, 重复 headers
-测试：与 nginx 对比输出
+学习：Connection: keep-alive,  Connection: close,  HTTP/1.1 默认 keep-alivem HTTP/1.0 默认 close
+实现：shouldCloseConnection(), 根据请求头决定连接是否关闭
+测试：curl -v localhost:8080, Chrome 测试 Keep-Alive 是否生效。
 
-第 13 天 — Chunked（可选）
-实现：解析 chunked, 或生成 chunked
-测试： curl -H "Transfer-Encoding: chunked" -d "test" localhost:8080
+Day 12 — NGINX 行为对齐
+学习：多余空格如何处理, 重复 headers
+Host 缺失 → 400
+Accept: / 兼容性
+实现：parser 容错更新
+测试：和 nginx 对比输出：curl -v --raw localhost:8080
 
-第 14 天 — 压力测试
-测试工具：ab, wrk
-命令：
+Day 13 — Chunked Encoding（可选）
+可选内容。
+实现：解析 chunked 或 输出 chunked 响应
+测试：curl -H "Transfer-Encoding: chunked" -d "test" localhost:8080
+
+Day 14 — 压力测试（你只检查响应逻辑是否正确）
+Person A 会跑：
 ab -n 5000 -c 100 http://localhost:8080/
 wrk -t4 -c200 -d10s http://localhost:8080/
-修复：内存泄漏, 假死, keep-alive 循环
+你负责：
+不要内存泄漏（检查 parser）
+不要重复 free
+不要 keep-alive 死循环
+Day 15 — 最终清理
 
-第 15 天 — 最终整理 + 完整测试
-测试：浏览器, curl, RFC 审查
-清理：移除 debug, 注释、代码规范化 
+代码规范化, 注释,  删除 printf, RFC 遵循检查, 浏览器实机测试

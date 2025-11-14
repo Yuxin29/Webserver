@@ -13,6 +13,8 @@
 //  ├─ Headers.hpp              // utility header functions
 //  ├─ MimeTypes.hpp            // text/html, image/png, etc.
 
+// -----------------------------------------------------------------------------------------------------
+
 // method required by this subject: 
 // enum Method{
 //     GET,
@@ -53,10 +55,47 @@ public:
     std::string                         getBody();
 };
 
+// -----------------------------------------------------------------------------------------------------
+// this is used in both HttpRequest and HttpResponse
+enum State{
+    START_LINE,
+    HEADERS,
+    EMPTY,   // might not be neccessary ??
+    BODY,
+    DONE
+};
+
 //Accepts raw bytes (from non-blocking reads) and advances through states:
+// I might recerive something from Lucio like this:
+// GET /index.html HTTP/1.1\r\n
+// Host: example.com\r\n
+// Content-Length: 5\r\n
+// \r\n
+// hello
+// in this class, I put it into HttpRequest class
+// I will use State Machine here
+// check state -> get input -> do a thin -> change to next state
 class HttpParser{
-//what do I do here?? is the parsing beheviour happenning here???
+private:
+    std::string                         _version, _status, _phase;
+    std::map<std::string, std::string>  _responseHeaders;
+    std::string                         _body;
+    //buffering here
+    std::string                         buffer;
+    size_t                              buffer_length;
+
+    void parseStartLine(const std::string& startline);
+    void parseHeaderLine(const std::string& headerline);
+
+public:
+    State   _state:
+    
+    HttpParser() : state(START_LINE), buffer_length(0){};
+
+    HttpRequest parseHttpRequest(const std::string& rawLine);
 }
+
+// -----------------------------------------------------------------------------------------------------
 
 // <status-line>\r\n
 // <header1: value>\r\n
