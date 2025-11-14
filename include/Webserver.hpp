@@ -2,6 +2,7 @@
 #include "Server.hpp"
 #include "Config.hpp"
 #include "utils.hpp"
+#include <map>
 #include <poll.h>
 #include <signal.h>
 #include <iostream>
@@ -12,7 +13,7 @@ class Webserver {
 	private:
 		std::vector<pollfd>		_pollFds;
 		std::vector<Server> 	_servers;
-		std::map<int, size_t> 	_clientFdToServerIndex;
+		std::map<int, size_t> 	_listenFdToServerIndex;
 
 		void handleSignal();
 

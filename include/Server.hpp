@@ -21,14 +21,18 @@ class Server{
 		};
 
 	private:
-		int							_listenFd;
-		Configuration::ServerBlock	_servConfig;
+		int	 						_listenFd;
+		int 						_port;
+		std::vector<Configuration::ServerBlock>	_virtualHosts;
 		struct sockaddr_in			_addr;
+		Http						_httpHandler;
 
+		const Configuration::ServerBlock* matchVirtualHost(const std::string& host);
+		
 	public:
 		Server() = delete;
-		explicit Server(const Configuration::ServerBlock& serverBlock);
-		Server(const Server& other);
+		explicit Server(int port, const std::vector<Configuration::ServerBlock>& serverBlocks);
+		Server(const Server& other) = delete;
 		Server& operator=(const Server& other) = delete;
 		~Server();
 
