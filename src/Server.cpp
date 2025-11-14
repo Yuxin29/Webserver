@@ -1,7 +1,11 @@
 #include "Server.hpp"
 
 Server::Server(int port, const std::vector<Configuration::ServerBlock>& serverBlocks)
-	: _port(port), _virtualHosts(serverBlocks), _addr(){}
+	: _listenFd(-1), _port(port), _virtualHosts(serverBlocks), _addr(){
+		_addr.sin_family = AF_INET;
+		_addr.sin_addr.s_addr =	INADDR_ANY; 
+		_addr.sin_port = htons(_port);
+}
 
 Server::~Server(){
 	shutdown();

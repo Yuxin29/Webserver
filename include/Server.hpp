@@ -9,9 +9,7 @@
 #include "Request.hpp"
 #include "Http.hpp"
 
-// Server can only be constructed by passing a configuration
-class Server{
-
+class Server {
 	public:
 		enum StartResult{
 			START_SUCCESS,
@@ -21,13 +19,18 @@ class Server{
 		};
 
 	private:
-		int	 						_listenFd;
-		int 						_port;
+		int			_listenFd;
+		int  		_port;
 		std::vector<Configuration::ServerBlock>	_virtualHosts;
-		struct sockaddr_in			_addr;
-		Http						_httpHandler;
+		sockaddr_in	_addr;
+		Http		_httpHandler;
 
 		const Configuration::ServerBlock* matchVirtualHost(const std::string& host);
+		std::string extractHostHeader(const std::string& rawRequest) const;
+		const Configuration::ServerBlock::LocationBlock*
+			findLocation(const Configuration::ServerBlock& server,
+						const std::string& path) const;
+		bool shouldKeepAlive(const std::string& rawRequest) const;
 		
 	public:
 		Server() = delete;
@@ -36,17 +39,10 @@ class Server{
 		Server& operator=(const Server& other) = delete;
 		~Server();
 
-		// Setup and cleanup
-		StartResult start();
-		void shutdown();
-
-		// Return the new client fd, or -1 on error
-		int acceptConnection();
-
-		// Process a client request
+		StartResult start(void);
+		void shutdown(void);
+		int  acceptConnection(void);
 		void handleClient(int fd);
-
-		// Getters
-		int getListenFd() const;
-		int getPort() const;
+		int  getListenFd(void) const;
+		int  getPort(void) const;
 };
