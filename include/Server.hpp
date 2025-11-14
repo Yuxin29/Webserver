@@ -28,7 +28,7 @@ class Server{
 	public:
 		Server() = delete;
 		explicit Server(const Configuration::ServerBlock& serverBlock);
-		Server(const Server& other) = delete;
+		Server(const Server& other);
 		Server& operator=(const Server& other) = delete;
 		~Server();
 

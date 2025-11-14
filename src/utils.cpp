@@ -17,8 +17,11 @@ namespace utils {
 			case PARSE_ERROR:
 				errorMessage = "Some parsing error for Lin to check";
 				break;
+			case FAILED_TO_LOAD_DEFAULT_PATH:
+				errorMessage = "Could not find the file in default path";
+				break;
 		}
-		std::cout << "Error: " << errorMessage << std::endl;
+		std::cerr << "Error: " << errorMessage << std::endl;
 		return FAILURE;
 	}
 }

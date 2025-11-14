@@ -32,7 +32,7 @@ class Configuration{
 		std::vector<ServerBlock> _serverBlocks;
 
 	public:
-		int getNumberOfServers() const {
+		uint16_t getNumberOfServers() const {
 			return _serverBlocks.size();
 		}
 
@@ -42,5 +42,11 @@ class Configuration{
 
 		void addServerBlock(const ServerBlock& block) {
 			_serverBlocks.push_back(block);
+		}
+
+		bool load(const std::string& path){
+			(void)path;
+			return 1;
+			//pass default path if none was provided
 		}
 };
