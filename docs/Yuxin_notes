@@ -138,3 +138,75 @@ headers["Host"] = "localhost:8080";
 headers["User-Agent"] = "curl/7.68.0";
 headers["Accept"] = "*/*";
 headers["Content-Length"] = "12";
+
+====================================================== MAP container that stores key–value pairs ======================================================
+🗓 第 1 周 — HTTP 请求解析基础
+第 1 天 — 学基础 + 建立结构
+学习：HTTP/1.1 格式, 请求行（方法、路径、版本, Header 规则, CRLF
+实现：创建 HttpRequest / HttpParser / HttpResponse 框架
+测试： 无
+
+第 2 天 — 解析请求行
+学习：GET/POST/DELETE, URL 简单处理
+实现：parseRequestLine()
+测试：printf "GET / HTTP/1.1\r\n\r\n" | nc localhost 8080
+
+第 3 天 — 解析 Headers
+学习： key:value 格式. 不区分大小写
+实现：parseHeaders() → 存入 map
+测试：重复字段, 缺少 CRLF
+
+第 4 天 — 基础 body（Content-Length）
+实现：按 Content-Length 读 body
+测试：curl -d "hello" http://localhost:8080
+
+第 5 天 — 状态机解析（非阻塞必需）
+学习：START_LINE → HEADERS → BODY → DONE
+实现：HttpParser::consume(buffer)
+测试：分包解析, 模拟慢速攻击（slowloris）
+
+🗓 第 2 周 — 响应生成 + 各种方法
+第 6 天 — Response 基础
+实现：status line, header set
+测试：与 nginx 对比
+
+第 7 天 — 实现 GET（静态文件）
+学习：MIME types, 文件权限
+测试：curl -v http://localhost:8080/file.txt
+
+第 8 天 — 实现 POST
+实现：保存 body, 返回 200/201
+测试：curl -X POST -d "x=y" http://localhost:8080
+
+第 9 天 — 实现 DELETE
+实现：删除文件 + 权限检查
+测试：curl -X DELETE http://localhost:8080/a.txt
+
+第 10 天 — 错误页面 + 验证
+实现：400 / 413 / 414 / 500, 自动生成错误返回
+测试：非法请求, 超长 URL, body 超大
+
+🗓 第 3 周 — Keep-alive、浏览器行为、压力测试
+第 11 天 — Keep-Alive
+学习：Connection: close, HTTP/1.0 行为差异
+实现：shouldCloseConnection()
+测试： curl / Chrome
+
+第 12 天 — 对齐 NGINX 行为
+学习： Host 缺失, 多余空格, 重复 headers
+测试：与 nginx 对比输出
+
+第 13 天 — Chunked（可选）
+实现：解析 chunked, 或生成 chunked
+测试： curl -H "Transfer-Encoding: chunked" -d "test" localhost:8080
+
+第 14 天 — 压力测试
+测试工具：ab, wrk
+命令：
+ab -n 5000 -c 100 http://localhost:8080/
+wrk -t4 -c200 -d10s http://localhost:8080/
+修复：内存泄漏, 假死, keep-alive 循环
+
+第 15 天 — 最终整理 + 完整测试
+测试：浏览器, curl, RFC 审查
+清理：移除 debug, 注释、代码规范化 

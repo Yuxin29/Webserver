@@ -1,6 +1,6 @@
 #include "Request.hpp"
 
-//the for Request class
+/*  ******************************HttpRequest********************************  */
 HttpRequest::HttpRequest(const std::string& method, const std::string& requestpath, const std::string& version, const std::string& body, const std::map<std::string, std::string>& requestHeaders)
     :_method(method), _requestPath(requestpath), _version(version), _body(body), _requestHeaders(requestHeaders){
 }
@@ -27,45 +27,45 @@ std::string HttpRequest::getVersion(){
     return _version;
 }   
 
-std::map<std::string, std::string>  HttpRequest::getrequestHeaders{
+std::map<std::string, std::string>  HttpRequest::getrequestHeaders(){
     return _body;
 }
 std::string HttpRequest::getBody(){
     return _requestHeaders;
 }
+/*  ******************************HttpRequest********************************  */
 
-HttpResponse(const std::HttpResponse& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& requestHeaders);
-
-//the for Request class
-HttpRequest::HttpRequest(const std::string& method, const std::string& requestpath, const std::string& version, const std::string& body, const std::map<std::string, std::string>& requestHeaders)
-    :_method(method), _requestPath(requestpath), _version(version), _body(body), _requestHeaders(requestHeaders){
+/*  ******************************HttpRequest********************************  */
+HttpResponse::HttpResponse(const std::string& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& responseHeaders)
+    :_version(version), _status(status), _phase(phase), _body(body), _responseHeaders(responseHeaders){
 }
 
-HttpRequest::HttpRequest(const HttpRequest& other)
-    : _method(other._method), _requestPath(other._requestPath), _version(other._version), _body(other._body), _requestHeaders(other._requestHeaders){
+HttpResponse::HttpResponse(const HttpResponse& other)
+    : _version(other._version), _status(other._status), _phase(other._phase), _body(other._body), _responseHeaders(other._responseHeaders){
 }            
     
-HttpRequest& HttpRequest::operator=(const HttpRequest &other) = delete{
+HttpResponse& HttpResponse::operator=(const HttpResponse &other) = delete{
 }
 
-HttpRequest::~HttpRequest(){
+HttpResponse::~HttpResponse(){
 }
 
-std::string HttpRequest::getMethod(){
+std::string HttpResponse::getMethod(){
     return _method;
 }
 
-std::string HttpRequest::getrequestPath(){
+std::string HttpResponse::getrequestPath(){
     return _requestPath;
 }   
 
-std::string HttpRequest::getVersion(){
+std::string HttpResponse::getVersion(){
     return _version;
 }   
 
-std::map<std::string, std::string>  HttpRequest::getrequestHeaders{
+std::map<std::string, std::string>  HttpResponse::getrequestHeaders(){
     return _body;
 }
-std::string HttpRequest::getBody(){
-    return _requestHeaders;
+std::string HttpResponse::getBody(){
+    return _responseHeaders;
 }
+/*  ******************************HttpRequest********************************  */

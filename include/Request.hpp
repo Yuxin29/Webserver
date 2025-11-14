@@ -49,13 +49,12 @@ public:
     std::string                         getMethod();
     std::string                         getrequestPath();
     std::string                         getVersion();
-    std::map<std::string, std::string>  getrequestHeaders;
+    std::map<std::string, std::string>  getrequestHeaders();
     std::string                         getBody();
 };
 
 //Accepts raw bytes (from non-blocking reads) and advances through states:
-class HttpParser
-{
+class HttpParser{
 //what do I do here?? is the parsing beheviour happenning here???
 }
 
@@ -77,7 +76,7 @@ private:
 
 public:
     //Orthodox * 4 
-    HttpResponse(const std::HttpResponse& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& requestHeaders);
+    HttpResponse(const std::string& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& responseHeaders);
     HttpResponse(const HttpResponse& other);               
     HttpResponse& operator=(const HttpResponse &other);
     ~HttpResponse();
@@ -86,6 +85,6 @@ public:
     std::string                         getVersion();
     std::string                         getStatus();
     std::string                         getPhase();
-    std::map<std::string, std::string>  getrequestHeaders;
+    std::map<std::string, std::string>  getrequestHeaders();
     std::string                         getBody();
 };
