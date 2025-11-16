@@ -1,7 +1,7 @@
 Yuxin\s notes
 
 ====================================================== Git Repo ======================================================
--Lucio started the repo and invided me, we will have 3 different branch there, I ren amed it team 
+-Lucio started the repo and invited me, we will have 3 different branch there, I ren amed it team 
 -I have a remote link repo origin 
 - then at team repo, I git remote add origin https://github.com/Yuxin29/Webserver.git 
 - I will work in shared team repo, and git push origin my_branch / main normally there 

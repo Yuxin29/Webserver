@@ -36,6 +36,13 @@ std::string HttpRequest::getBody(){
 /*  ******************************HttpRequest********************************  */
 
 /*  ******************************HttpRequest Parsing********************************  */
+// enum State{
+//     START_LINE,
+//     HEADERS,
+//     EMPTY,   // might not be neccessary ??
+//     BODY,
+//     DONE
+// };
 //here is the actual parsing process
 //below one is private
 void HttpResponse::parseStartLine(const std::string& startline){
@@ -45,28 +52,49 @@ void HttpResponse::parseStartLine(const std::string& startline){
 
     if (_method.empty() || _path.empty || _version.empty())
         throw std::runtime_error(|"Something missing in http request starting line");
-    _state = headers;
+    _state = HEADERS;
 }
 
 //below one is private, it will be recalled for a few times.
 void HttpResponse::parseHeaderLine(const std::string& headerline){
-
+    //first check if headers are done
+    if (headerline.empty()){
+        _state = DONE;
+        return;
+    }
+    //if not: find ":"
+    size_t dd = line.find(":"); //dd: double dots
+    std::string key = line.substr(0, dd);
+    std::string value = line.substr(dd + 1);
+    _requestHeaders [key] = value;
 }
 
+//this one is going to called mamy times, basically whenever recv() some new bytes, 
+// one call of this only append / parse one chunk of data
 HttpRequest HttpResponse::parseHttpRequest(const std::string& rawLine)
 {
-    // while it is startline / headers
-    // {
-    //     if (is startline)
-    //         parse startline
-    //     if (is header)
-    //         [parse header]
-    // }
-    // if (it is EMPTY)
-    //     change to BODY
-    // parse body and change to end;
-    // if it is end.
-    //     return this HttpRequest;
+    _buffer += rawLine;
+    
+    std::istringstream ss(_buffer);
+    std::string         line;
+
+    while (_state != DONE && std::getline(ss, line)) // there is repeatance here when parseHttpRequest called again,
+    {
+        if (_state == START_LINE)
+            parseHeaderLine(line);
+        if (_state == HEADERS)
+            parseHeaderLine(line);
+    }
+    if (_state == BODY)
+    {
+        std::string remaining;
+        std::getline(ss, remaining);
+        _body += remaining;
+        _state = DONE;
+    }
+    if (_state == DONE){
+        return HttpResponse(_state, _path, _version, _body, _requestHeaders);
+    }
 }
 /*  ******************************HttpRequest Parsing********************************  */
 
