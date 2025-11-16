@@ -1,6 +1,5 @@
 Yuxin\s notes
 
-
 ====================================================== Git Repo ======================================================
 -Lucio started the repo and invided me, we will have 3 different branch there, I ren amed it team 
 -I have a remote link repo origin 
@@ -78,84 +77,14 @@ C | Configuration & CGI Manager | - Design and implement server.conf parser
 -Prepare demo config files for defense
 -Polish docs, error handling, testing scripts |
 
-====================================================== HTTP form ======================================================
-type of http request:
-GET     POST    PUT         PATCH           DELETE  HEAD                            OPTIONS         CONNECT         TRACE
-read    create  replace     partial update  delete  like get, but not return body   check methods   build router    for testing
-requred by suj: GET, POST, and DELETE
-
-----> a normal http request form
-<start-line>\r\n
-<header1: value>\r\n
-<header2: value>\r\n
-...\r\n
-\r\n
-<body>
-------
-1. <start-line>\r\n
-Method sp _path sp version crlf(Carriage Return and Line Feed)
-Get /index.html HTTP/1.1\r\n
-------
-2. <header1: value>\r\n
-Host: example.com\r\n                ← Headers
-User-Agent: curl/7.64.1\r\n
-Content-Length: 5\r\n
-------
-3. empty line
-\r\n 
-------
-4. Body, only for POST, PUT
-hello 
-
-----> a normal http response form
-<status-line>\r\n
-<header1: value>\r\n
-...\r\n
-\r\n
-<body>
-------
-1.<status-line>\r\n
-VERSION SP STATUS_CODE SP REASON_PHRASE CRLF
-HTTP/1.1 200 OK\r\needs
-2.<headern: value>\r\n
-Content-Type: text/html\r\n
-Content-Length: 13\r\n
-3. empty line
-\r\need
-4. body:
-a string: like "hello world"
-
-====================================================== MAP container that stores key–value pairs ======================================================
-#include <map>
---> std::map
-- ordered assoiative container
-- automateically keeps the keys sorted
-- each key must be unique
-- Lookup, insertion and deletion are all O(log n)
-For example
-std::map<std::string, std::string> headers; 
-headers["Host"] = "localhost:8080";
-headers["User-Agent"] = "curl/7.68.0";
-headers["Accept"] = "*/*";
-headers["Content-Length"] = "12";
-
-====================================================== State Machine ======================================================
-State Machine / Finite State Machine(FSM). it has 3 elements.
-1. State,
-2. Event / Input   
-3. Transition
-check state -> get input -> do a thin -> change to next state
----> why do we use state machine in http request parsing
-- raw Line comes with a certain order 
-- it can avoid lots of if / else if, the step is tracable
-- the might be interruption / waiting time between input
-
-====================================================== MAP container that stores key–value pairs ======================================================
+====================================================== If I want to do my request in 3 weeks ======================================================
 第 1 周：HTTP Parser + Request Handling
 目标：能解析完整的 HTTP 请求（start-line、headers、body）
-Day 1 — 架构搭建 + HTTP 基础复习
-学习：HTTP/1.1 结构, Request-Line, Headers, CRLF, Body（Content-Length）
-实现：HttpRequest, HttpParser 类骨架
+✅  ❌ ⏳ ⚠️
+------------------------
+Day 1 — 架构搭建 + HTTP 基础复习                                                ✅
+学习：HTTP/1.1 结构, Request-Line, Headers, CRLF, Body（Content-Length）        ✅
+实现：HttpRequest, HttpParser 类骨架                                            ✅
 
 Day 2 — parseRequestLine()
 学习：方法 GET/POST/DELETE, URL 格式, HTTP version 校验
@@ -242,3 +171,88 @@ wrk -t4 -c200 -d10s http://localhost:8080/
 Day 15 — 最终清理
 
 代码规范化, 注释,  删除 printf, RFC 遵循检查, 浏览器实机测试
+
+====================================================== HTTP form ======================================================
+type of http request:
+GET     POST    PUT         PATCH           DELETE  HEAD                            OPTIONS         CONNECT         TRACE
+read    create  replace     partial update  delete  like get, but not return body   check methods   build router    for testing
+requred by suj: GET, POST, and DELETE
+
+----> a normal http request form
+<start-line>\r\n
+<header1: value>\r\n
+<header2: value>\r\n
+...\r\n
+\r\n
+<body>
+------
+1. <start-line>\r\n
+Method sp _path sp version crlf(Carriage Return and Line Feed)
+Get /index.html HTTP/1.1\r\n
+------
+2. <header1: value>\r\n
+Host: example.com\r\n                ← Headers
+User-Agent: curl/7.64.1\r\n
+Content-Length: 5\r\n
+------
+3. empty line
+\r\n 
+------
+4. Body, only for POST, PUT
+hello 
+
+----> a normal http response form
+<status-line>\r\n
+<header1: value>\r\n
+...\r\n
+\r\n
+<body>
+------
+1.<status-line>\r\n
+VERSION SP STATUS_CODE SP REASON_PHRASE CRLF
+HTTP/1.1 200 OK\r\needs
+2.<headern: value>\r\n
+Content-Type: text/html\r\n
+Content-Length: 13\r\n
+3. empty line
+\r\need
+4. body:
+a string: like "hello world"
+
+====================================================== MAP container that stores key–value pairs ======================================================
+#include <map>
+--> std::map
+- ordered assoiative container
+- automateically keeps the keys sorted
+- each key must be unique
+- Lookup, insertion and deletion are all O(log n)
+For example
+std::map<std::string, std::string> headers; 
+headers["Host"] = "localhost:8080";
+headers["User-Agent"] = "curl/7.68.0";
+headers["Accept"] = "*/*";
+headers["Content-Length"] = "12";
+
+====================================================== State Machine ======================================================
+State Machine / Finite State Machine(FSM). it has 3 elements.
+1. State,
+2. Event / Input   
+3. Transition
+check state -> get input -> do a thin -> change to next state
+---> why do we use state machine in http request parsing
+- raw Line comes with a certain order 
+- it can avoid lots of if / else if, the step is tracable
+- the might be interruption / waiting time between input
+
+====================================================== std::istringstream ======================================================
+std::isstringstream is a class that string flows as a stream (eg. reading from a file or socket)
+(maybe a bit like a automatic getnext line)
+-->>Example use
+std::istringstream ss("hello world 42");
+std::string a, b;
+int num;
+ss >> a >> b >> num;
+// a = "hello"
+// b = "world"
+// num = 42
+

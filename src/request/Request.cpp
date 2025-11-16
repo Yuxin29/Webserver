@@ -37,6 +37,22 @@ std::string HttpRequest::getBody(){
 
 /*  ******************************HttpRequest Parsing********************************  */
 //here is the actual parsing process
+//below one is private
+void HttpResponse::parseStartLine(const std::string& startline){
+    //std::string                         _method, _path, _version;
+    std::istringstream ss(startline);   //ss : stringstream
+    sl >> _method >> _path >> _version;
+
+    if (_method.empty() || _path.empty || _version.empty())
+        throw std::runtime_error(|"Something missing in http request starting line");
+    _state = headers;
+}
+
+//below one is private, it will be recalled for a few times.
+void HttpResponse::parseHeaderLine(const std::string& headerline){
+
+}
+
 HttpRequest HttpResponse::parseHttpRequest(const std::string& rawLine)
 {
     // while it is startline / headers

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <map>
+#include <sstream>
 //maybe more
 
 //  ├─ HttpRequest.hpp             // // response builder
@@ -67,7 +68,7 @@ enum State{
 
 //Accepts raw bytes (from non-blocking reads) and advances through states:
 // I might recerive something from Lucio like this:
-// GET /index.html HTTP/1.1\r\n
+GET /index.html HTTP/1.1\r\n
 // Host: example.com\r\n
 // Content-Length: 5\r\n
 // \r\n
@@ -77,7 +78,8 @@ enum State{
 // check state -> get input -> do a thin -> change to next state
 class HttpParser{
 private:
-    std::string                         _version, _status, _phase;
+    //should I have these repreating here? maybe i do, they r not const
+    std::string                         _method, _path, _version;
     std::map<std::string, std::string>  _responseHeaders;
     std::string                         _body;
     //buffering here
