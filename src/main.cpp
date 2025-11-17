@@ -6,7 +6,6 @@ std::string tokenTypeToString(TokenType type) {
 	switch (type) {
 		case TK_IDENTIFIER: return "IDENTIFIER";
 		case TK_NUMBER:     return "NUMBER";
-		case TK_STRING:     return "STRING";
 		case TK_LBRACE:     return "LBRACE";
 		case TK_RBRACE:     return "RBRACE";
 		case TK_SEMICOLON:  return "SEMICOLON";

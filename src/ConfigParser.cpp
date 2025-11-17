@@ -1,122 +1,62 @@
 #include "ConfigParser.hpp"
-#include <cctype> //std::isspace, std::isdigit
-#include <stdexcept>
+#include <fstream>
+#include <sstream> //std::stringstream
 
-Tokenizer::Tokenizer(std::string& source)
-:_source(source),_pos(0),_line(1),_col(1){}
-
-char Tokenizer::peek() const
+Parser::Parser(std::string& filename)
+:_pos(0)
 {
-	if(eof())
-		return '\0';
-	return _source[_pos];
+	std::ifstream infile(filename);
+	if (!infile)
+		throw std::runtime_error("Failed to open config file" + filename);
+	std::stringstream buffer;
+	buffer << infile.rdbuf();//.rdbuf() gives access to its underlying stream buffer.
+	std::string content = buffer.str();
+	Tokenizer tokenizer(content);
+	_tokens = tokenizer.tokenize();
 }
 
-char Tokenizer::get()
+Token Parser::peek() const
 {
-	if(eof())
-		return '\0';
-	char c = _source[_pos++];
-	if (c =='\n'){
-		_line++;
-		_col = 1;
-	}
-	else
-		_col++;
-	return c;
+	if(_pos >= _tokens.size())
+		return Token{TK_EOF, "", 0, 0};
+	return _tokens[_pos];
 }
 
-bool Tokenizer::eof() const
+Token Parser::get()
 {
-	return _pos >= _source.size();
+	if (_pos >= _tokens.size())
+		return Token{TK_EOF, "", 0, 0};
+	return _tokens[_pos++];
 }
 
-void Tokenizer::skipWhitespaceAndComments()
+bool Parser::match(TokenType type)
 {
-	while(!eof())
+	if (peek().type == type)
 	{
-		char c = peek();
-		if (std::isspace(c))
-			get();
-		else if (c == '#'){
-			while (peek() != '\n' && !eof())
-				get();
-		}
-		else
-			break;
+		get();
+		return true;
 	}
+	return false;
 }
 
-Token Tokenizer::nextToken()
+void Parser::expect(TokenType type, const std::string& msg) //msg?
 {
-	int start_line = _line;
-	int start_col = _col;
-	char c = peek();
-	if (eof())
-		return Token{TK_EOF, "", start_line, start_col};
-	if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-') //identifier or path
-		return tokenizeIdentifier();
-	if (c == '{' || c == '}' || c == ';')
-		return tokenizeSymbol();
-	throw std::runtime_error("unexpected character '" + std::string(1, c) + "' at line " + std::to_string(start_line) + ", col " + std::to_string(start_col));
+	Token cur_token = get();
+	if (cur_token.type != type)
+		throw std::runtime_error("Error at line " + std::to_string(cur_token.line) + ", col " + std::to_string(cur_token.col) + " : " + msg);
 }
 
-Token Tokenizer::tokenizeIdentifier()
+ServerNode Parser::parseServerBlock()
 {
-	int start_pos = _pos;
-	int start_line = _line;
-	int start_col = _col;
 
-	while (!eof())
-	{
-		char c = peek();
-		if (isalnum(c) || c == '/'|| c == '.' || c == '_')
-			get();
-		else
-			break;
-	}
-	std::string keyword = _source.substr(start_pos, _pos-start_pos);
-	bool is_number = true;
-	for(std::size_t i = 0; i < keyword.length(); i++)
-	{
-		if(!isdigit(keyword[i])){
-			is_number = false;
-			break;
-		}
-	}
-	TokenType type = is_number ? TK_NUMBER: TK_IDENTIFIER;
-	return Token{type, keyword, start_line, start_col};
 }
 
-Token Tokenizer::tokenizeSymbol()
+LocationNode Parser::parseLocationBlock()
 {
-	TokenType type;
-	char c = get();
-	if (c == '{')
-		type = TK_LBRACE;
-	else if(c == '}')
-		type = TK_RBRACE;
-	else if (c == ';')
-		type = TK_SEMICOLON;
-	else
-		throw std::runtime_error("Invalid symbol");
-	return Token{type, std::string(1,c), _line, _col};
+
 }
 
-std::vector<Token> Tokenizer::tokenize()
+std::vector<ServerNode> Parser::parse()
 {
-	std::vector<Token> tokens;
 
-	while(!eof())
-	{
-		skipWhitespaceAndComments();
-		Token token = nextToken();
-		tokens.push_back(token);
-		if (token.type == TK_EOF)
-			break;
-	}
-	//tokens.push_back(Token{TK_EOF, "", _line, _col});
-	return tokens;
 }
-// Token Tokenizer::tokenizeNumber();
-// Token Tokenizer::tokenizerString();

@@ -1,51 +1,46 @@
 #ifndef CONFIGPARSER_HPP
 #define CONFIGPARSER_HPP
 
-#include <string>
 #include <vector>
+#include "ConfigTokenizer.hpp"
 
-enum TokenType
+struct ServerNode
 {
-	TK_IDENTIFIER, //server, root, error_page
-	TK_NUMBER, // 8080, 404, 10240
-	TK_STRING, //"/var/www/html"
-	TK_LBRACE, //{
-	TK_RBRACE,//}
-	TK_SEMICOLON,
-	TK_EOF,
+	std::vector<std::string> server_name;
+	int listen;
+	std::string error_age;
+	std::string root;
+	//....
+	std::vector<LocationNode> Locations;
 };
 
-struct Token
+struct LocationNode
 {
-	TokenType type;
-	std::string value;
-	int	line;
-	int	col;
+	std::vector<std::string> methods;
+	std::string path;
+	std::string root;
+	std::string redirect;
+	bool autoindex;
+	//...
 };
 
-class Tokenizer
+class Parser
 {
 public:
-	Tokenizer(std::string& source);
-	std::vector<Token> tokenize();
+	Parser(std::string& filename);
+	std::vector<ServerNode> parse();
+
 private:
-	const std::string& _source;
+	std::vector<Token> _tokens;
 	std::size_t _pos;
-	int _line;
-	int _col;
 
-	char peek() const;
-	char get();
-	bool eof() const;
+	Token peek() const;
+	Token get();
+	bool match(TokenType type);
+	void expect(TokenType type, const std::string& msg);
+	ServerNode parseServerBlock();
+	LocationNode parseLocationBlock();
 
-	void skipWhitespaceAndComments();
-	Token nextToken();
-
-	Token tokenizeIdentifier();
-	Token tokenizeString();
-	Token tokenizeSymbol(); //{}
-	//Token tokenizeNumber();
-	//error()?
 };
 
 #endif
