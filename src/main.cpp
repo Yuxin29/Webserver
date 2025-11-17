@@ -1,24 +1,52 @@
-#include "Webserver.hpp"
-#include "Config.hpp"
-#include "utils.hpp"
+#include <iostream>
+#include <vector>
+#include "ConfigParser.hpp"
 
-int main(int argc, char **argv){
-	if (argc != 2){
-		return utils::returnErrorMessage(utils::WRONG_ARGUMENTS);
+std::string tokenTypeToString(TokenType type) {
+	switch (type) {
+		case TK_IDENTIFIER: return "IDENTIFIER";
+		case TK_NUMBER:     return "NUMBER";
+		case TK_STRING:     return "STRING";
+		case TK_LBRACE:     return "LBRACE";
+		case TK_RBRACE:     return "RBRACE";
+		case TK_SEMICOLON:  return "SEMICOLON";
+		case TK_EOF:        return "EOF";
+		default:            return "UNKNOWN";
 	}
-	Configuration configFile;
-	/* Maybe a:
-		validateFile()
-		parseFile()
-		validateDataInFile()
-	*/
-	Webserver miniNginx;
-	if (miniNginx.createServers(configFile) == utils::FAILURE){
-		return utils::returnErrorMessage(utils::FAILED_TO_CREATE_SERVERS);
+}
+
+int main() {
+	std::string config = R"(
+		#comment
+		server {
+			listen 8080;
+			server_name localhost;
+
+			error_page 404 /errors/404.html;
+			error_page 403 /errors/403.html;
+			error_page 500 /errors/500.html;
+
+			client_max_body_size 1M;
+
+			# Location: root page with autoindex off
+			location / {
+				root /home/linliu/42_github/rank5/webserver/sites/static/index.html;
+				index index.html;
+				autoindex off;
+				methods GET;
+			}
+	)";
+
+	Tokenizer tokenizer(config);
+	std::vector<Token> tokens = tokenizer.tokenize();
+
+	for (size_t i = 0; i < tokens.size(); ++i) {
+		const Token& tok = tokens[i];
+
+		std::cout << "Line " << tok.line
+		          << ", Col " << tok.col
+		          << " | Type: " << tokenTypeToString(tok.type)
+		          << " | Value: \"" << tok.value << "\""
+		          << std::endl;
 	}
-	if (miniNginx.runServers() == utils::FAILURE){
-		return utils::returnErrorMessage(utils::ERROR_RUNNING_SERVERS);
-	}
-	miniNginx.stopServers();
-	return utils::SUCCESS;
 }
