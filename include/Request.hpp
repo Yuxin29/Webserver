@@ -5,17 +5,13 @@
 #include <stdexcept>
 #include <map>
 #include <sstream>
-//maybe more
 
 //  ├─ HttpRequest.hpp             // // response builder
 //  ├─ HttpParser.hpp              // state machine parser
 //  ├─ HttpResponse.hpp            // response builder
-//  ├─ StatusCodes.hpp          // constant table
-//  ├─ Headers.hpp              // utility header functions
 //  ├─ MimeTypes.hpp            // text/html, image/png, etc.
 
 // -----------------------------------------------------------------------------------------------------
-
 // method required by this subject: 
 // enum Method{
 //     GET,
@@ -43,6 +39,7 @@ private:
 
 public:
     //Orthodox * 4 
+    HttpRequest() {}
     HttpRequest(const std::string& method, const std::string& requestpath, const std::string& version, const std::string& body, const std::map<std::string, std::string>& requestHeaders);
     HttpRequest(const HttpRequest& other);               
     HttpRequest& operator=(const HttpRequest &other) = delete;
@@ -91,14 +88,12 @@ private:
 
 public:
     State   _state = START_LINE;
-    //default construction ft. _buffer("") is not necessary
     HttpParser() :_bufferLength(0){};
 
     HttpRequest parseHttpRequest(const std::string& rawLine);
 };
 
 // -----------------------------------------------------------------------------------------------------
-
 // <status-line>\r\n
 // <header1: value>\r\n
 // ...\r\n

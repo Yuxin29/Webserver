@@ -12,15 +12,16 @@ int main() {
 
     // First chunk
     HttpRequest req1 = parser.parseHttpRequest(chunk1);
-    if (!req1.getMethod().empty()) {
+    if (parser._state == DONE) {
         std::cout << "Request fully parsed after chunk1 (unexpected!)\n";
     } else {
         std::cout << "Parser waiting for more data...\n";
     }
+    std::cout << "--------------" << std::endl;
 
     // Second chunk
     HttpRequest req2 = parser.parseHttpRequest(chunk2);
-    if (req2.getMethod().empty()) {
+    if (parser._state != DONE) {
         std::cout << "Parser still waiting for body...\n";
     } else {
         std::cout << "Request parsed after chunk2!\n";
@@ -33,15 +34,24 @@ int main() {
         }
         std::cout << "Body: " << req2.getBody() << "\n";
     }
+    std::cout << "--------------" << std::endl;
 
     // Third chunk (body continuation)
     HttpRequest req3 = parser.parseHttpRequest(chunk3);
-    if (!req3.getMethod().empty()) {
-        std::cout << "Final request after chunk3:\n";
-        std::cout << "Method: " << req3.getMethod() << "\n";
-        std::cout << "Path: " << req3.getrequestPath() << "\n";
-        std::cout << "Body: " << req3.getBody() << "\n";
+    if (parser._state != DONE) {
+        std::cout << "Parser still waiting for body...\n";
+    } else {
+        std::cout << "Request parsed after chunk2!\n";
+        std::cout << "Method: " << req2.getMethod() << "\n";
+        std::cout << "Path: " << req2.getrequestPath() << "\n";
+        std::cout << "Version: " << req2.getVersion() << "\n";
+        std::cout << "Headers:\n";
+        for (auto &h : req2.getrequestHeaders()) {
+            std::cout << "  " << h.first << ": " << h.second << "\n";
+        }
+        std::cout << "Body: " << req2.getBody() << "\n";
     }
+    std::cout << "--------------" << std::endl;
 
     return 0;
 }

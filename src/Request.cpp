@@ -34,13 +34,6 @@ const std::string HttpRequest::getBody(){
 /*  ******************************HttpRequest********************************  */
 
 /*  ******************************HttpRequest Parsing********************************  */
-// enum State{
-//     START_LINE,
-//     HEADERS,
-//     EMPTY,   // might not be neccessary ??
-//     BODY,
-//     DONE
-// };
 //here is the actual parsing process
 //below one is private
 void HttpParser::parseStartLine(const std::string& startline){
@@ -56,10 +49,24 @@ void HttpParser::parseStartLine(const std::string& startline){
 //below one is private, it will be recalled for a few times.
 void HttpParser::parseHeaderLine(const std::string& headerline){
     //first check if headers are done
-    if (headerline.empty()){
-        _state = DONE;
+    // if (headerline.empty()){
+    //     _state = BODY;
+    //     return;
+    // }
+    if (headerline.empty()) {
+        // check if Content-Length exists
+        std::map<std::string, std::string>::iterator it =
+            _requestHeaders.find("Content-Length");
+        
+        if (it != _requestHeaders.end()) {
+            _bufferLength = std::stoi(it->second);
+            _state = BODY;
+        } else {
+            _state = DONE;
+        }
         return;
     }
+
     //if not: find ":"
     size_t dd = headerline.find(":"); //dd: double dots
     std::string key = headerline.substr(0, dd);
@@ -78,22 +85,33 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
 
     while (_state != DONE && std::getline(ss, line)) // there is repeatance here when parseHttpRequest called again,
     {
+        // remove trailing '\r'
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+            
         if (_state == START_LINE)
-            parseHeaderLine(line);
+        {
+            parseStartLine(line);
+            //continue;
+        }
         if (_state == HEADERS)
+        {
             parseHeaderLine(line);
+            //continue;
+        }
     }
     if (_state == BODY)
     {
         std::string remaining;
-        std::getline(ss, remaining);
+        std::getline(ss, remaining, '\0');
         _body += remaining;
-        _state = DONE;
+        if (_body.size() >= _bufferLength)
+            _state = DONE;
     }
     if (_state == DONE){
         return HttpRequest(_method, _path, _version, _body, _requestHeaders);
-    }
-    throw std::runtime_error("Incomplete HTTP request");
+    } 
+    return HttpRequest();
 }
 /*  ******************************HttpRequest Parsing********************************  */
 
