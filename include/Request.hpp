@@ -45,15 +45,15 @@ public:
     //Orthodox * 4 
     HttpRequest(const std::string& method, const std::string& requestpath, const std::string& version, const std::string& body, const std::map<std::string, std::string>& requestHeaders);
     HttpRequest(const HttpRequest& other);               
-    HttpRequest& operator=(const HttpRequest &other);
+    HttpRequest& operator=(const HttpRequest &other) = delete;
     ~HttpRequest();
 
     //getters
-    std::string                         getMethod();
-    std::string                         getrequestPath();
-    std::string                         getVersion();
-    std::map<std::string, std::string>  getrequestHeaders();
-    std::string                         getBody();
+    const std::string                         getMethod();
+    const std::string                         getrequestPath();
+    const std::string                         getVersion();
+    const std::map<std::string, std::string>  getrequestHeaders();
+    const std::string                         getBody();
 };
 
 // -----------------------------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ enum State{
 
 //Accepts raw bytes (from non-blocking reads) and advances through states:
 // I might recerive something from Lucio like this:
-GET /index.html HTTP/1.1\r\n
+// GET /index.html HTTP/1.1\r\n
 // Host: example.com\r\n
 // Content-Length: 5\r\n
 // \r\n
@@ -80,7 +80,7 @@ class HttpParser{
 private:
     //should I have these repreating here? maybe i do, they r not const
     std::string                         _method, _path, _version;
-    std::map<std::string, std::string>  _responseHeaders;
+    std::map<std::string, std::string>  _requestHeaders;
     std::string                         _body;
     //buffering here
     std::string                         _buffer;
@@ -90,9 +90,9 @@ private:
     void parseHeaderLine(const std::string& headerline);
 
 public:
-    State   _state;
+    State   _state = START_LINE;
     //default construction ft. _buffer("") is not necessary
-    HttpParser() : _state(START_LINE), _buffer(""), _bufferLength(0){};
+    HttpParser() :_bufferLength(0){};
 
     HttpRequest parseHttpRequest(const std::string& rawLine);
 };
@@ -107,25 +107,25 @@ public:
 // 1.<status-line>\r\n
 // VERSION SP STATUS_CODE SP REASON_PHRASE CRLF
 // HTTP/1.1 200 OK\r\needs
-class HttpResponse{
-private:
-    std::string                         _version;
-    std::string                         _status;
-    std::string                         _phase;
-    std::map<std::string, std::string>  _responseHeaders;
-    std::string                         _body;
+// class HttpResponse{
+// private:
+//     std::string                         _version;
+//     std::string                         _status;
+//     std::string                         _phase;
+//     std::map<std::string, std::string>  _responseHeaders;
+//     std::string                         _body;
 
-public:
-    //Orthodox * 4 
-    HttpResponse(const std::string& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& responseHeaders);
-    HttpResponse(const HttpResponse& other);               
-    HttpResponse& operator=(const HttpResponse &other);
-    ~HttpResponse();
+// public:
+//     //Orthodox * 4 
+//     HttpResponse(const std::string& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& responseHeaders);
+//     HttpResponse(const HttpResponse& other);               
+//     HttpResponse& operator=(const HttpResponse &other) = delete;
+//     ~HttpResponse();
 
-    //getters
-    std::string                         getVersion();
-    std::string                         getStatus();
-    std::string                         getPhase();
-    std::map<std::string, std::string>  getrequestHeaders();
-    std::string                         getBody();
-};
+//     //getters
+//     std::string                         getVersion();
+//     std::string                         getStatus();
+//     std::string                         getPhase();
+//     std::map<std::string, std::string>  getrequestHeaders();
+//     std::string                         getBody();
+// };
