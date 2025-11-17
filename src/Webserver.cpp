@@ -26,14 +26,14 @@ Webserver::~Webserver(){
    or create new object Server if it is a different port
 */
 int Webserver::createServers(const Configuration& config){
-	std::map<int, std::vector<Configuration::ServerBlock>> portGroups;
-
+	std::map<std::pair<std::string, int>, std::vector<Configuration::ServerBlock>> groups;
 	for (size_t i = 0; i < config.getNumberOfServers(); i++){
 		const Configuration::ServerBlock& block = config.getServerBlock(i);
-		portGroups[block.port].push_back(block);
+		std::pair<std::string, int> hostPort = {block.host, block.port};
+		groups[hostPort].push_back(block);
 	}
-	for (const auto& [port, blocks] : portGroups){
-		_servers.emplace_back(port, blocks);
+	for (const auto& [hostPort, blocks] : groups){
+		_servers.emplace_back(hostPort.second, blocks);
 	}
 	for (size_t i = 0; i < _servers.size(); i++){
 		Server::StartResult result = _servers[i].start();

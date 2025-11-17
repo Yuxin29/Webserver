@@ -9,6 +9,7 @@ class Configuration{
 	// Data Structure for ONE parsed server block
 		struct ServerBlock {
 			int 						port;
+			std::string 				host;
 			std::vector<std::string> 	serverNames;
 			std::string 				root;
 			std::string					index;
