@@ -97,9 +97,13 @@ void Webserver::handleNewConnection(int listenFd)
 	uint8_t serverIndex = it->second;
 	if (_servers[serverIndex].acceptConnection() < 0){
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EMFILE){
-			std::cerr << "Server not read\n";
+			std::cerr << "Server not ready\n";
 			return;
 		}
+	}
+	uint8_t flags = fcntl(listenFd, F_GETFL, 0);
+	if (flags < 0 || fcntl(listenFd, F_SETFL, flags | O_NONBLOCK) < 0){
+		
 	}
 }
 
