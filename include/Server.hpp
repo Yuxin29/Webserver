@@ -11,7 +11,14 @@
 
 class Server {
 	public:
-		enum StartResult{
+		enum ClientStatus {
+			CLIENT_INCOMPLETE,
+			CLIENT_KEEP_ALIVE,
+			CLIENT_COMPLETE,
+			CLIENT_ERROR
+		};
+
+		enum StartResult {
 			START_SUCCESS,
 			START_SOCKET_ERROR,
 			START_BIND_ERROR,
@@ -19,12 +26,13 @@ class Server {
 		};
 
 	private:
-		std::string _host;
-		int			_listenFd;
-		int  		_port;
-		std::vector<Configuration::ServerBlock>	_virtualHosts;
-		sockaddr_in	_addr;
-		Http		_httpHandler;
+		std::string 	_host;
+		int				_listenFd;
+		int  			_port;
+		std::vector<Configuration
+		::ServerBlock>	_virtualHosts;
+		sockaddr_in		_addr;
+		Http			_httpHandler;
 
 		const Configuration::ServerBlock* matchVirtualHost(const std::string& host);
 		std::string extractHostHeader(const std::string& rawRequest) const;
@@ -43,7 +51,7 @@ class Server {
 		StartResult start(void);
 		void shutdown(void);
 		int  acceptConnection(void);
-		void handleClient(int fd);
+		ClientStatus handleClient(int clientFd);
 		int  getListenFd(void) const;
 		int  getPort(void) const;
 };

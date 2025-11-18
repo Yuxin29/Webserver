@@ -2,33 +2,21 @@
 
 static volatile sig_atomic_t signalRunning = 1;
 
-static void signalHandler(int sig)
-{
+static void signalHandler(int sig){
 	(void)sig;
 	signalRunning = 0;
 }
 
-/* Constructor initializing signals and setting up webserver 
-   to false when object is created.
-*/
-Webserver::Webserver() : _running(false)
-{
+Webserver::Webserver() : _running(false){
 	signal(SIGINT, signalHandler);
 	signal(SIGTERM, signalHandler);
 }
 
-/* Destructor uses RAII method to stop and clean all webserver object created
-   and this calls Server cleanup in their destructors
-*/
 Webserver::~Webserver(){
 	stopWebserver();
 }
 
-/* CreateServers groups servers based on port coincidence similarly as nginx
-   or create new object Server if it is on a different port
-*/
-int Webserver::createServers(const Configuration& config)
-{
+int Webserver::createServers(const Configuration& config){
 	std::map<std::string, std::vector<Configuration::ServerBlock>> bindGroups;
 	for (size_t i = 0; i < config.getNumberOfServers(); i++){
 		const auto& block = config.getServerBlock(i);
@@ -59,12 +47,7 @@ int Webserver::createServers(const Configuration& config)
 	return utils::SUCCESS;
 }
 
-/* Main loop to run in the program, this loop forwards requests to 
-   corresponding server that matches the port, poll on ready requests and
-   close fds.
-*/
-int Webserver::runWebserver()
-{	
+int Webserver::runWebserver(){	
 	_running = true;
 	while(_running && signalRunning){
 
@@ -72,59 +55,55 @@ int Webserver::runWebserver()
 	return utils::SUCCESS;
 }
 
-/* Stop the main webserver on error or when the program ends,
-   it will call stop to all the servers in the vector automatically.
-*/
-void Webserver::stopWebserver()
-{
+void Webserver::stopWebserver(){
 	_running = false;
+	closeAllClients();
 	for (size_t i = 0; i < _servers.size(); i++){
 		_servers[i].shutdown();
 	}
 }
 
-bool Webserver::isListeningSocket(int fd) const
-{	
+bool Webserver::isListeningSocket(int fd) const {	
 	return _listenFdToServerIndex.find(fd) != _listenFdToServerIndex.end();
 }
 
-void Webserver::handleNewConnection(int listenFd)
-{	
+void Webserver::handleNewConnection(int listenFd){	
 	auto it = _listenFdToServerIndex.find(listenFd);
 	if (it == _listenFdToServerIndex.end()){
 		return;
 	}
-	uint8_t serverIndex = it->second;
-	if (_servers[serverIndex].acceptConnection() < 0){
-		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EMFILE){
-			std::cerr << "Server not ready\n";
-			return;
-		}
+	size_t serverIndex = it->second;
+	int clientFd = _servers[serverIndex].acceptConnection();
+	if (clientFd < 0){
+		return;
 	}
-	uint8_t flags = fcntl(listenFd, F_GETFL, 0);
-	if (flags < 0 || fcntl(listenFd, F_SETFL, flags | O_NONBLOCK) < 0){
-		
-	}
+	addClientToPoll(clientFd, serverIndex);
 }
 
-void Webserver::handleClientRequest(int clientFd)
-{
+void Webserver::handleClientRequest(int clientFd){
 	auto it = _clientFdToServerIndex.find(clientFd);
 	if (it == _clientFdToServerIndex.end()){
 		return;
 	}
-	uint8_t serverIndex = it->second;
-	_servers[serverIndex].handleClient(clientFd);
+	size_t serverIndex = it->second;
+	Server::ClientStatus status = _servers[serverIndex].handleClient(clientFd);
+	switch (status){
+	case Server::CLIENT_INCOMPLETE:
+	case Server::CLIENT_KEEP_ALIVE:
+		break;
+	case Server::CLIENT_COMPLETE:
+	case Server::CLIENT_ERROR:
+		removeClientFd(clientFd);
+		break;
+	}
 }
 
-void Webserver::addClientToPoll(int clientFd, size_t serverIndex)
-{
+void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 	_clientFdToServerIndex[clientFd] = serverIndex;
 	_pollFds.push_back({clientFd, POLLIN, 0});
 }
 
-void Webserver::removeFdFromPoll(int fd)
-{
+void Webserver::removeFdFromPoll(int fd){
 	for (auto it = _pollFds.begin(); it != _pollFds.end(); it++){
 		if (it->fd == fd){
 			_pollFds.erase(it);
@@ -133,17 +112,15 @@ void Webserver::removeFdFromPoll(int fd)
 	}
 }
 
-void Webserver::removeClientFd(int clientFd)
-{
+void Webserver::removeClientFd(int clientFd){
 	const auto& it = _clientFdToServerIndex.find(clientFd);
 	if (it != _clientFdToServerIndex.end()){
-		close (clientFd);
 		_clientFdToServerIndex.erase(it);
 	}
+	removeFdFromPoll(clientFd);
 }
 
-void Webserver::closeAllClients(void)
-{
+void Webserver::closeAllClients(void){
 	for (const auto& [fd, serverIndex] : _clientFdToServerIndex){
 		(void)serverIndex;
 		close (fd);
@@ -151,7 +128,7 @@ void Webserver::closeAllClients(void)
 	_clientFdToServerIndex.clear();
 }
 
-bool Webserver::hasError(const pollfd& pollFd) const
-{
-	return (pollFd.revents & POLL_HUP) || (pollFd.revents & POLL_ERR) || (pollFd.revents & POLLNVAL);
+bool Webserver::hasError(const pollfd& pollFd) const{
+	return (pollFd.revents & POLL_HUP) || (pollFd.revents & POLL_ERR)
+		 || (pollFd.revents & POLLNVAL);
 }

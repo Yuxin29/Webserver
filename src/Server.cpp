@@ -39,10 +39,36 @@ void Server::shutdown(){
 	}
 }
 
+int  Server::acceptConnection(void){
+
+}
+
+Server::ClientStatus Server::handleClient(int clientFd){
+
+}
+
 int Server::getListenFd() const {
 	return _listenFd;
 }
 
 int Server::getPort() const {
 	return _port;
+}
+
+const Configuration::ServerBlock* matchVirtualHost(const std::string& host){
+
+}
+
+std::string Server::extractHostHeader(const std::string& rawRequest) const {
+
+}
+
+const Configuration::ServerBlock::LocationBlock* 
+	Server::findLocation(const Configuration::ServerBlock& server,
+		const std::string& path) const {
+
+}
+
+bool Server::shouldKeepAlive(const std::string& rawRequest) const {
+
 }
