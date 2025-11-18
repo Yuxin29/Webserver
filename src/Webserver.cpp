@@ -1,16 +1,18 @@
 #include "Webserver.hpp"
 
-static volatile sig_atomic_t g_running = 1;
+static volatile sig_atomic_t signalRunning = 1;
 
-static void signalHandler(int sig){
+static void signalHandler(int sig)
+{
 	(void)sig;
-	g_running = 0;
+	signalRunning = 0;
 }
 
 /* Constructor initializing signals and setting up webserver 
    to false when object is created.
 */
-Webserver::Webserver() : _running(false){
+Webserver::Webserver() : _running(false)
+{
 	signal(SIGINT, signalHandler);
 	signal(SIGTERM, signalHandler);
 }
@@ -23,28 +25,37 @@ Webserver::~Webserver(){
 }
 
 /* CreateServers groups servers based on port coincidence similarly as nginx
-   or create new object Server if it is a different port
+   or create new object Server if it is on a different port
 */
-int Webserver::createServers(const Configuration& config){
-	std::map<std::pair<std::string, int>, std::vector<Configuration::ServerBlock>> groups;
+int Webserver::createServers(const Configuration& config)
+{
+	std::map<std::string, std::vector<Configuration::ServerBlock>> bindGroups;
 	for (size_t i = 0; i < config.getNumberOfServers(); i++){
-		const Configuration::ServerBlock& block = config.getServerBlock(i);
-		std::pair<std::string, int> hostPort = {block.host, block.port};
-		groups[hostPort].push_back(block);
+		const auto& block = config.getServerBlock(i);
+
+		std::string host = block.host;
+		if (host.empty() || host == "*"){
+			host = "0.0.0.0";
+		}
+		std::string bindKey = host + ":" + std::to_string(block.port);
+		bindGroups[bindKey].push_back(block);
 	}
-	for (const auto& [hostPort, blocks] : groups){
-		_servers.emplace_back(hostPort.second, blocks);
+
+	for (const auto& [bindKey, blocks] : bindGroups){
+		size_t colonPos = bindKey.find(":");
+		std::string host = bindKey.substr(0, colonPos);
+		int port = stoi(bindKey.substr(colonPos + 1));
+		_servers.emplace_back(host, port, blocks);
 	}
+
 	for (size_t i = 0; i < _servers.size(); i++){
-		Server::StartResult result = _servers[i].start();
-		if(result != Server::START_SUCCESS){
+		if (_servers[i].start() != Server::START_SUCCESS){
 			return utils::FAILURE;
 		}
 		int listenFd = _servers[i].getListenFd();
 		_pollFds.push_back({listenFd, POLLIN, 0});
 		_listenFdToServerIndex[listenFd] = i;
 	}
-	_running = true;
 	return utils::SUCCESS;
 }
 
@@ -52,8 +63,10 @@ int Webserver::createServers(const Configuration& config){
    corresponding server that matches the port, poll on ready requests and
    close fds.
 */
-int Webserver::runWebserver(){
-	while(_running && g_running){
+int Webserver::runWebserver()
+{	
+	_running = true;
+	while(_running && signalRunning){
 
 	}
 	return utils::SUCCESS;
@@ -62,45 +75,79 @@ int Webserver::runWebserver(){
 /* Stop the main webserver on error or when the program ends,
    it will call stop to all the servers in the vector automatically.
 */
-void Webserver::stopWebserver(){
+void Webserver::stopWebserver()
+{
 	_running = false;
 	for (size_t i = 0; i < _servers.size(); i++){
 		_servers[i].shutdown();
 	}
 }
 
-bool Webserver::isListeningSocket(int fd) const {
-
+bool Webserver::isListeningSocket(int fd) const
+{	
+	return _listenFdToServerIndex.find(fd) != _listenFdToServerIndex.end();
 }
 
-void Webserver::handleNewConnection(int listenFd){
-
+void Webserver::handleNewConnection(int listenFd)
+{	
+	auto it = _listenFdToServerIndex.find(listenFd);
+	if (it == _listenFdToServerIndex.end()){
+		return;
+	}
+	uint8_t serverIndex = it->second;
+	if (_servers[serverIndex].acceptConnection() < 0){
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EMFILE){
+			std::cerr << "Server not read\n";
+			return;
+		}
+	}
 }
 
-void Webserver::handleClientRequest(int clientFd){
-
+void Webserver::handleClientRequest(int clientFd)
+{
+	auto it = _clientFdToServerIndex.find(clientFd);
+	if (it == _clientFdToServerIndex.end()){
+		return;
+	}
+	uint8_t serverIndex = it->second;
+	_servers[serverIndex].handleClient(clientFd);
 }
 
-void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
-
+void Webserver::addClientToPoll(int clientFd, size_t serverIndex)
+{
+	_clientFdToServerIndex[clientFd] = serverIndex;
+	_pollFds.push_back({clientFd, POLLIN, 0});
 }
 
-void Webserver::removeFdFromPoll(int fd){
-
+void Webserver::removeFdFromPoll(int fd)
+{
+	for (auto it = _pollFds.begin(); it != _pollFds.end(); it++){
+		if (it->fd == fd){
+			_pollFds.erase(it);
+			break;
+		}
+	}
 }
 
-void Webserver::removeClientFd(int clientFd){
-
+void Webserver::removeClientFd(int clientFd)
+{
+	const auto& it = _clientFdToServerIndex.find(clientFd);
+	if (it != _clientFdToServerIndex.end()){
+		close (clientFd);
+		_clientFdToServerIndex.erase(it);
+	}
 }
 
-void Webserver::closeAllClients(void){
+void Webserver::closeAllClients(void)
+{
 	for (const auto& [fd, serverIndex] : _clientFdToServerIndex){
 		(void)serverIndex;
-		close(fd);
+		close (fd);
 	}
 	_clientFdToServerIndex.clear();
 }
 
-bool Webserver::hasError(const pollfd& pfd) const {
-
+bool Webserver::hasError(const pollfd& pollFd) const
+{
+	return (pollFd.revents & POLL_HUP) || (pollFd.revents & POLL_ERR) || (pollFd.revents & POLLNVAL);
 }

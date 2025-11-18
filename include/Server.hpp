@@ -19,6 +19,7 @@ class Server {
 		};
 
 	private:
+		std::string _host;
 		int			_listenFd;
 		int  		_port;
 		std::vector<Configuration::ServerBlock>	_virtualHosts;
@@ -34,7 +35,7 @@ class Server {
 		
 	public:
 		Server() = delete;
-		explicit Server(int port, const std::vector<Configuration::ServerBlock>& serverBlocks);
+		explicit Server(const std::string& host, int port, const std::vector<Configuration::ServerBlock>& serverBlocks);
 		Server(const Server& other) = delete;
 		Server& operator=(const Server& other) = delete;
 		~Server();

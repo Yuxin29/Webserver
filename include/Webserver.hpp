@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <iostream>
 #include <vector>
+#include <string>
 
 class Webserver {
 	private:
