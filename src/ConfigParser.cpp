@@ -2,9 +2,9 @@
 #include <fstream>
 #include <sstream> //std::stringstream
 #include <format>
+#include <iostream>
 
-
-Parser::Parser(std::string& filename)
+Parser::Parser(const std::string& filename)
 :_pos(0)
 {
 	std::ifstream infile(filename);
@@ -45,14 +45,24 @@ void Parser::expect(TokenType type, const std::string& msg) //msg?
 {
 	Token cur_token = get();
 	if (cur_token.type != type)
-		throw std::runtime_error(std::format("Error at line {}, col {}", cur_token.line, cur_token.col));
+		throw std::runtime_error(msg);
 }
 
-// ServerNode Parser::parseServerBlock()
-// {
+ServerNode Parser::parseServerBlock()
+{
 
 
-// }
+}
+
+std::string Parser::parseSimpleDirective(const std::string& name)
+{
+	get();
+	Token valuetoken = get();
+	if (valuetoken.type != TK_IDENTIFIER)
+		throw std::runtime_error(std::format("Expcept {} value at line {}, col {}", name, valuetoken.line, valuetoken.col));
+	expect(TK_SEMICOLON, std::format("Expected ';' after {}", name));
+	return valuetoken.value;
+}
 
 LocationNode Parser::parseLocationBlock()
 {
@@ -73,50 +83,15 @@ LocationNode Parser::parseLocationBlock()
 			break;
 		}
 		if (token.type == TK_IDENTIFIER && token.value == "root")
-		{
-			get();
-			Token rootValue = get();
-			if (rootValue.type != TK_IDENTIFIER)
-				throw std::runtime_error(std::format("Expcept path after root at line {}, col {}", rootValue.line, rootValue.col));
-			location.root = rootValue.value;
-			expect(TK_SEMICOLON, "Expected ';' after location path");
-		}
+			location.root = parseSimpleDirective("root");
 		else if(token.type == TK_IDENTIFIER && token.value == "redirect")
-		{
-			get();
-			Token redirValue = get();
-			if (redirValue.type != TK_IDENTIFIER)
-				throw std::runtime_error(std::format("Expcept URL after redirect at line {}, col {}", redirValue.line, redirValue.col));
-			location.redirect = redirValue.value;
-			expect(TK_SEMICOLON, "Expected ';' after location path");
-		}
+			location.redirect = parseSimpleDirective("redirect");
 		else if(token.type==TK_IDENTIFIER && token.value == "index")
-		{
-			get();
-			Token indexValue = get();
-			if (indexValue.type != TK_IDENTIFIER)
-				throw std::runtime_error(std::format("Expcept filename after index at line {}, col {}", indexValue.line, indexValue.col));
-			location.index = indexValue.value;
-			expect(TK_SEMICOLON, "Expected ';' after location path");
-		}
+			location.index = parseSimpleDirective("redirect");
 		else if(token.type==TK_IDENTIFIER && token.value == "cgi_path")
-		{
-			get();
-			Token cgiValue = get();
-			if (cgiValue.type != TK_IDENTIFIER)
-				throw std::runtime_error(std::format("Expcept path after cgi_path at line {}, col {}", cgiValue.line, cgiValue.col));
-			location.cgi_path = cgiValue.value;
-			expect(TK_SEMICOLON, "Expected ';' after location path");
-		}
+			location.cgi_path = parseSimpleDirective("cgi_path");
 		else if(token.type==TK_IDENTIFIER && token.value == "upload_dir")
-		{
-			get();
-			Token uploadValue = get();
-			if (uploadValue.type != TK_IDENTIFIER)
-				throw std::runtime_error(std::format("Expcept path after cgi_path at line {}, col {}", uploadValue.line, uploadValue.col));
-			location.cgi_path = uploadValue.value;
-			expect(TK_SEMICOLON, "Expected ';' after location path");
-		}
+			location.upload_dir = parseSimpleDirective("upload_dir");
 		else if(token.type==TK_IDENTIFIER && token.value == "autoindex")
 		{
 			get();
@@ -129,7 +104,7 @@ LocationNode Parser::parseLocationBlock()
 				throw std::runtime_error(std::format("Expcept on/off after autoindex at line {}, col {}", autoindex.line, autoindex.col));
 			expect(TK_SEMICOLON, "Expected ';' after location path");
 		}
-		else if(token.type==TK_IDENTIFIER && token.value == "method")
+		else if(token.type==TK_IDENTIFIER && token.value == "methods")
 		{
 			get();
 			while(true)
@@ -145,11 +120,13 @@ LocationNode Parser::parseLocationBlock()
 				}
 			}
 		}
+		else
+			throw std::runtime_error(std::format("Unknown directive {} in location block at line {}, col {}", token.value, token.line, token.col));
 	}
-
+	return location;
 }
 
-// std::vector<ServerNode> Parser::parse()
-// {
+std::vector<ServerNode> Parser::parse()
+{
 
-// }
+}

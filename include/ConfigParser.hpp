@@ -2,7 +2,7 @@
 #define CONFIGPARSER_HPP
 
 #include <vector>
-
+#include <map>
 #include "ConfigTokenizer.hpp"
 
 struct ServerNode
@@ -30,8 +30,9 @@ struct LocationNode
 class Parser
 {
 public:
-	Parser(std::string& filename);
+	Parser(const std::string& filename);
 	std::vector<ServerNode> parse();
+	//LocationNode parseLocationBlock();
 
 private:
 	std::vector<Token> _tokens;
@@ -43,7 +44,7 @@ private:
 	void expect(TokenType type, const std::string& msg);
 	ServerNode parseServerBlock();
 	LocationNode parseLocationBlock();
-
+	std::string parseSimpleDirective(const std::string& name);
 };
 
 #endif

@@ -1,51 +1,39 @@
+#include <fstream>
 #include <iostream>
-#include <vector>
+#include "ConfigParser.hpp"
 #include "ConfigTokenizer.hpp"
-
-std::string tokenTypeToString(TokenType type) {
-	switch (type) {
-		case TK_IDENTIFIER: return "IDENTIFIER";
-		case TK_NUMBER:     return "NUMBER";
-		case TK_LBRACE:     return "LBRACE";
-		case TK_RBRACE:     return "RBRACE";
-		case TK_SEMICOLON:  return "SEMICOLON";
-		case TK_EOF:        return "EOF";
-		default:            return "UNKNOWN";
-	}
-}
+#include <sstream>
 
 int main() {
-	std::string config = R"(
-		#comment
-		server {
-			listen 8080;
-			server_name localhost;
+	try {
+		// std::ifstream file("new.conf");
+		// if (!file)
+		// 	throw std::runtime_error("Failed to open config file");
 
-			error_page 404 /errors/404.html;
-			error_page 403 /errors/403.html;
-			error_page 500 /errors/500.html;
+		// std::stringstream buffer;
+		// buffer << file.rdbuf();
+		// std::string content = buffer.str();
 
-			client_max_body_size 1M;
+		// Tokenizer tokenizer(content);
+		// std::vector<Token> tokens = tokenizer.tokenize();
 
-			# Location: root page with autoindex off
-			location / {
-				root /home/linliu/42_github/rank5/webserver/sites/static/index.html;
-				index index.html;
-				autoindex off;
-				methods GET POST DELETE;
-			}
-	)";
+		Parser parser("../configuration/simple.conf");
+		LocationNode loc = parser.parseLocationBlock();
 
-	Tokenizer tokenizer(config);
-	std::vector<Token> tokens = tokenizer.tokenize();
+		std::cout << "Location path: " << loc.path << "\n";
+		std::cout << "Root: " << loc.root << "\n";
+		std::cout << "Redirect: " << loc.redirect << "\n";
+		std::cout << "Index: " << loc.index << "\n";
+		std::cout << "CGI Path: " << loc.cgi_path << "\n";
+		std::cout << "Upload Dir: " << loc.upload_dir << "\n";
+		std::cout << "Autoindex: " << (loc.autoindex ? "on" : "off") << "\n";
 
-	for (size_t i = 0; i < tokens.size(); ++i) {
-		const Token& tok = tokens[i];
+		std::cout << "Methods: ";
+		for (const std::string& m : loc.methods)
+			std::cout << m << " ";
+		std::cout << "\n";
 
-		std::cout << "Line " << tok.line
-		          << ", Col " << tok.col
-		          << " | Type: " << tokenTypeToString(tok.type)
-		          << " | Value: \"" << tok.value << "\""
-		          << std::endl;
+	} catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << "\n";
 	}
 }
