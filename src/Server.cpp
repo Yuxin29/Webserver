@@ -42,21 +42,49 @@ Server::StartResult Server::start(){
 }
 
 void Server::shutdown(){
-	for (size_t i = 0; i < _virtualHosts.size(); i++){
-		std::cout << "Stopping servers listening on port: " << _virtualHosts[i].port << std::endl;
-		if (_virtualHosts[i].port != -1){
-			close (_listenFd);
-			_listenFd = -1;
-		}
+	if (_listenFd != -1){
+		std::cout << "Stopping servers listening on port: " << _port << std::endl;
+		close (_listenFd);
+		_listenFd = -1;
 	}
 }
 
 int  Server::acceptConnection(void){
+	struct sockaddr_in clientAddr;
+	socklen_t clientLen = sizeof(clientAddr);
+	int clientFd = accept(_listenFd, (struct sockaddr*)&clientAddr, &clientLen);
+	if (clientFd < 0){
+		if (errno == EAGAIN || errno == EWOULDBLOCK){
+			return -1;
+		}
+		std::cerr << "Accept error: " << strerror(errno) << std::endl;
+		return -1;
+	}
+	int flags = fcntl(clientFd, F_GETFL, 0);
+	if (flags < 0 || fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) < 0){
+		close (clientFd);
+		return -1;
+	}
+	return clientFd;
 
 }
 
 Server::ClientStatus Server::handleClient(int clientFd){
+	char buffer[8192];
+	ssize_t nBytes = recv(clientFd, buffer, sizeof(buffer), 0);
+	if (nBytes <= 0){
+		if (nBytes == 0 || (errno != EAGAIN && errno != EWOULDBLOCK)){
+			close (clientFd);
+			return CLIENT_ERROR;
+		}
+		return CLIENT_INCOMPLETE;
+	}
 
+	//Temporary hardcoded to test server
+	std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
+	send (clientFd, response.c_str(), response.size(), 0);
+	close (clientFd);
+	return CLIENT_COMPLETE;
 }
 
 int Server::getListenFd() const {

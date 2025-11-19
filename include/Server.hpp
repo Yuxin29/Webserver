@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <cstring>
 #include <string>
 #include <iostream>
 #include <arpa/inet.h>

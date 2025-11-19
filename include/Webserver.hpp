@@ -14,7 +14,6 @@ class Webserver {
 	private:
 		int 					_epollFd;
 		std::vector<Server> 	_servers;
-		std::map<int, int>		_fdToEvents;
 		std::map<int, size_t> 	_listenFdToServerIndex;
 		std::map<int, size_t>	_clientFdToServerIndex;
 		bool					_running;

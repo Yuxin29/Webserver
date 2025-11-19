@@ -10,6 +10,7 @@ static void signalHandler(int sig){
 Webserver::Webserver() : _running(false){
 	signal(SIGINT, signalHandler);
 	signal(SIGTERM, signalHandler);
+	signal(SIGPIPE, SIG_IGN);
 
 	_epollFd = epoll_create1(0);
 	if (_epollFd < 0){
@@ -64,14 +65,16 @@ int Webserver::runWebserver(){
 	_running = true;
 	const int MAX_EVENTS = 64;
 	struct epoll_event events[MAX_EVENTS];
-
 	while(_running && signalRunning){
-		int nfds = epoll_wait(_epollFd, events, MAX_EVENTS, -1);
+		int nfds = epoll_wait(_epollFd, events, MAX_EVENTS, 1000);
 		if (nfds < 0){
 			if (errno == EINTR){
 				continue;
 			}
 			return utils::FAILURE;
+		}
+		if (nfds == 0){ //expand here eventually to timeout idle connections
+			continue;
 		}
 		for (int i = 0; i < nfds; i++){
 			int fd = events[i].data.fd;
