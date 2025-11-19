@@ -1,7 +1,15 @@
 #include "Server.hpp"
 
 Server::Server(const std::string& host, int port, 
-	const std::vector<Configuration::ServerBlock>& serverBlocks){}
+	const std::vector<Configuration::ServerBlock>& serverBlocks)
+	: _host(host), _port(port), _virtualHosts(serverBlocks), _listenFd(-1), _addr(){
+		_addr.sin_family = AF_INET;
+		if (inet_pton(AF_INET, _host.c_str(), &_addr.sin_addr) <= 0){
+			throw std::runtime_error("Invalid Ip address: " + _host);
+		}
+		_addr.sin_port = htons(_port);
+}
+
 
 Server::~Server(){
 	shutdown();
@@ -36,6 +44,10 @@ Server::StartResult Server::start(){
 void Server::shutdown(){
 	for (size_t i = 0; i < _virtualHosts.size(); i++){
 		std::cout << "Stopping servers listening on port: " << _virtualHosts[i].port << std::endl;
+		if (_virtualHosts[i].port != -1){
+			close (_listenFd);
+			_listenFd = -1;
+		}
 	}
 }
 

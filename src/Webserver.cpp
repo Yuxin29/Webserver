@@ -10,10 +10,18 @@ static void signalHandler(int sig){
 Webserver::Webserver() : _running(false){
 	signal(SIGINT, signalHandler);
 	signal(SIGTERM, signalHandler);
+
+	_epollFd = epoll_create1(0);
+	if (_epollFd < 0){
+		throw std::runtime_error("Failed to create epoll instance");
+	}
 }
 
 Webserver::~Webserver(){
 	stopWebserver();
+	if (_epollFd >= 0){
+		close(_epollFd);
+	}
 }
 
 int Webserver::createServers(const Configuration& config){
@@ -41,7 +49,12 @@ int Webserver::createServers(const Configuration& config){
 			return utils::FAILURE;
 		}
 		int listenFd = _servers[i].getListenFd();
-		_pollFds.push_back({listenFd, POLLIN, 0});
+		struct epoll_event ev;
+		ev.events = EPOLLIN;
+		ev.data.fd = listenFd;
+		if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, listenFd, &ev) < 0){
+			return utils::FAILURE;
+		}
 		_listenFdToServerIndex[listenFd] = i;
 	}
 	return utils::SUCCESS;
@@ -49,8 +62,30 @@ int Webserver::createServers(const Configuration& config){
 
 int Webserver::runWebserver(){	
 	_running = true;
-	while(_running && signalRunning){
+	const int MAX_EVENTS = 64;
+	struct epoll_event events[MAX_EVENTS];
 
+	while(_running && signalRunning){
+		int nfds = epoll_wait(_epollFd, events, MAX_EVENTS, -1);
+		if (nfds < 0){
+			if (errno == EINTR){
+				continue;
+			}
+			return utils::FAILURE;
+		}
+		for (int i = 0; i < nfds; i++){
+			int fd = events[i].data.fd;
+			if (events[i].events & EPOLLIN){
+				if (isListeningSocket(fd)){
+					handleNewConnection(fd);
+				} else {
+					handleClientRequest(fd);
+				}
+			}
+			if (hasError(events[i])){
+				removeClientFd(fd);
+			}
+		}
 	}
 	return utils::SUCCESS;
 }
@@ -68,7 +103,7 @@ bool Webserver::isListeningSocket(int fd) const {
 }
 
 void Webserver::handleNewConnection(int listenFd){	
-	auto it = _listenFdToServerIndex.find(listenFd);
+	const auto& it = _listenFdToServerIndex.find(listenFd);
 	if (it == _listenFdToServerIndex.end()){
 		return;
 	}
@@ -81,7 +116,7 @@ void Webserver::handleNewConnection(int listenFd){
 }
 
 void Webserver::handleClientRequest(int clientFd){
-	auto it = _clientFdToServerIndex.find(clientFd);
+	const auto& it = _clientFdToServerIndex.find(clientFd);
 	if (it == _clientFdToServerIndex.end()){
 		return;
 	}
@@ -100,16 +135,16 @@ void Webserver::handleClientRequest(int clientFd){
 
 void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 	_clientFdToServerIndex[clientFd] = serverIndex;
-	_pollFds.push_back({clientFd, POLLIN, 0});
+	struct epoll_event ev;
+	ev.events = EPOLLIN;
+	ev.data.fd = clientFd;
+	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, clientFd, &ev) < 0){
+		std::cout << strerror(errno) << std::endl;
+	}
 }
 
 void Webserver::removeFdFromPoll(int fd){
-	for (auto it = _pollFds.begin(); it != _pollFds.end(); it++){
-		if (it->fd == fd){
-			_pollFds.erase(it);
-			break;
-		}
-	}
+	epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL);
 }
 
 void Webserver::removeClientFd(int clientFd){
@@ -128,7 +163,8 @@ void Webserver::closeAllClients(void){
 	_clientFdToServerIndex.clear();
 }
 
-bool Webserver::hasError(const pollfd& pollFd) const{
-	return (pollFd.revents & POLL_HUP) || (pollFd.revents & POLL_ERR)
-		 || (pollFd.revents & POLLNVAL);
+bool Webserver::hasError(const epoll_event& event) const{
+	return (event.events & EPOLLHUP) ||
+		   (event.events & EPOLLERR) ||
+		   (event.events & EPOLLRDHUP);
 }

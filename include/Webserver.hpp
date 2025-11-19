@@ -3,16 +3,18 @@
 #include "Config.hpp"
 #include "utils.hpp"
 #include <map>
-#include <poll.h>
+#include <sys/epoll.h>
 #include <signal.h>
 #include <iostream>
 #include <vector>
 #include <string>
+#include <cstring>
 
 class Webserver {
 	private:
-		std::vector<pollfd>		_pollFds;
+		int 					_epollFd;
 		std::vector<Server> 	_servers;
+		std::map<int, int>		_fdToEvents;
 		std::map<int, size_t> 	_listenFdToServerIndex;
 		std::map<int, size_t>	_clientFdToServerIndex;
 		bool					_running;
@@ -27,7 +29,7 @@ class Webserver {
 		void removeClientFd(int clientFd);
 		void closeAllClients(void);
 
-		bool hasError(const pollfd& pfd) const;
+		bool hasError(const epoll_event& event) const;
 
 	public:
 		explicit Webserver();
