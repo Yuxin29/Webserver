@@ -1,6 +1,8 @@
 #include "ConfigTokenizer.hpp"
 #include <cctype> //std::isspace, std::isdigit
 #include <stdexcept>
+#include <format>
+#include <iostream> //debug
 
 Tokenizer::Tokenizer(std::string& source)
 :_source(source),_pos(0),_line(1),_col(1){}
@@ -58,7 +60,7 @@ Token Tokenizer::nextToken()
 		return tokenizeIdentifier();
 	if (c == '{' || c == '}' || c == ';')
 		return tokenizeSymbol();
-	throw std::runtime_error("unexpected character '" + std::string(1, c) + "' at line " + std::to_string(start_line) + ", col " + std::to_string(start_col));
+	throw std::runtime_error(std::format("Unexpected character '{}' at line{}, col{}", c, start_line, start_col));
 }
 
 Token Tokenizer::tokenizeIdentifier()

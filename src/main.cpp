@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include "ConfigParser.hpp"
+#include "ConfigTokenizer.hpp"
 
 std::string tokenTypeToString(TokenType type) {
 	switch (type) {
@@ -32,7 +32,7 @@ int main() {
 				root /home/linliu/42_github/rank5/webserver/sites/static/index.html;
 				index index.html;
 				autoindex off;
-				methods GET;
+				methods GET POST DELETE;
 			}
 	)";
 
