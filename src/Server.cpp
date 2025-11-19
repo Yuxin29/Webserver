@@ -74,6 +74,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	ssize_t nBytes = recv(clientFd, buffer, sizeof(buffer), 0);
 	if (nBytes <= 0){
 		if (nBytes == 0 || (errno != EAGAIN && errno != EWOULDBLOCK)){
+			_partialRequests.erase(clientFd);
 			close (clientFd);
 			return CLIENT_ERROR;
 		}

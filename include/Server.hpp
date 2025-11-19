@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <map>
 #include <cstring>
 #include <string>
 #include <iostream>
@@ -34,6 +35,7 @@ class Server {
 		::ServerBlock>	_virtualHosts;
 		sockaddr_in		_addr;
 		Http			_httpHandler;
+		std::map<int, std::string> _partialRequests;
 
 		const Configuration::ServerBlock* matchVirtualHost(const std::string& host);
 		std::string extractHostHeader(const std::string& rawRequest) const;
