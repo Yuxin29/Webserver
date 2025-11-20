@@ -149,7 +149,12 @@ void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 }
 
 void Webserver::removeFdFromPoll(int fd){
-	epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL);
+	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) < 0){
+		if (errno != ENOENT && errno != EBADF){
+			std::cerr << "epoll_ctl_del failed on fd " << fd << ": "
+				 << strerror(errno) << std::endl;
+		}
+	}
 }
 
 void Webserver::removeClientFd(int clientFd){
