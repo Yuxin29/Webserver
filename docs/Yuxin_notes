@@ -82,8 +82,8 @@ C | Configuration & CGI Manager | - Design and implement server.conf parser
 目标：能解析完整的 HTTP 请求（start-line、headers、body）
 ✅  ❌ ⏳ ⚠️
 ------------------------
-Day 1 — 架构搭建 + HTTP 基础复习                                                ✅
-学习：HTTP/1.1 结构, Request-Line, Headers, CRLF, Body（Content-Length）        ✅
+Day 1 — 架构搭建 + HTTP 基础复习                                                 ✅
+学习：HTTP/1.1 结构, Request-Line, Headers, CRLF, Body（Content-Length）         ✅
 实现：HttpRequest, HttpParser 类骨架                                            ✅
 
 Day 2 — parseRequestLine()
@@ -264,3 +264,16 @@ iterator iterates,
 it points to the any pair in the container map
 it->firs    //key
 it->second  //value
+
+====================================================== http rules for GET POST DELETE ======================================================
+| Method     | Can have a body?  | "Content-Length" needed?           | "Content-Type" needed?   | Notes                                                                                                                             |
+| ---------- | ----------------- | ---------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| **GET**    | Rare / Usually no | Not needed                         | Optional                 | GET requests normally do **not have a body**. Some servers allow it, but it’s unusual and most clients/servers ignore it.         |
+| **POST**   | Yes               | **Required**                       | Optional but recommended | POST is the standard method to send a body (e.g., form data, JSON). `Content-Length` is necessary to know how many bytes to read. |
+| **DELETE** | Rarely            | Required if body exists            | Optional                 | HTTP spec allows a body, but it’s unusual. If your parser sees a body, `Content-Length` is needed to parse it.                    |
+
+
+1. HTTP/1.1 Keep-Alive
+
+By default, HTTP/1.1 connections are persistent (keep-alive), unless the server sends Connection: close in its response. 
+This means the TCP connection can be reused for multiple requests.
