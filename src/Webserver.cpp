@@ -137,13 +137,15 @@ void Webserver::handleClientRequest(int clientFd){
 }
 
 void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
-	_clientFdToServerIndex[clientFd] = serverIndex;
 	struct epoll_event ev;
 	ev.events = EPOLLIN;
 	ev.data.fd = clientFd;
 	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, clientFd, &ev) < 0){
+		close (clientFd);
 		std::cerr << strerror(errno) << std::endl;
+		return;
 	}
+	_clientFdToServerIndex[clientFd] = serverIndex;
 }
 
 void Webserver::removeFdFromPoll(int fd){
@@ -156,6 +158,7 @@ void Webserver::removeClientFd(int clientFd){
 		_clientFdToServerIndex.erase(it);
 	}
 	removeFdFromPoll(clientFd);
+	close (clientFd);
 }
 
 void Webserver::closeAllClients(void){

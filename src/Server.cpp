@@ -2,7 +2,7 @@
 
 Server::Server(const std::string& host, int port, 
 	const std::vector<Configuration::ServerBlock>& serverBlocks)
-	: _host(host), _port(port), _virtualHosts(serverBlocks), _listenFd(-1), _addr(){
+	: _host(host), _listenFd(-1), _port(port), _virtualHosts(serverBlocks), _addr(){
 		_addr.sin_family = AF_INET;
 		if (inet_pton(AF_INET, _host.c_str(), &_addr.sin_addr) <= 0){
 			throw std::runtime_error("Invalid Ip address: " + _host);
@@ -10,10 +10,13 @@ Server::Server(const std::string& host, int port,
 		_addr.sin_port = htons(_port);
 }
 
-
 Server::~Server(){
 	shutdown();
 }
+
+Server::Server(const Server& other)
+	: _host(other._host), _listenFd(other._listenFd), _port(other._port),
+		 _virtualHosts(other._virtualHosts), _addr(other._addr){}
 
 Server::StartResult Server::start(){
 	_listenFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -130,15 +133,38 @@ const Configuration::ServerBlock* Server::matchVirtualHost(const std::string& ho
 std::string Server::extractHostHeader(const std::string& rawRequest) const {
 	std::istringstream streamRequest(rawRequest);
 	std::string line;
+	while (std::getline(streamRequest, line)){
+		if (line.compare(0, 5, "Host:") == 0){
+			size_t start = line.find_first_not_of(" \t", 5);
+			if (start != std::string::npos){
+				size_t end = line.find_last_of("\r\n");
+				std::string host = line.substr(start, end - start);
 
+				size_t colonPos = host.find(":");
+				if (colonPos != std::string::npos){
+					host = host.substr(0, colonPos);
+				}
+				return host;
+			}	
+		}
+	}
+	return "";
 }
 
 const Configuration::ServerBlock::LocationBlock* 
-	Server::findLocation(const Configuration::ServerBlock& server, const std::string& path) const {
-		for (size_t i = 0; i < server.locations.size(); i++){
-			if (server.locations[i].path == path){
-				return &server.locations[i];
+	Server::findLocation(const Configuration::ServerBlock& server,
+			const std::string& path) const {
+	const Configuration::ServerBlock::LocationBlock* bestMatch = nullptr;
+	size_t longestPrefix = 0;
+
+	for (size_t i = 0; i < server.locations.size(); i++){
+		const std::string& locPath = server.locations[i].path;
+		if (path.find(locPath) == 0){
+			if (locPath.length() > longestPrefix){
+				longestPrefix = locPath.length();
+				bestMatch = &server.locations[i];
 			}
 		}
-	return nullptr;
+	}
+	return bestMatch;
 }

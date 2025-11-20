@@ -41,11 +41,11 @@ class Server {
 		std::string extractHostHeader(const std::string& rawRequest) const;
 		const Configuration::ServerBlock::LocationBlock* findLocation(const Configuration::ServerBlock& server,
 						const std::string& path) const;
-								
+
 	public:
 		Server() = delete;
 		explicit Server(const std::string& host, int port, const std::vector<Configuration::ServerBlock>& serverBlocks);
-		Server(const Server& other) = delete;
+		Server(const Server& other);
 		Server& operator=(const Server& other) = delete;
 		~Server();
 

@@ -1,5 +1,7 @@
 #pragma once
 #include <map>
+#include <vector>
+#include <string>
 #include <iostream>
 
 //Placeholder class to be obtained from parsed config file
@@ -47,7 +49,28 @@ class Configuration{
 
 		bool load(const std::string& path){
 			(void)path;
-			return 1;
-			//pass default path if none was provided
+			
+			// Create a minimal test server block
+			ServerBlock testServer;
+			testServer.port = 8080;
+			testServer.host = "0.0.0.0";
+			testServer.serverNames.push_back("localhost");
+			testServer.serverNames.push_back("127.0.0.1");
+			testServer.root = "/var/www/html";
+			testServer.index = "index.html";
+			testServer.clientMaxBodySize = 1048576; // 1MB
+			
+			// Add a root location
+			ServerBlock::LocationBlock rootLocation;
+			rootLocation.path = "/";
+			rootLocation.allowedMethods.push_back("GET");
+			rootLocation.allowedMethods.push_back("POST");
+			rootLocation.autoindex = false;
+			rootLocation.root = "/var/www/html";
+			testServer.locations.push_back(rootLocation);
+			
+			_serverBlocks.push_back(testServer);
+			
+			return true;
 		}
 };
