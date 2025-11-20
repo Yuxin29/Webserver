@@ -4,46 +4,48 @@
 #include <string>
 #include <vector>
 
-enum TokenType
-{
-	TK_IDENTIFIER, //server, root, error_page
-	TK_NUMBER, // 8080, 404, 10240
-	TK_LBRACE, //{
-	TK_RBRACE,//}
-	TK_SEMICOLON,
-	TK_EOF,
-	//TK_STRING, //"/var/www/html"
-};
+namespace config{
+	enum TokenType
+	{
+		TK_IDENTIFIER, //server, root, error_page
+		TK_NUMBER, // 8080, 404, 10240
+		TK_LBRACE, //{
+		TK_RBRACE,//}
+		TK_SEMICOLON,
+		TK_EOF,
+		//TK_STRING, //"/var/www/html"
+	};
 
-struct Token
-{
-	TokenType type;
-	std::string value;
-	int	line;
-	int	col;
-};
+	struct Token
+	{
+		TokenType type;
+		std::string value;
+		int	line;
+		int	col;
+	};
 
-class Tokenizer
-{
-public:
-	Tokenizer(std::string& source);
-	std::vector<Token> tokenize();
-private:
-	const std::string& _source;
-	std::size_t _pos;
-	int _line;
-	int _col;
+	class Tokenizer
+	{
+	public:
+		Tokenizer(std::string& source);
+		std::vector<Token> tokenize();
+	private:
+		const std::string& _source;
+		std::size_t _pos;
+		int _line;
+		int _col;
 
-	char peek() const;
-	char get();
-	bool eof() const;
-	void skipWhitespaceAndComments();
-	Token nextToken();
-	Token tokenizeIdentifier();
-	Token tokenizeSymbol(); //{}
-	//Token tokenizeNumber();
-	//Token tokenizeString();
-	//error()?
-};
+		char peek() const;
+		char get();
+		bool eof() const;
+		void skipWhitespaceAndComments();
+		Token nextToken();
+		Token tokenizeIdentifier();
+		Token tokenizeSymbol(); //{}
+		//Token tokenizeNumber();
+		//Token tokenizeString();
+		//error()?
+	};
+}
 
 #endif

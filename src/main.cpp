@@ -1,39 +1,53 @@
-#include <fstream>
-#include <iostream>
 #include "ConfigParser.hpp"
 #include "ConfigTokenizer.hpp"
-#include <sstream>
+#include <iostream>
+using namespace config;
 
 int main() {
 	try {
-		// std::ifstream file("new.conf");
-		// if (!file)
-		// 	throw std::runtime_error("Failed to open config file");
+		// point to config file
+		config::Parser parser("configuration/webserv.conf");
 
-		// std::stringstream buffer;
-		// buffer << file.rdbuf();
-		// std::string content = buffer.str();
+		// parse it into vector of ServerNode
+		std::vector<ServerNode> servers = parser.parse();
 
-		// Tokenizer tokenizer(content);
-		// std::vector<Token> tokens = tokenizer.tokenize();
+		//  print results
+		for (std::size_t i = 0; i < servers.size(); ++i) {
+			const ServerNode& server = servers[i];
+			std::cout << "==== Server " << i + 1 << " ====\n";
+			std::cout << "Listen: " << server.listen.first << ":" << server.listen.second << "\n";
+			std::cout << "Root: " << server.root << "\n";
 
-		Parser parser("../configuration/simple.conf");
-		LocationNode loc = parser.parseLocationBlock();
+			std::cout << "Server Names:\n";
+			for (const std::string& name : server.server_names)
+				std::cout << "  - " << name << "\n";
 
-		std::cout << "Location path: " << loc.path << "\n";
-		std::cout << "Root: " << loc.root << "\n";
-		std::cout << "Redirect: " << loc.redirect << "\n";
-		std::cout << "Index: " << loc.index << "\n";
-		std::cout << "CGI Path: " << loc.cgi_path << "\n";
-		std::cout << "Upload Dir: " << loc.upload_dir << "\n";
-		std::cout << "Autoindex: " << (loc.autoindex ? "on" : "off") << "\n";
+			std::cout << "Error Pages:\n";
+			for (const auto& [code, path] : server.error_pages)
+				std::cout << "  " << code << " => " << path << "\n";
 
-		std::cout << "Methods: ";
-		for (const std::string& m : loc.methods)
-			std::cout << m << " ";
-		std::cout << "\n";
+			std::cout << "Client Max Body Size: " << server.client_max_body_size << "\n";
 
-	} catch (const std::exception& e) {
-		std::cerr << "Error: " << e.what() << "\n";
+			std::cout << "Locations:\n";
+			for (const LocationNode& loc : server.locations) {
+				std::cout << "  Path: " << loc.path << "\n";
+				std::cout << "  Root: " << loc.root << "\n";
+				std::cout << "  Index: " << loc.index << "\n";
+				std::cout << "  Autoindex: " << (loc.autoindex ? "on" : "off") << "\n";
+				std::cout << "  Redirect: " << loc.redirect << "\n";
+				std::cout << "  CGI Path: " << loc.cgi_path << "\n";
+				std::cout << "  Upload Dir: " << loc.upload_dir << "\n";
+				std::cout << "  Methods:\n";
+				for (const std::string& method : loc.methods)
+					std::cout << "    - " << method << "\n";
+				std::cout << "\n";
+			}
+			std::cout << std::endl;
+		}
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error while parsing config: " << e.what() << std::endl;
+		return 1;
 	}
 }
+

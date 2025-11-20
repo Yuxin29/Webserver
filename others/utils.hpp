@@ -9,11 +9,11 @@ namespace utils {
 
 	// Error messages
 	enum error_macros{
-			WRONG_ARGUMENTS = 1,
+			WRONG_ARGUMENTS,
 			FAILED_TO_CREATE_SERVERS,
 			ERROR_RUNNING_SERVERS,
 			PARSE_ERROR
 	};
-	
+
 	int returnErrorMessage(int errorCode);
 }
