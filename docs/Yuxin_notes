@@ -96,10 +96,12 @@ Day 3 — parseHeaders()
 学习：key:value, 大小写不敏感, header 合并规则, Host 必须存在（HTTP/1.1 规范）
 实现：parseHeaders()
 测试：重复 header, 缺少 CRLF
+
 Day 4 — parseBody()（Content-Length）
 学习：Content-Length, body 大小限制（防止 413）
 实现：parseBody()
 测试：curl -d "hello" localhost:8080
+
 Day 5 — 状态机（非阻塞需要）
 学习状态机： START_LINE, HEADERS, BODY, DONE
 实现： HttpParser::consume(buffer), 能够分段解析（防止 slowloris）
@@ -256,3 +258,9 @@ ss >> a >> b >> num;
 // b = "world"
 // num = 42
 
+====================================================== iterator ======================================================
+std::map<std::string, std::string>::iterator it;
+iterator iterates,
+it points to the any pair in the container map
+it->firs    //key
+it->second  //value

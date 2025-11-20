@@ -47,102 +47,127 @@ void HttpParser::parseStartLine(const std::string& startline){
 }
 
 //below one is private, it will be recalled for a few times.
+//example http request with a content lenth
+// POST /login HTTP/1.1
+// Host: example.com
+// User-Agent: curl/7.81.0 
+// Content-Type: application/x-www-form-urlencoded 
+// Content-Length: 27 
+// \r\n
+// username=John&password=1234
 void HttpParser::parseHeaderLine(const std::string& headerline){
-    //first check if headers are done
-    // if (headerline.empty()){
-    //     _state = BODY;
-    //     return;
-    // }
-    if (headerline.empty()) {
-        // check if Content-Length exists
-        std::map<std::string, std::string>::iterator it =
-            _requestHeaders.find("Content-Length");
-        
-        if (it != _requestHeaders.end()) {
-            _bufferLength = std::stoi(it->second);
+    // first check if headers are done, \r\n will be removed \r\n
+    if (headerline.empty()){
+        std::map<std::string, std::string>::iterator it = _requestHeaders.find("Content-Length"); // try to find content length in map to see it there is bodu
+        //if the abouve find it, iit returns the content length pair
+        // if not find, return map.end. end of one step past the last element
+        if (it != _requestHeaders.end()){//so this is find it 
+            _bodyLength = std::stoi(it->second);
             _state = BODY;
-        } else {
-            _state = DONE;
         }
+        else
+            _state = DONE;
         return;
     }
+    //if not: still in the headers stage: find ":"
+     size_t dd = headerline.find(":");
+    if (dd == std::string::npos)
+        return;
 
-    //if not: find ":"
-    size_t dd = headerline.find(":"); //dd: double dots
     std::string key = headerline.substr(0, dd);
     std::string value = headerline.substr(dd + 1);
+
+    key.erase(0, key.find_first_not_of(" \t"));
+    key.erase(key.find_last_not_of(" \t") + 1);
+
+    value.erase(0, value.find_first_not_of(" \t"));
+    value.erase(value.find_last_not_of(" \t") + 1);
+
     _requestHeaders[key] = value;
 }
 
 //this one is going to called mamy times, basically whenever recv() some new bytes, 
 // one call of this only append / parse one chunk of data
+// the data might be ramdom pieces, not neccessarily a full line
 HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
 {
     _buffer += rawLine;
     
-    std::istringstream ss(_buffer);
-    std::string         line;
-
-    while (_state != DONE && std::getline(ss, line)) // there is repeatance here when parseHttpRequest called again,
+    // std::istringstream ss(_buffer);
+    // std::string         line;
+    size_t pos = 0;
+    while (_state != DONE ) // there is repeatance here when parseHttpRequest called again, getline removes the \n
     {
-        // remove trailing '\r'
-        if (!line.empty() && line.back() == '\r')
-            line.pop_back();
-            
-        if (_state == START_LINE)
+        if (_state == START_LINE || _state == HEADERS)
         {
-            parseStartLine(line);
-            //continue;
+            size_t end = _buffer.find("\r\n", pos);
+            if (end == std::string::npos)
+                return HttpRequest();
+            std::string line = _buffer.substr(pos, end - pos);
+            pos = end + 2;
+            if (!line.empty() && line.back() == '\r')  // check is the last one is \r
+                line.pop_back();    //remove the last char \r
+            if (_state == START_LINE)
+            {
+                parseStartLine(line);
+                continue;
+            }
+            if (_state == HEADERS)
+            {
+                parseHeaderLine(line);
+                if (_state == DONE)
+                    break;
+                if (_state == BODY)
+                    break;
+            }
         }
-        if (_state == HEADERS)
+        if (_state == BODY)
         {
-            parseHeaderLine(line);
-            //continue;
+            size_t available = _buffer.size() - pos;
+            _body += _buffer.substr(pos, available);
+            pos += available;
+            if (_body.size() >= _bodyLength)
+                _state = DONE;
+            break;
         }
     }
-    if (_state == BODY)
-    {
-        std::string remaining;
-        std::getline(ss, remaining, '\0');
-        _body += remaining;
-        if (_body.size() >= _bufferLength)
-            _state = DONE;
-    }
-    if (_state == DONE){
+    if (pos > 0)
+        _buffer.erase(0, pos);
+    if (_state == DONE)
         return HttpRequest(_method, _path, _version, _body, _requestHeaders);
-    } 
     return HttpRequest();
 }
 /*  ******************************HttpRequest Parsing********************************  */
 
 /*  ******************************Response Request********************************  */
-// HttpResponse::HttpResponse(const std::string& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& responseHeaders)
-//     :_version(version), _status(status), _phase(phase), _body(body), _responseHeaders(responseHeaders){
-// }
+HttpResponse::HttpResponse(const std::string& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& responseHeaders)
+    :_version(version), _status(status), _phase(phase), _body(body), _responseHeaders(responseHeaders){
+}
 
-// HttpResponse::HttpResponse(const HttpResponse& other)
-//     : _version(other._version), _status(other._status), _phase(other._phase), _body(other._body), _responseHeaders(other._responseHeaders){
-// }            
+HttpResponse::HttpResponse(const HttpResponse& other)
+    : _version(other._version), _status(other._status), _phase(other._phase), _body(other._body), _responseHeaders(other._responseHeaders){
+}          
 
-// HttpResponse::~HttpResponse(){
-// }
+HttpResponse::~HttpResponse(){
+}
 
-// std::string HttpResponse::getMethod(){
-//     return _method;
-// }
+const std::string HttpResponse::getVersion(){
+    return _version;
+}
 
-// std::string HttpResponse::getrequestPath(){
-//     return _requestPath;
-// }   
+const std::string HttpResponse::getStatus(){
+    return _status;
+}   
 
-// std::string HttpResponse::getVersion(){
-//     return _version;
-// }   
+const std::string HttpResponse::getPhase(){
+    return _phase;
+}   
 
-// std::map<std::string, std::string>  HttpResponse::getrequestHeaders(){
-//     return _body;
-// }
-// std::string HttpResponse::getBody(){
-//     return _responseHeaders;
-// }
+const std::string HttpResponse::getBody(){
+    return _body;
+}
+
+const std::map<std::string, std::string>  HttpResponse::getResponseHeaders(){
+    return _responseHeaders;
+}
 /*  ******************************Response Request********************************  */

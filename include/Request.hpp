@@ -81,14 +81,14 @@ private:
     std::string                         _body;
     //buffering here
     std::string                         _buffer;
-    size_t                              _bufferLength;
+    size_t                              _bodyLength; // for the body
 
     void parseStartLine(const std::string& startline);
     void parseHeaderLine(const std::string& headerline);
 
 public:
     State   _state = START_LINE;
-    HttpParser() :_bufferLength(0){};
+    HttpParser() :_bodyLength(0){};
 
     HttpRequest parseHttpRequest(const std::string& rawLine);
 };
@@ -102,25 +102,25 @@ public:
 // 1.<status-line>\r\n
 // VERSION SP STATUS_CODE SP REASON_PHRASE CRLF
 // HTTP/1.1 200 OK\r\needs
-// class HttpResponse{
-// private:
-//     std::string                         _version;
-//     std::string                         _status;
-//     std::string                         _phase;
-//     std::map<std::string, std::string>  _responseHeaders;
-//     std::string                         _body;
+class HttpResponse{
+private:
+    const std::string                         _version;
+    const std::string                         _status;
+    const std::string                         _phase;
+    const std::string                         _body;
+    const std::map<std::string, std::string>  _responseHeaders;
 
-// public:
-//     //Orthodox * 4 
-//     HttpResponse(const std::string& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& responseHeaders);
-//     HttpResponse(const HttpResponse& other);               
-//     HttpResponse& operator=(const HttpResponse &other) = delete;
-//     ~HttpResponse();
+public:
+    //Orthodox * 4 
+    HttpResponse(const std::string& version, const std::string& status, const std::string& phase, const std::string& body, const std::map<std::string, std::string>& responseHeaders);
+    HttpResponse(const HttpResponse& other);               
+    HttpResponse& operator=(const HttpResponse &other) = delete;
+    ~HttpResponse();
 
-//     //getters
-//     std::string                         getVersion();
-//     std::string                         getStatus();
-//     std::string                         getPhase();
-//     std::map<std::string, std::string>  getrequestHeaders();
-//     std::string                         getBody();
-// };
+    //getters
+    const std::string                         getVersion();
+    const std::string                         getStatus();
+    const std::string                         getPhase();
+    const std::string                         getBody();
+    const std::map<std::string, std::string>  getResponseHeaders();
+};
