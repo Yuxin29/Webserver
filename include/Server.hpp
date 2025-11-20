@@ -3,6 +3,7 @@
 #include <map>
 #include <cstring>
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -31,19 +32,16 @@ class Server {
 		std::string 	_host;
 		int				_listenFd;
 		int  			_port;
-		std::vector<Configuration
-		::ServerBlock>	_virtualHosts;
+		std::vector<Configuration::ServerBlock>	_virtualHosts;
 		sockaddr_in		_addr;
 		Http			_httpHandler;
 		std::map<int, std::string> _partialRequests;
 
-		const Configuration::ServerBlock* matchVirtualHost(const std::string& host);
+		const Configuration::ServerBlock* matchVirtualHost(const std::string& hostHeader);
 		std::string extractHostHeader(const std::string& rawRequest) const;
-		const Configuration::ServerBlock::LocationBlock*
-			findLocation(const Configuration::ServerBlock& server,
+		const Configuration::ServerBlock::LocationBlock* findLocation(const Configuration::ServerBlock& server,
 						const std::string& path) const;
-		bool shouldKeepAlive(const std::string& rawRequest) const;
-		
+								
 	public:
 		Server() = delete;
 		explicit Server(const std::string& host, int port, const std::vector<Configuration::ServerBlock>& serverBlocks);

@@ -26,7 +26,7 @@ Server::StartResult Server::start(){
 		return START_SOCKET_ERROR;
 	}
 	if (bind(_listenFd, (struct sockaddr *)&_addr, sizeof(_addr)) < 0){
-		close(_listenFd);
+		close (_listenFd);
 		return START_BIND_ERROR;
 	}
 	if (listen(_listenFd, SOMAXCONN) < 0){
@@ -72,20 +72,37 @@ int  Server::acceptConnection(void){
 Server::ClientStatus Server::handleClient(int clientFd){
 	char buffer[8192];
 	ssize_t nBytes = recv(clientFd, buffer, sizeof(buffer), 0);
-	if (nBytes <= 0){
-		if (nBytes == 0 || (errno != EAGAIN && errno != EWOULDBLOCK)){
-			_partialRequests.erase(clientFd);
-			close (clientFd);
-			return CLIENT_ERROR;
+	if (nBytes < 0){
+		if (errno == EAGAIN || errno == EWOULDBLOCK){
+			return CLIENT_INCOMPLETE;
 		}
+		_partialRequests.erase(clientFd);
+		return CLIENT_ERROR;
+	}
+	if (nBytes == 0){
+		_partialRequests.erase(clientFd);
+		return CLIENT_ERROR;
+	}
+	_partialRequests[clientFd].append(buffer, nBytes);
+	std::string& request = _partialRequests[clientFd];
+	size_t headerEnd = request.find("\r\n\r\n");
+	if (headerEnd == std::string::npos){
 		return CLIENT_INCOMPLETE;
 	}
-
-	//Temporary hardcoded to test server
-	std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
-	send (clientFd, response.c_str(), response.size(), 0);
-	close (clientFd);
-	return CLIENT_COMPLETE;
+	std::string hostHeader = extractHostHeader(request);
+	const Configuration::ServerBlock* virtualHost = matchVirtualHost(hostHeader);
+	if (!virtualHost){
+		_partialRequests.erase(clientFd);
+		return CLIENT_ERROR;
+	}
+	httpResponse response = _httpHandler.processRequest(request, *virtualHost);
+	ssize_t sent = send(clientFd, response.responseData.c_str(), response.responseData.size(), 0);
+	if (sent < 0){
+		_partialRequests.erase(clientFd);
+		return CLIENT_ERROR;
+	}
+	_partialRequests.erase(clientFd);
+	return response.keepConnectionAlive ? CLIENT_KEEP_ALIVE : CLIENT_COMPLETE;
 }
 
 int Server::getListenFd() const {
@@ -96,20 +113,32 @@ int Server::getPort() const {
 	return _port;
 }
 
-const Configuration::ServerBlock* matchVirtualHost(const std::string& host){
-
+const Configuration::ServerBlock* Server::matchVirtualHost(const std::string& hostHeader){
+	for(size_t i = 0; i < _virtualHosts.size(); i++){
+		for (size_t j = 0; j < _virtualHosts[i].serverNames.size(); j++){
+			if (_virtualHosts[i].serverNames[j] == hostHeader){
+				return &_virtualHosts[i];
+			}
+		}
+	}
+	if (!_virtualHosts.empty()){
+		return &_virtualHosts[0];
+	}
+	return nullptr;
 }
 
 std::string Server::extractHostHeader(const std::string& rawRequest) const {
+	std::istringstream streamRequest(rawRequest);
+	std::string line;
 
 }
 
 const Configuration::ServerBlock::LocationBlock* 
-	Server::findLocation(const Configuration::ServerBlock& server,
-		const std::string& path) const {
-
-}
-
-bool Server::shouldKeepAlive(const std::string& rawRequest) const {
-
+	Server::findLocation(const Configuration::ServerBlock& server, const std::string& path) const {
+		for (size_t i = 0; i < server.locations.size(); i++){
+			if (server.locations[i].path == path){
+				return &server.locations[i];
+			}
+		}
+	return nullptr;
 }

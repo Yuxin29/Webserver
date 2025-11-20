@@ -142,7 +142,7 @@ void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 	ev.events = EPOLLIN;
 	ev.data.fd = clientFd;
 	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, clientFd, &ev) < 0){
-		std::cout << strerror(errno) << std::endl;
+		std::cerr << strerror(errno) << std::endl;
 	}
 }
 

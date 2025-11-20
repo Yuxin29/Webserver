@@ -1,14 +1,24 @@
 #pragma once
 #include <iostream>
 
+ struct httpResponse {
+            std::string responseData;
+            bool keepConnectionAlive;
+            int statusCode;
+        };
+
 //Placeholder for http class that will process the requests and return responses
 class Http{
+
+    public:
+       
 
 	private:
 		std::string _name;
 
 	public:
 		void setName(const std::string& name);
+        httpResponse processRequest(const std::string& request, const Configuration::ServerBlock& server);
 
 		// maybe needed for Http
     // parseRequest(rawData) → Request object
