@@ -41,9 +41,9 @@ public:
     ~HttpRequest();
 
     //getters
-    const std::string                         getMethod();
-    const std::string                         getrequestPath();
-    const std::string                         getVersion();
-    const std::map<std::string, std::string>  getrequestHeaders();
-    const std::string                         getBody();
+    const std::string&                         getMethod() const;
+    const std::string&                         getrequestPath() const;
+    const std::string&                          getVersion() const;
+    const std::map<std::string, std::string>&  getrequestHeaders() const;
+    const std::string&                         getBody() const;
 };

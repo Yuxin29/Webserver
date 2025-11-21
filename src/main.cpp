@@ -2,6 +2,7 @@
 #include "HttpRequest.hpp"
 #include "HttpRequestParser.hpp"
 #include "HttpResponse.hpp"
+#include "HttpResponseHandler.hpp"
 
 //testing for yuxin request part, not the real main, can be commented if anyone is merging to main
 int main() {
@@ -51,7 +52,7 @@ int main() {
     }
     std::cout << "--------------" << std::endl;
 
-    std::cout << " ------------------------ testing http request ----------------------" << std::endl; 
+    std::cout << " ------------------------ testing http reponse ----------------------" << std::endl; 
     std::map<std::string, std::string> headers;
     headers["Content-Type"] = "text/plain";
 
@@ -62,7 +63,29 @@ int main() {
         "Hello World\n",  // _body
         headers
     };
-
     std::cout << res.buildResponse() << std::endl;
+
+    std::cout << " ------------------------ testing HttpResponseHandler ----------------------" << std::endl; 
+    // Example HTTP requests
+    std::map<std::string, std::string> headers2;
+    headers2["Host"] = "localhost";
+
+    // GET request
+    HttpRequest getReq("GET", "/index.html", "HTTP/1.1", "", headers2);
+    HttpResponseHandler handler;
+    HttpResponse getRes = handler.handleRequest(getReq);
+    std::cout << "GET response status: " << getRes._status << std::endl;
+
+    // POST request
+    HttpRequest postReq("POST", "/submit", "HTTP/1.1", "name=John&age=30", headers2);
+    HttpResponse postRes = handler.handleRequest(postReq);
+    std::cout << "POST response status: " << postRes._status << std::endl;
+
+    // DELETE request
+    HttpRequest delReq("DELETE", "/data.txt", "HTTP/1.1", "", headers2);
+    HttpResponse delRes = handler.handleRequest(delReq);
+    std::cout << "DELETE response status: " << delRes._status << std::endl;
+
+
     return 0;
 }

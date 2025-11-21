@@ -35,7 +35,8 @@ public:
     std::map<std::string, std::string>  _responseHeaders;
 
     //getters: not needed since all is public
-
+    HttpResponse() {};
+    HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders);
     std::string buildResponse();
 };
 

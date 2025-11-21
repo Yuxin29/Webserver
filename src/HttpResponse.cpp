@@ -1,10 +1,19 @@
 #include "HttpResponse.hpp"
 
-std::string                         _version;
-int                                 _status;
-std::string                         _reason;
-std::string                         _body;
-std::map<std::string, std::string>  _responseHeaders;
+// std::string                         _version;
+// int                                 _status;
+// std::string                         _reason;
+// std::string                         _body;
+// std::map<std::string, std::string>  _responseHeaders;
+
+HttpResponse::HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders)
+{
+    _version = version;
+    _status = status;
+    _reason = reason;
+    _body = body;
+    _responseHeaders = responseHeaders;
+}
 
 std::string HttpResponse::buildResponse(){
     std::ostringstream response;  //out string stream
