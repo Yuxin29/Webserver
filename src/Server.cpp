@@ -46,7 +46,7 @@ Server::StartResult Server::start(){
 
 void Server::shutdown(){
 	if (_listenFd != -1){
-		std::cout << "Stopping servers listening on port: " << _port << std::endl;
+		std::cout << "\nStopping servers listening on port: " << _port << std::endl;
 		close (_listenFd);
 		_listenFd = -1;
 	}
