@@ -277,3 +277,11 @@ it->second  //value
 
 By default, HTTP/1.1 connections are persistent (keep-alive), unless the server sends Connection: close in its response. 
 This means the TCP connection can be reused for multiple requests.
+
+====================================================== A MIME type  ======================================================
+A MIME type: Multipurpose Internet Mail Extension type:
+-> is a std string that tells a browser or client what kind of file is being transmitted
+-> format: type / subtype
+   eg: text/html, image/png, application/json, text/plain, application/octec-stream
+-> How it is used in a server:
+   Content-Type: text/html

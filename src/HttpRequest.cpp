@@ -1,4 +1,5 @@
 #include "HttpRequest.hpp"
+#include "HttpUtils.hpp"
 
 /*  ******************************HttpRequest********************************  */
 HttpRequest::HttpRequest(const std::string& method, const std::string& requestpath, const std::string& version, const std::string& body, const std::map<std::string, std::string>& requestHeaders)

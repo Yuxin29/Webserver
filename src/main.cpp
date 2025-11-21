@@ -8,6 +8,7 @@
 int main() {
     std::cout << " ------------------------ testing http request ----------------------" << std::endl;
     HttpParser parser;
+    std::cout << parser._state << std::endl;
 
     // Simulate receiving HTTP request in multiple broken chunks, 
     // std::string chunk1 = "GET /index.html HTTP/1.1\r\nHost: loca";
@@ -15,9 +16,14 @@ int main() {
     // std::string chunk3 = "Hello World!";
 
     // Simulate receiving HTTP request in multiple clean and full chunks
-    std::string chunk1 = "GET /index.html HTTP/1.1\r\n";
-    std::string chunk2 = "Host: localhost\r\n";
-    std::string chunk3 = "\r\n";
+    // std::string chunk1 = "GET /index.html HTTP/1.1\r\n";
+    // std::string chunk2 = "Host: localhost\r\n";
+    // std::string chunk3 = "\r\n";
+
+    // Simulate receiving HTTP request in multiple clean and full chunks
+    std::string chunk1 = "";
+    std::string chunk2 = "";
+    std::string chunk3 = "GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n DELETE ";
 
     // First chunk
     HttpRequest req1 = parser.parseHttpRequest(chunk1);

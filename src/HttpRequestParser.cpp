@@ -1,5 +1,6 @@
 #include "HttpRequestParser.hpp"
 #include "HttpRequest.hpp"
+#include "HttpUtils.hpp"
 
 // example of http request 
 // example http request with a content lenth
@@ -51,14 +52,6 @@ void HttpParser::parseStartLine(const std::string& startline)
     _state = HEADERS;
 }
 
-// a helper to trim empty space
-static std::string trim_space(const std::string& str)
-{
-    size_t start = str.find_first_not_of(" \t");
-    size_t end = str.find_last_not_of(" \t");
-    return str.substr(start, end - start + 1);
-}
-
 //below one is private, it will be recalled for a few times.
 void HttpParser::parseHeaderLine(const std::string& headerline){
     // first check if headers are done, \r\n will be removed \r\n
@@ -96,6 +89,7 @@ void HttpParser::parseBody(size_t pos)
         _state = DONE;
 }
 
+// for LUCIO to use
 // this one is going to called mamy times, basically whenever recv() some new bytes, 
 // the data might be ramdom pieces, not neccessarily a full line
 HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
