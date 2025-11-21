@@ -54,9 +54,9 @@ namespace config{
 	{
 		int start_line = _line;
 		int start_col = _col;
-		char c = peek();
 		if (eof())
 			return Token{TK_EOF, "", start_line, start_col};
+		char c = peek(); //should put it after peek aviding go over the boundary
 		if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-') //identifier or path
 			return tokenizeIdentifier();
 		if (c == '{' || c == '}' || c == ';')
@@ -73,7 +73,7 @@ namespace config{
 		while (!eof())
 		{
 			char c = peek();
-			if (isalnum(c) || c == '/'|| c == '.' || c == '_')
+			if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-')
 				get();
 			else
 				break;

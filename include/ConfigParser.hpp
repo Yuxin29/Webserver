@@ -11,9 +11,11 @@ namespace config{
 		std::string path;
 		std::string root;
 		std::string redirect;
-		std::string index;
-		std::string cgi_path;
+		std::vector<std::string> index;//
+		std::string cgi_pass;
+		std::string cgi_ext;
 		std::string upload_dir;
+		std::string client_max_body_size;
 		bool autoindex;
 		std::vector<std::string> methods;
 	};
@@ -23,8 +25,9 @@ namespace config{
 		std::vector<std::string> server_names;
 		std::pair<std::string, int> listen; //might 127.0.0.1:8080 or just 8080; 127.0.0.1 is string
 		std::map<int, std::string> error_pages; //int: error code; string:path to html file
-		int client_max_body_size;
+		std::string client_max_body_size;
 		std::string root;
+		std::vector<std::string> index;
 		std::vector<LocationNode> locations;
 	};
 

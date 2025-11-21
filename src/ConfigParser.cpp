@@ -16,6 +16,13 @@ namespace config{
 		std::string content = buffer.str();
 		Tokenizer tokenizer(content);
 		_tokens = tokenizer.tokenize();
+
+		for (auto &tk : _tokens) {
+		std::cout << "[" << tk.value << "] "
+				<< tk.type
+				<< " line " << tk.line
+				<< " col " << tk.col << "\n";
+			} //for print the token list, debug
 	}
 
 	Token Parser::peek() const
@@ -47,11 +54,12 @@ namespace config{
 		return false;
 	}
 
-	void Parser::expect(TokenType type, const std::string& msg) //msg?
+	void Parser::expect(TokenType type, const std::string& msg)
 	{
 		Token cur_token = get();
 		if (cur_token.type != type)
-			throw std::runtime_error(msg);
+			//throw std::runtime_error(msg);
+			throw std::runtime_error(makeError(msg, cur_token.line, cur_token.col));
 	}
 
 	std::string Parser::parseSimpleDirective()
@@ -59,17 +67,19 @@ namespace config{
 		get();
 		Token valuetoken = get();
 		if (valuetoken.type != TK_IDENTIFIER)
-			throw std::runtime_error(makeError("Expcept value ", valuetoken.line, valuetoken.col));
+			throw std::runtime_error(makeError("Expect value ", valuetoken.line, valuetoken.col));
 		expect(TK_SEMICOLON, "Expected ';'");
 		return valuetoken.value;
 	}
 
 	ServerNode Parser::parseServerBlock()
 	{
-		expect(TK_IDENTIFIER, "Expect 'server");
+		// expect(TK_IDENTIFIER, "Expect server");
+		// expect(TK_LBRACE, "Expect '{'");
 		Token token = get();
+		//std::cout<< token.value << std::endl;
 		if (token.value != "server")
-			throw std::runtime_error(makeError("Expcept server", token.line, token.col));
+			throw std::runtime_error(makeError("Expect server ", token.line, token.col));
 		expect(TK_LBRACE, "Expected '{' after location path");
 
 		ServerNode server;
@@ -85,7 +95,7 @@ namespace config{
 				get();
 				Token listenToken = get();
 				if(listenToken.type != TK_IDENTIFIER && listenToken.type != TK_NUMBER)
-					throw std::runtime_error(makeError("Expcept port ", listenToken.line, listenToken.col));
+					throw std::runtime_error(makeError("Expect port ", listenToken.line, listenToken.col));
 				std::string host;
 				int port;
 				std::string listenValue = listenToken.value;
@@ -109,10 +119,9 @@ namespace config{
 						throw std::runtime_error("Unexpected EOF while parsing server_name");
 					}
 					Token sernameToken = get();
-					if(sernameToken.type == TK_IDENTIFIER)
-						server.server_names.push_back(sernameToken.value);
-					else
-						throw std::runtime_error(makeError("Expcept server_name ", sernameToken.line, sernameToken.col));
+					if(sernameToken.type != TK_IDENTIFIER)
+						throw std::runtime_error(makeError("Expect server_name ", sernameToken.line, sernameToken.col));
+					server.server_names.push_back(sernameToken.value);
 					if(peek().type == TK_SEMICOLON)
 					{
 						get(); //eat ;
@@ -125,35 +134,59 @@ namespace config{
 				get();//eat error_page
 				Token codeTok = get();
 				if (codeTok.type != TK_NUMBER)
-					throw std::runtime_error(makeError("Expcept error code ", codeTok.line, codeTok.col));
+					throw std::runtime_error(makeError("Expect error code ", codeTok.line, codeTok.col));
 				Token pathTok = get();
 				if (pathTok.type != TK_IDENTIFIER)
-					throw std::runtime_error(makeError("Expcept path ", codeTok.line, codeTok.col));
+					throw std::runtime_error(makeError("Expect path ", codeTok.line, codeTok.col));
 				server.error_pages[std::stoi(codeTok.value)] = pathTok.value;
 				expect(TK_SEMICOLON, "Expected ';' after error path");
 			}
 			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
-			{
-				get(); // eat client max body size
-				Token sizeToken = get();
-				if(sizeToken.type != TK_NUMBER)
-					throw std::runtime_error(makeError("Expcept size ", sizeToken.line, sizeToken.col));
-				server.client_max_body_size = std::stoi(sizeToken.value);
-				expect(TK_SEMICOLON, "Expected ';' after error path");
-			}
+				server.client_max_body_size = parseSimpleDirective();
+			// else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
+			// {
+			// 	get(); // eat client max body size
+			// 	Token sizeToken = get();
+			// 	if(sizeToken.type != TK_NUMBER)
+			// 		throw std::runtime_error(makeError("Expect size ", sizeToken.line, sizeToken.col));
+			// 	server.client_max_body_size = std::stoi(sizeToken.value);
+			// 	expect(TK_SEMICOLON, "Expected ';' after error path");
+			// }
 			else if (token.type == TK_IDENTIFIER && token.value == "root")
 				server.root = parseSimpleDirective();
+			else if(token.type==TK_IDENTIFIER && token.value == "index")
+			{
+				get(); //eat index
+				while(true)
+				{
+					if (eof()) {
+						throw std::runtime_error("Unexpected EOF while parsing index value");
+					}
+					Token indexValue = get();
+					if(indexValue.type != TK_IDENTIFIER)
+						throw std::runtime_error(makeError("Expect index URI ", indexValue.line, indexValue.col));
+					server.index.push_back(indexValue.value);
+					if(peek().type == TK_SEMICOLON){
+						get(); //eat ;
+						break;
+					}
+				}
+			}
 			else if (token.type == TK_IDENTIFIER && token.value == "location")
 				server.locations.push_back(parseLocationBlock());
 			else
-				throw std::runtime_error(makeError("Unknown keyword in location block ", token.line, token.col));
+				throw std::runtime_error(makeError("Unknown keyword in server block ", token.line, token.col));
 		}
 		return server;
 	}
 
 	LocationNode Parser::parseLocationBlock()
 	{
-		expect(TK_IDENTIFIER, "Expect 'Location' ");
+
+		Token token = get();
+		if (token.value != "location")
+			throw std::runtime_error(makeError("Expect location ", token.line, token.col));
+		//expect(TK_IDENTIFIER, "Expect 'Location' ");
 		Token path = get();
 		if (path.type != TK_IDENTIFIER)
 			throw std::runtime_error(makeError("Expected path after 'location '", path.line, path.col));
@@ -173,12 +206,41 @@ namespace config{
 				location.root = parseSimpleDirective();
 			else if(token.type == TK_IDENTIFIER && token.value == "redirect")
 				location.redirect = parseSimpleDirective();
-			else if(token.type==TK_IDENTIFIER && token.value == "index")
-				location.index = parseSimpleDirective();
-			else if(token.type==TK_IDENTIFIER && token.value == "cgi_path")
-				location.cgi_path = parseSimpleDirective();
+			else if(token.type==TK_IDENTIFIER && token.value == "cgi_pass")
+				location.cgi_pass = parseSimpleDirective();
+			else if(token.type==TK_IDENTIFIER && token.value == "cgi_ext")
+				location.cgi_ext = parseSimpleDirective();
 			else if(token.type==TK_IDENTIFIER && token.value == "upload_dir")
 				location.upload_dir = parseSimpleDirective();
+			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
+				location.client_max_body_size = parseSimpleDirective();
+			// {
+			// 	get(); // eat client max body size
+			// 	Token sizeToken = get();
+			// 	if(sizeToken.type != TK_NUMBER)
+			// 		location.client_max_body_size = std::stoi(sizeToken.value);
+			// 		throw std::runtime_error(makeError("Expect size ", sizeToken.line, sizeToken.col));
+
+			// 	expect(TK_SEMICOLON, "Expected ';' after error path");
+			// }
+			else if(token.type==TK_IDENTIFIER && token.value == "index")
+			{
+				get(); //eat index
+				while(true)
+				{
+					if (eof()) {
+						throw std::runtime_error("Unexpected EOF while parsing index value");
+					}
+					Token indexValue = get();
+					if(indexValue.type != TK_IDENTIFIER)
+						throw std::runtime_error(makeError("Expect index URI ", indexValue.line, indexValue.col));
+					location.index.push_back(indexValue.value);
+					if(peek().type == TK_SEMICOLON){
+						get(); //eat ;
+						break;
+					}
+				}
+			}
 			else if(token.type==TK_IDENTIFIER && token.value == "autoindex")
 			{
 				get();
@@ -188,10 +250,10 @@ namespace config{
 				else if(autoindex.value == "off")
 					location.autoindex = false;
 				else
-					throw std::runtime_error(makeError("Expcept on/off after autoindex ", autoindex.line, autoindex.col));
+					throw std::runtime_error(makeError("Expect on/off after autoindex ", autoindex.line, autoindex.col));
 				expect(TK_SEMICOLON, "Expected ';' after location path");
 			}
-			else if(token.type==TK_IDENTIFIER && token.value == "methods")
+			else if(token.type==TK_IDENTIFIER && (token.value == "methods" || token.value == "allowed_methods"))
 			{
 				get();
 				while(true){
@@ -202,7 +264,7 @@ namespace config{
 					if(methodValue.value == "GET" || methodValue.value == "POST" || methodValue.value == "DELETE")
 						location.methods.push_back(methodValue.value);
 					else
-						throw std::runtime_error(makeError("Expcept GET/POST/DELETE after methods ", methodValue.line, methodValue.col));
+						throw std::runtime_error(makeError("Expect GET/POST/DELETE after methods ", methodValue.line, methodValue.col));
 					if(peek().type == TK_SEMICOLON){
 						get();
 						break;
@@ -218,13 +280,13 @@ namespace config{
 	std::vector<ServerNode> Parser::parse()
 	{
 		std::vector<ServerNode> servers;
-		while(!eof())
+		while(peek().type != TK_EOF)
 		{
 			Token t = peek();
 			if (t.type == TK_IDENTIFIER && t.value == "server")
 				servers.push_back(parseServerBlock());
 			else
-				throw std::runtime_error(makeError("Expected 'server' block", t.line, t.col));
+				throw std::runtime_error(makeError("Expected 'server' block ", t.line, t.col));
 		}
 		return servers;
 	}
