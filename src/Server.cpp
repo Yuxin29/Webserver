@@ -99,6 +99,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		return CLIENT_ERROR;
 	}
 	httpResponse response = _httpHandler.processRequest(request, *virtualHost);
+	// Maybe add that http is waiting more data response.requestComplete true/false
 	ssize_t sent = send(clientFd, response.responseData.c_str(), response.responseData.size(), 0);
 	if (sent < 0){
 		_partialRequests.erase(clientFd);
@@ -134,18 +135,24 @@ std::string Server::extractHostHeader(const std::string& rawRequest) const {
 	std::istringstream streamRequest(rawRequest);
 	std::string line;
 	while (std::getline(streamRequest, line)){
-		if (line.compare(0, 5, "Host:") == 0){
+		if (!line.empty() && line.back() == '\r'){
+			line.pop_back();
+		}
+		if (line.size() >= 5 && line.compare(0, 5, "Host:") == 0){
 			size_t start = line.find_first_not_of(" \t", 5);
-			if (start != std::string::npos){
-				size_t end = line.find_last_of("\r\n");
-				std::string host = line.substr(start, end - start);
-
-				size_t colonPos = host.find(":");
-				if (colonPos != std::string::npos){
-					host = host.substr(0, colonPos);
-				}
-				return host;
-			}	
+			if (start == std::string::npos){
+				return "";
+			}
+			std::string host = line.substr(start);
+			size_t end = host.find_last_not_of(" \t");
+			if (end != std::string::npos){
+				host = host.substr(0, end + 1);
+			}
+			size_t colonPos = host.find(":");
+			if (colonPos != std::string::npos){
+				host = host.substr(0, colonPos);
+			}
+			return host;		
 		}
 	}
 	return "";
