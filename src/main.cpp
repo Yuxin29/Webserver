@@ -7,7 +7,7 @@ using namespace config;
 int main() {
     try {
         // load config file
-        Parser parser("configuration/webserv.conf");
+        Parser parser("configuration/new.conf");
 
         // parse into AST
         std::vector<ServerNode> servers = parser.parse();
