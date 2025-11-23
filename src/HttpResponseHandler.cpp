@@ -30,27 +30,39 @@ Content-Type: text/plain
 Content-Length: 13
 
 Hello, world!
------------------------------- What happens here ------------------------------
-1. Server received GET /hello. /hello is supposed to be file
-2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
-3. Checked if the file exists, is readable, and is a regular file.
-    exits(), is_regular_file, access(R_OK)
-4. Determined MIME type (text/plain for .txt or plain text).
-5. Got file size (13) → set Content-Length.
-6. Filled headers like Date and Server.
-7. Read file content → sent as response body.
 */
-// accroding to lin configuration/webserv.conf
-HttpResponse HttpResponseHandler::handleGET(const HttpRequest& /*req*/){
-    // 1. Server received GET /hello. /hello is supposed to be file
-    // 2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
-    // 3. Checked if the file exists, is readable, and is a regular file.
-    //     exits(), is_regular_file, access(R_OK)
-    // 4. Determined MIME type (text/plain for .txt or plain text).
-    // 5. Got file size (13) → set Content-Length.
-    // 6. Filled headers like Date and Server.
-    // 7. Read file content → sent as response body.
-    return HttpResponse("HTTP/1.1", 111, "get_test", "GET", std::map<std::string, std::string>());
+HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req){
+   // 1. Server received GET /hello. /hello is supposed to be file
+   // URI: uniform Resource Identifier, _path in the request
+   std::string uri = req.getrequestPath();
+
+   // 2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
+   const std::string root = "lin_root"; //fake, hard-coded, ask lin later: ccroding to lin configuration/webserv.conf
+   std::string fullpath = root + uri;
+
+   // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
+   // if (!exit) 
+   //    return HttpResponse("HTTP/1.1", 404, "Not Found", "GET", std::map<std::string, std::string>(), "<h1>404 Not Found</h1>");
+   // if (!readable)
+   //    return HttpResponse("HTTP/1.1", 403, "Forbidden", "GET", std::map<std::string, std::string>(), "<h1>403 Forbidden</h1>");
+   // if (!regularfile)
+   //    return HttpResponse("HTTP/1.1", 404, "Forbidden", "GET", std::map<std::string, std::string>(), "<h1>403 Forbidden</h1>");
+   
+   // 4. Determined MIME type (text/plain for .txt or plain text).
+   std::string mine_type = getMimeType(fullpath);
+
+   // 5. Got file size (13) → set Content-Length.
+
+   // 6. Read file content → sent as response body.
+   std::string body = "xxxx";
+   
+   // 7. Filled headers like Date and Server.
+   std::map<std::string, std::string> headers;
+   headers["Content-Type"] = mine_type;
+   headers["Content-Length"] = std::to_string(body.size());
+   // ... 
+
+   return HttpResponse("HTTP/1.1", 200, "OK", body, headers);
 }
 
 /*
@@ -65,24 +77,6 @@ Content-Type: application/json
 Content-Length: 23
 
 {"status":"success"}
------------------------------- What happens here ------------------------------
-1. Server receives POST /submit-data.
-2. Determines the target resource:
-   - Typically a CGI script, an upload handler, or a location block.
-   - Example: /var/www/html/submit-data (or routed to CGI)
-3. Reads request body:
-   - Content-Length = 27 → read exactly 27 bytes.
-   - Body = {"name":"Alice","age":30}
-4. Validates:
-   - Check allowed methods (POST must be allowed)
-   - Validate Content-Type
-   - Optional: Check if JSON is valid
-5. Processes the data:
-   - Example: store in a database, write to a file, pass to CGI, etc.
-6. Generates response:
-   - Set status code (201 Created, 200 OK, 400 Bad Request…)
-   - Set headers (Content-Type, Content-Length, Date, Server)
-   - Optional response body with result.
 */
 HttpResponse HttpResponseHandler::handlePOST(const HttpRequest& /*req*/){
     // 1. Server receives POST /submit-data.
@@ -114,21 +108,6 @@ User-Agent: curl/7.81.0
 HTTP/1.1 204 No Content
 Date: Thu, 21 Nov 2025 11:00:00 GMT
 Server: ExampleServer/1.0
------------------------------- What happens here ------------------------------
-1. Server receives DELETE /files/file1.txt.
-2. Maps path:
-   - /files/file1.txt → /var/www/html/files/file1.txt
-3. Validates:
-   - Does file exist?
-   - Is it allowed to delete this path? (check directory permissions)
-   - Is DELETE method allowed in this location?
-4. If file does not exist → return 404 Not Found.
-   If file exists but permission denied → 403 Forbidden.
-5. Attempts deletion:
-   - unlink("/var/www/html/files/file1.txt")
-6. Generates response:
-   - If success → 204 No Content (most common)
-   - Or 200 OK with optional message
 */
 HttpResponse HttpResponseHandler::handleDELETE(const HttpRequest& /*req*/){
     // 1. Server receives DELETE /files/file1.txt.
