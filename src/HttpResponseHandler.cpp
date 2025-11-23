@@ -40,6 +40,7 @@ Hello, world!
 6. Filled headers like Date and Server.
 7. Read file content → sent as response body.
 */
+// accroding to lin configuration/webserv.conf
 HttpResponse HttpResponseHandler::handleGET(const HttpRequest& /*req*/){
     // 1. Server received GET /hello. /hello is supposed to be file
     // 2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
