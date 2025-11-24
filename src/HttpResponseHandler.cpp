@@ -31,22 +31,22 @@ Content-Length: 13
 
 Hello, world!
 */
+//lin configuration/webserv.conf -> root, location, index,, error_page, cgi_path, upload_path and so on.
 HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req){
    // 1. Server received GET /hello. /hello is supposed to be file
-   // URI: uniform Resource Identifier, _path in the request
-   std::string uri = req.getrequestPath();
+   std::string uri = req.getrequestPath(); // URI: uniform Resource Identifier, _path in the request
 
    // 2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
-   const std::string root = "lin_root"; //fake, hard-coded, ask lin later: ccroding to lin configuration/webserv.conf
+   const std::string root = "linConfig/root"; //fake one, hard-coded, ask lin later: should be according to to lin configuration/webserv.conf
    std::string fullpath = root + uri;
 
    // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
-   // if (!exit) 
-   //    return HttpResponse("HTTP/1.1", 404, "Not Found", "GET", std::map<std::string, std::string>(), "<h1>404 Not Found</h1>");
-   // if (!readable)
-   //    return HttpResponse("HTTP/1.1", 403, "Forbidden", "GET", std::map<std::string, std::string>(), "<h1>403 Forbidden</h1>");
-   // if (!regularfile)
-   //    return HttpResponse("HTTP/1.1", 404, "Forbidden", "GET", std::map<std::string, std::string>(), "<h1>403 Forbidden</h1>");
+   if (!exit) 
+      return HttpResponse("HTTP/1.1", 404, "Not Found", "GET", std::map<std::string, std::string>(), "<h1>404 Not Found</h1>");
+   if (!readable)
+      return HttpResponse("HTTP/1.1", 403, "Forbidden", "GET", std::map<std::string, std::string>(), "<h1>403 Forbidden</h1>");
+   if (!regularfile)
+      return HttpResponse("HTTP/1.1", 404, "Forbidden", "GET", std::map<std::string, std::string>(), "<h1>403 Forbidden</h1>");
    
    // 4. Determined MIME type (text/plain for .txt or plain text).
    std::string mine_type = getMimeType(fullpath);

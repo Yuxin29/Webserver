@@ -86,23 +86,23 @@ Day 1 — 架构搭建 + HTTP 基础复习                                      
 学习：HTTP/1.1 结构, Request-Line, Headers, CRLF, Body（Content-Length）         ✅
 实现：HttpRequest, HttpParser 类骨架                                            ✅
 
-Day 2 — parseRequestLine()
+Day 2 — parseRequestLine()                                                    ✅
 学习：方法 GET/POST/DELETE, URL 格式, HTTP version 校验
 实现：parseRequestLine()
 测试：printf "GET / HTTP/1.1\r\n\r\n" | nc localhost 8080
 Person A 会把收到的数据传给你。
 
-Day 3 — parseHeaders()
+Day 3 — parseHeaders()                                                        ✅
 学习：key:value, 大小写不敏感, header 合并规则, Host 必须存在（HTTP/1.1 规范）
 实现：parseHeaders()
 测试：重复 header, 缺少 CRLF
 
-Day 4 — parseBody()（Content-Length）
+Day 4 — parseBody()（Content-Length）                                         ✅
 学习：Content-Length, body 大小限制（防止 413）
 实现：parseBody()
 测试：curl -d "hello" localhost:8080
 
-Day 5 — 状态机（非阻塞需要）
+Day 5 — 状态机（非阻塞需要）                                                     ✅
 学习状态机： START_LINE, HEADERS, BODY, DONE
 实现： HttpParser::consume(buffer), 能够分段解析（防止 slowloris）
 测试：切分的 TCP 包，逐字节输入, 模拟慢速攻击
@@ -110,22 +110,22 @@ Day 5 — 状态机（非阻塞需要）
 ⭐ 第 2 周：HTTP Response + 各种方法
 目标：能正确生成 HTTP/1.1 响应
 
-Day 6 — Response Builder
+Day 6 — Response Builder                                                      
 学习：status line, headers, Content-Length, Connection
 实现：HttpResponse::buildResponse()
 测试：与 NGINX 对比：curl -v localhost:8080
 
-Day 7 — GET（静态文件）
+Day 7 — GET（静态文件）                                                    
 学习：MIME types, 文件权限, index 文件（可选）
 实现：GET handler
 测试：curl -v localhost:8080/test.txt
 
-Day 8 — POST
+Day 8 — POST                                                     
 学习：保存 body, safe path, parent directory traversal attacks（避免 ../）
 实现：POST handler → 写入文件
 测试：curl -X POST -d "x=y" localhost:8080
 
-Day 9 — DELETE
+Day 9 — DELETE                                                      
 学习：权限检查, 文件不存在返回 404, 如果是目录返回 403（和 NGINX 一样）
 实现：DELETE handler
 测试：curl -X DELETE localhost:8080/file.txt
@@ -285,3 +285,16 @@ A MIME type: Multipurpose Internet Mail Extension type:
    eg: text/html, image/png, application/json, text/plain, application/octec-stream
 -> How it is used in a server:
    Content-Type: text/html
+
+====================================================== Lin ConfigParser / Config    ======================================================
+Lin ConfigParser / Config class
+- root 
+- location 
+- index 
+- error_page 
+- cgi_path（如果是 CGI）: could be like /var/www/cgi-bin/my_script.cgi or  /usr/bin/php-cgi
+- upload_path（POST/PUT） 
+
+====================================================== CGI path ======================================================
+CGI path is the filesystem path to the cgi executable program:
+CGI: common gateway Interface
