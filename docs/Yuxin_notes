@@ -298,3 +298,21 @@ Lin ConfigParser / Config class
 ====================================================== CGI path ======================================================
 CGI path is the filesystem path to the cgi executable program:
 CGI: common gateway Interface
+
+====================================================== Nginx ======================================================
+Nginx: Engine-X
+it is a high-performance web server, reverse proxy and load balancer designed  to handle massive ammont of connnxtions using event-drive ynchronous architecture.
+It is used for:
+   - serving static files
+   - Load balancing across multiple backend servers
+   - ...
+
+====================================================== Edge case for Http request ======================================================
+GET  HTTP/1.1
+Host: localhost:8080
+User-Agent: curl/8.3.0
+Accept: */*
+
+here the request path is empty:
+- Nginx and Apache tolerate this: they treat an empty request-target as / (the root).
+- Some stricter HTTP parsers will return 400 Bad Request because the request-target is required by the spec (RFC 9110).  ⚠️ YUXIN WANTS TO FOLLOW THIS

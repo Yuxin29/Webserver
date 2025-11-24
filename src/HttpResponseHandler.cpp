@@ -41,12 +41,14 @@ HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req){
    std::string fullpath = root + uri;
 
    // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
-   if (!exit) 
-      return HttpResponse("HTTP/1.1", 404, "Not Found", "GET", std::map<std::string, std::string>(), "<h1>404 Not Found</h1>");
-   if (!readable)
-      return HttpResponse("HTTP/1.1", 403, "Forbidden", "GET", std::map<std::string, std::string>(), "<h1>403 Forbidden</h1>");
-   if (!regularfile)
-      return HttpResponse("HTTP/1.1", 404, "Forbidden", "GET", std::map<std::string, std::string>(), "<h1>403 Forbidden</h1>");
+   struct stat st;
+
+   if (stat(fullpath.c_str(), &st) < 0) 
+      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>());
+   if (access(fullpath.c_str(), R_OK) < 0)
+      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>());
+   if (!S_ISREG(st.st_mode))
+      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>());
    
    // 4. Determined MIME type (text/plain for .txt or plain text).
    std::string mine_type = getMimeType(fullpath);
@@ -54,8 +56,9 @@ HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req){
    // 5. Got file size (13) → set Content-Length.
 
    // 6. Read file content → sent as response body.
-   std::string body = "xxxx";
-   
+   std::ifstream ifs(fullpath.c_str(), std::ios::binary);
+   std::string body((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>(ifs));
+
    // 7. Filled headers like Date and Server.
    std::map<std::string, std::string> headers;
    headers["Content-Type"] = mine_type;

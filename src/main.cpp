@@ -80,18 +80,24 @@ int main() {
     HttpRequest getReq("GET", "/index.html", "HTTP/1.1", "", headers2);
     HttpResponseHandler handler;
     HttpResponse getRes = handler.handleRequest(getReq);
+    std::cout << "GET response status: " << getRes._version << std::endl;
     std::cout << "GET response status: " << getRes._status << std::endl;
-
+    std::cout << "GET response status: " << getRes._reason << std::endl;
+    std::cout << "GET response status: " << getRes._body << std::endl;
+    //std::cout << "GET response status: " << getRes._responseHeaders << std::endl;
+    std::cout << "--------------" << std::endl;
+    
     // POST request
     HttpRequest postReq("POST", "/submit", "HTTP/1.1", "name=John&age=30", headers2);
     HttpResponse postRes = handler.handleRequest(postReq);
     std::cout << "POST response status: " << postRes._status << std::endl;
+    std::cout << "--------------" << std::endl;
 
     // DELETE request
     HttpRequest delReq("DELETE", "/data.txt", "HTTP/1.1", "", headers2);
     HttpResponse delRes = handler.handleRequest(delReq);
     std::cout << "DELETE response status: " << delRes._status << std::endl;
-
+    std::cout << "--------------" << std::endl;
 
     return 0;
 }
