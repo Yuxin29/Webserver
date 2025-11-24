@@ -42,7 +42,6 @@ HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req){
 
    // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
-
    if (stat(fullpath.c_str(), &st) < 0) 
       return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>());
    if (access(fullpath.c_str(), R_OK) < 0)
@@ -128,30 +127,39 @@ HTTP/1.1 204 No Content
 Date: Thu, 21 Nov 2025 11:00:00 GMT
 Server: ExampleServer/1.0
 */
-HttpResponse HttpResponseHandler::handleDELETE(const HttpRequest& /*req*/){
+HttpResponse HttpResponseHandler::handleDELETE(const HttpRequest& req){
    // 1. Server receives DELETE /files/file1.txt.
-   
+   std::string uri = req.getrequestPath();
    
    // 2. Maps path:
    // - /files/file1.txt → /var/www/html/files/file1.txt
-   
+   const std::string root = "linConfig/root"; //fake one, hard-coded, ask lin later: should be according to to lin configuration/webserv.conf
+   std::string fullpath = root + uri;
    
    // 3. Validates:
    // - Does file exist?
    // - Is it allowed to delete this path? (check directory permissions)
    // - Is DELETE method allowed in this location?
-   
-   
-   // 4. If file does not exist → return 404 Not Found.
-   // If file exists but permission denied → 403 Forbidden.
-   
+   struct stat st;
+   if (stat(fullpath.c_str(), &st) < 0) 
+      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>());
+   if (access(fullpath.c_str(), W_OK) < 0) //to delete it, we need to have the writing right
+      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>());
+   if (!S_ISREG(st.st_mode))
+      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>());
    
    // 5. Attempts deletion:
    // - unlink("/var/www/html/files/file1.txt")
-   
+   if (unlink(fullpath.c_str()) < 0)
+      //sth worng: (io err, permission)
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", std::map<std::string, std::string>());
    
    // 6. Generates response:
    // - If success → 204 No Content (most common)
    // - Or 200 OK with optional message
-   return HttpResponse("HTTP/1.1", 333, "delete_test", "DELETE", std::map<std::string, std::string>());
+   std::map<std::string, std::string> headers;
+   headers["Content-Length"] = "0";  // No response body
+   headers["Content-Type"]   = "text/plain";
+
+   return HttpResponse("HTTP/1.1", 204, "No content", "", std::map<std::string, std::string>());
 }

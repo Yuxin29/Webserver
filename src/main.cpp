@@ -100,7 +100,11 @@ int main() {
     // DELETE request
     HttpRequest delReq("DELETE", "/data.txt", "HTTP/1.1", "", headers2);
     HttpResponse delRes = handler.handleRequest(delReq);
+    std::cout << "DELETE response version: " << delRes._version << std::endl;
     std::cout << "DELETE response status: " << delRes._status << std::endl;
+    std::cout << "DELETE response reason: " << delRes._reason << std::endl;
+    std::cout << "DELETE response body: " << delRes._body << std::endl;
+    //std::cout << "DELETE response status: " << postRes._responseHeaders << std::endl;
     std::cout << "--------------" << std::endl;
 
     return 0;
