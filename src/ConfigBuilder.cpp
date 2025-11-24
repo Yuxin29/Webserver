@@ -16,17 +16,6 @@ namespace config{
 
 	}
 
-	std::vector<ServerConfig> ConfigBuilder::build(const std::vector<ServerNode>& servers)
-	{
-		std::vector<ServerConfig> cfgs;
-		for(size_t i = 0; i < servers.size(); i++)
-		{
-			ServerConfig cfg = buildServerConfig(servers[i]);
-			cfgs.push_back(cfg);
-		}
-		return cfgs;
-	}
-
 	LocationConfig ConfigBuilder::buildLocationConfig(const LocationNode& node, const ServerConfig& parent)
 	{
 		LocationConfig lc;
@@ -67,5 +56,16 @@ namespace config{
 			cfg.locations.push_back(lc);
 		}
 		return cfg;
+	}
+
+	std::vector<ServerConfig> ConfigBuilder::build(const std::vector<ServerNode>& servers)
+	{
+		std::vector<ServerConfig> cfgs;
+		for(size_t i = 0; i < servers.size(); i++)
+		{
+			ServerConfig cfg = buildServerConfig(servers[i]);
+			cfgs.push_back(cfg);
+		}
+		return cfgs;
 	}
 }
