@@ -25,7 +25,7 @@ namespace config
 		std::string path;
 		std::string root;
 		std::string redirect;
-		std::vector<std::string> index;//
+		std::vector<std::string> index;
 		std::string cgi_pass;
 		std::string cgi_ext;
 		std::string upload_dir;
@@ -48,12 +48,23 @@ namespace config
 
 	class ConfigBuilder
 	{
+	//static means it does NOT belong to an object, it belongs to the class
 	public:
-		std::vector<ServerConfig> build(const std::vector<ServerConfig>& ast);
+	//convert AST → final runtime configs
+		static std::vector<ServerConfig> build(const std::vector<ServerNode>& ast);
 	private:
-		ServerConfig buildServerConfig(const ServerNode& node);
-		LocationConfig buildLocationConfig(const LocationNode& node);
-
+	//Build one server from server AST
+		static ServerConfig buildServerConfig(const ServerNode& node);
+	//Build one location with inheritance
+		static LocationConfig buildLocationConfig(const LocationNode& node, const ServerConfig& parent);
+	//helper
+		static std::vector<std::string> defaultIndex();
+		static long defaultClientMaxBodySize();
+		static long parseSizeLiteral(const std::string& size);
+		/*This function must:
+		Read the last char → check if it's M/m/K/k
+		Parse the number part
+		Convert to bytes*/
 	};
 }
 

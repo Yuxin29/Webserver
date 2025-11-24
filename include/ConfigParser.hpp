@@ -36,7 +36,6 @@ namespace config{
 	public:
 		Parser(const std::string& filename);
 		std::vector<ServerNode> parse();
-		//LocationNode parseLocationBlock();
 
 	private:
 		std::vector<Token> _tokens;

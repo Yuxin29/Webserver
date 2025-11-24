@@ -17,6 +17,7 @@ namespace config{
 		Tokenizer tokenizer(content);
 		_tokens = tokenizer.tokenize();
 
+		//debug
 		for (auto &tk : _tokens) {
 		std::cout << "[" << tk.value << "] "
 				<< tk.type
@@ -58,7 +59,6 @@ namespace config{
 	{
 		Token cur_token = get();
 		if (cur_token.type != type)
-			//throw std::runtime_error(msg);
 			throw std::runtime_error(makeError(msg, cur_token.line, cur_token.col));
 	}
 
@@ -74,8 +74,6 @@ namespace config{
 
 	ServerNode Parser::parseServerBlock()
 	{
-		// expect(TK_IDENTIFIER, "Expect server");
-		// expect(TK_LBRACE, "Expect '{'");
 		Token token = get();
 		//std::cout<< token.value << std::endl;
 		if (token.value != "server")
@@ -186,7 +184,6 @@ namespace config{
 		Token token = get();
 		if (token.value != "location")
 			throw std::runtime_error(makeError("Expect location ", token.line, token.col));
-		//expect(TK_IDENTIFIER, "Expect 'Location' ");
 		Token path = get();
 		if (path.type != TK_IDENTIFIER)
 			throw std::runtime_error(makeError("Expected path after 'location '", path.line, path.col));
