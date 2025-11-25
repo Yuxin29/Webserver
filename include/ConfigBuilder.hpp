@@ -23,15 +23,15 @@ namespace config
 	struct LocationConfig
 	{
 		std::string path;
-		std::string root;
+		std::string root; //inherit
 		std::string redirect;
-		std::vector<std::string> index;
+		std::vector<std::string> index;//inherit
 		std::string cgi_pass;
 		std::string cgi_ext;
 		std::string upload_dir;
-		long client_max_body_size;
+		long client_max_body_size;//inherit
 		bool autoindex;
-		std::vector<std::string> methods;
+		std::vector<std::string> methods; //cannot be empty
 	};
 
 	struct ServerConfig
@@ -41,8 +41,8 @@ namespace config
 		std::vector<std::string> server_names;
 		std::map<int, std::string> error_pages;
 		long client_max_body_size; //bytes
-		std::string root;
-		std::vector<std::string> index;
+		std::string root;//cannot be empty
+		std::vector<std::string> index;//cannot be empty
 		std::vector<LocationConfig> locations;
 	};
 
@@ -59,6 +59,7 @@ namespace config
 		static LocationConfig buildLocationConfig(const LocationNode& node, const ServerConfig& parent);
 	//helper
 		static std::vector<std::string> defaultIndex();
+		static std::vector<std::string> defaultMethods();
 		static long defaultClientMaxBodySize();
 		static long parseSizeLiteral(const std::string& size);
 		/*This function must:

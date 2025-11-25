@@ -211,15 +211,6 @@ namespace config{
 				location.upload_dir = parseSimpleDirective();
 			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
 				location.client_max_body_size = parseSimpleDirective();
-			// {
-			// 	get(); // eat client max body size
-			// 	Token sizeToken = get();
-			// 	if(sizeToken.type != TK_NUMBER)
-			// 		location.client_max_body_size = std::stoi(sizeToken.value);
-			// 		throw std::runtime_error(makeError("Expect size ", sizeToken.line, sizeToken.col));
-
-			// 	expect(TK_SEMICOLON, "Expected ';' after error path");
-			// }
 			else if(token.type==TK_IDENTIFIER && token.value == "index")
 			{
 				get(); //eat index

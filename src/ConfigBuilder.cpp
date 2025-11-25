@@ -16,13 +16,26 @@ namespace config{
 
 	}
 
+	std::vector<std::string> ConfigBuilder::defaultMethods()
+	{
+
+	}
+
 	LocationConfig ConfigBuilder::buildLocationConfig(const LocationNode& node, const ServerConfig& parent)
 	{
 		LocationConfig lc;
 		lc.path = node.path;
-		if(node.root.empty())
-			lc.root = parent.root;
-		//...
+		lc.root = node.root.empty() ? parent.root : node.root;
+		lc.index = node.index.empty() ? parent.index : node.index;
+		lc.client_max_body_size = node.client_max_body_size.empty()
+									? parent.client_max_body_size
+									: parseSizeLiteral(node.client_max_body_size);
+		lc.redirect = node.redirect;
+		lc.cgi_pass = node.cgi_pass;
+		lc.cgi_ext = node.cgi_ext;
+		lc.upload_dir = node.upload_dir;
+		lc.autoindex = node.autoindex;
+		lc.methods = node.methods.empty() ? defaultMethods() : node.methods;
 		return lc;
 	}
 
@@ -31,26 +44,13 @@ namespace config{
 		ServerConfig cfg;
 		cfg.host = node.listen.first;
 		cfg.port = node.listen.second;
-		if (node.server_names.empty())
-			cfg.server_names = {};
-		else
-			cfg.server_names = node.server_names;
-		if (node.error_pages.empty())
-			cfg.error_pages = {};
-		else
-			cfg.error_pages = node.error_pages;
-		if (node.root.empty())
-			cfg.root = ".";
-		else
-			cfg.root = node.root;
-		if (node.index.empty())
-			cfg.index = defaultIndex();
-		else
-			cfg.index = node.index;
-		if (node.client_max_body_size.empty())
-			cfg.client_max_body_size = defaultClientMaxBodySize();
-		else
-			cfg.client_max_body_size = parseSizeLiteral(node.client_max_body_size);
+		cfg.server_names = node.server_names;
+		cfg.error_pages = node.error_pages;
+		cfg.root = node.root.empty() ? "." : node.root;
+		cfg.index = node.index.empty() ? defaultIndex() : node.index;
+		cfg.client_max_body_size = node.client_max_body_size.empty()
+									? defaultClientMaxBodySize()
+									: parseSizeLiteral(node.client_max_body_size);
 		for(size_t i = 0; i < node.locations.size(); i++){
 			LocationConfig lc = buildLocationConfig(node.locations[i], cfg);
 			cfg.locations.push_back(lc);
