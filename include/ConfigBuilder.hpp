@@ -62,6 +62,7 @@ namespace config
 		static std::vector<std::string> defaultMethods();
 		static long defaultClientMaxBodySize();
 		static long parseSizeLiteral(const std::string& size);
+		static std::map<int, std::string> defaultErrorPages();
 	};
 }
 

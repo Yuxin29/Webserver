@@ -36,6 +36,19 @@ namespace config{
 		return num;
 	}
 
+	std::map<int, std::string> ConfigBuilder::defaultErrorPages()
+	{
+		std::map<int, std::string> pages;
+		pages[400] = "/errors/400.html";
+		pages[403] = "/errors/403.html";
+		pages[404] = "/errors/404.html";
+		pages[500] = "/errors/500.html";
+		pages[502] = "/errors/502.html";
+		pages[503] = "/errors/503.html";
+		pages[504] = "/errors/504.html";
+		return pages;
+	}
+
 	std::vector<std::string> ConfigBuilder::defaultMethods()
 	{
 		std::vector<std::string> methods;
@@ -69,7 +82,7 @@ namespace config{
 		cfg.host = node.listen.first;
 		cfg.port = node.listen.second;
 		cfg.server_names = node.server_names;
-		cfg.error_pages = node.error_pages;
+		cfg.error_pages = node.error_pages.empty() ? defaultErrorPages() : node.error_pages;
 		cfg.root = node.root.empty() ? "." : node.root;
 		cfg.index = node.index.empty() ? defaultIndex() : node.index;
 		cfg.client_max_body_size = node.client_max_body_size.empty()
