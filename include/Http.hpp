@@ -4,7 +4,7 @@
 #include <sstream>
 #include "ConfigBuilder.hpp"
 
-using namespace config;
+//using namespace config;
 
 struct httpResponse {
 	std::string responseData;
@@ -20,7 +20,7 @@ class Http{
 
 	public:
 		void setName(const std::string& name);
-		httpResponse processRequest(const std::string& request, const ServerConfig& server);
+		httpResponse processRequest(const std::string& request, const config::ServerConfig& server);
 
 		// maybe needed for Http
     // parseRequest(rawData) → Request object

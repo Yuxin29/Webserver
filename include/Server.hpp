@@ -12,8 +12,6 @@
 #include "Request.hpp"
 #include "Http.hpp"
 
-using namespace config;
-
 class Server {
 	public:
 		enum ClientStatus {
@@ -31,22 +29,21 @@ class Server {
 		};
 
 	private:
-		std::string 	_host;
-		int				_listenFd;
-		int  			_port;
-		std::vector<ServerConfig>	_virtualHosts;
-		sockaddr_in		_addr;
-		Http			_httpHandler;
+		std::string 				_host;
+		int							_listenFd;
+		int  						_port;
+		std::vector<config::ServerConfig>	_virtualHosts;
+		sockaddr_in					_addr;
+		Http						_httpHandler;
 		std::map<int, std::string> _partialRequests;
 
-		const ServerConfig* matchVirtualHost(const std::string& hostHeader);
+		const config::ServerConfig* matchVirtualHost(const std::string& hostHeader);
 		std::string extractHostHeader(const std::string& rawRequest) const;
-		const LocationConfig* findLocation(const ServerConfig& server,
-						const std::string& path) const;
+		const config::LocationConfig* findLocation(const config::ServerConfig& server, const std::string& path) const;
 
 	public:
 		Server() = delete;
-		explicit Server(const std::string& host, int port, const std::vector<ServerConfig>& serverBlocks);
+		explicit Server(const std::string& host, int port, const std::vector<config::ServerConfig>& serverBlocks);
 		Server(const Server& other);
 		Server& operator=(const Server& other) = delete;
 		~Server();

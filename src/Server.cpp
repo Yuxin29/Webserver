@@ -1,5 +1,7 @@
 #include "Server.hpp"
 
+using namespace config;
+
 Server::Server(const std::string& host, int port, 
 	const std::vector<ServerConfig>& serverBlocks)
 	: _host(host), _listenFd(-1), _port(port), _virtualHosts(serverBlocks), _addr(){

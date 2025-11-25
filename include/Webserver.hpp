@@ -10,8 +10,6 @@
 #include <string>
 #include <cstring>
 
-using namespace config;
-
 class Webserver {
 	private:
 		int 					_epollFd;
@@ -38,7 +36,7 @@ class Webserver {
 		Webserver& operator=(const Webserver& other) = delete;
 		~Webserver();
 
-		int  createServers(const std::vector<ServerConfig>& config);
+		int  createServers(const std::vector<config::ServerConfig>& config);
 		int  runWebserver(void);
 		void stopWebserver(void);
 };

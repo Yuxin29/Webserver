@@ -1,5 +1,7 @@
 #include "Webserver.hpp"
 
+using namespace config;
+
 static volatile sig_atomic_t signalRunning = 1;
 
 static void signalHandler(int sig){

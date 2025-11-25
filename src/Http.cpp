@@ -1,5 +1,7 @@
 #include "Http.hpp"
 
+using namespace config;
+
 void Http::setName(const std::string& name) {
 	_name = name;
 }
