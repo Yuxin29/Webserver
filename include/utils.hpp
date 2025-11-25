@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <sstream>
 
 namespace utils {
 
@@ -21,4 +22,13 @@ namespace utils {
 	};
 	
 	int returnErrorMessage(int errorCode);
+}
+
+namespace config {
+	inline std::string makeError(const std::string& msg, int line, int col)
+	{
+		std::ostringstream oss;
+		oss << msg << "at line " << line << ", col " << col;
+		throw std::runtime_error(oss.str());
+	}
 }
