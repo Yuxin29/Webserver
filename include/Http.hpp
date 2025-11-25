@@ -9,6 +9,7 @@ using namespace config;
 struct httpResponse {
 	std::string responseData;
 	bool keepConnectionAlive;
+	bool requestComplete;
 	int statusCode;
 };
 

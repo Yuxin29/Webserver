@@ -99,7 +99,12 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		return CLIENT_ERROR;
 	}
 	httpResponse response = _httpHandler.processRequest(request, *virtualHost);
-	// Maybe add that http is waiting more data response.requestComplete true/false
+	
+	// Check if request is complete (handles POST body)
+	if (!response.requestComplete) {
+		return CLIENT_INCOMPLETE;
+	}
+	
 	ssize_t sent = send(clientFd, response.responseData.c_str(), response.responseData.size(), 0);
 	if (sent < 0){
 		_partialRequests.erase(clientFd);
