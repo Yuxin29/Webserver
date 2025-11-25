@@ -19,7 +19,7 @@ class Http{
 		void setName(const std::string& name);
 		httpResponse processRequest(const std::string& request, const Configuration::ServerBlock& server);
 
-		// maybe needed for Http
+	// maybe needed for Http
     // parseRequest(rawData) → Request object
     // isRequestComplete(rawData) → bool
     

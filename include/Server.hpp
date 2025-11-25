@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "Config.hpp"
-#include "Request.hpp"
+#include "HttpRequest.hpp"
 #include "Http.hpp"
 
 class Server {

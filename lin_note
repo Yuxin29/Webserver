@@ -1,0 +1,197 @@
+┌─────────────────────┐
+│   浏览器（Chrome）   │
+│ http://localhost:8080│
+└────────────┬────────┘
+             │   发出 HTTP 请求：
+             │   GET /index.html HTTP/1.1
+             ▼
+     ┌────────────────────────────┐
+     │        操作系统（OS）       │
+     │ 网络传输 & 找目标端口:8080 │
+     └────────────┬──────────────┘
+                  │
+                  ▼
+      ╔═════════════════════════════════╗
+      ║     你写的 webserv 程序启动了     ║
+      ║---------------------------------║
+      ║ ① socket() 创建 socket           ║
+      ║ ② bind() 绑定到端口 8080        ║
+      ║ ③ listen() 开始监听请求         ║
+      ╚═════════════╤═══════════════════╝
+                    │ 浏览器连接到 8080
+                    ▼
+         ┌────────────────────────────┐
+         │    accept() 建立连接       │
+         │ 生成一个“会话 socket”fd     │
+         └────────────┬──────────────┘
+                      │
+                      ▼
+       ┌──────────────────────────────┐
+       │    read() 读取请求内容       │
+       │ 解析：GET /index.html 等等   │
+       └────────────┬────────────────┘
+                    │
+                    ▼
+  ╔═══════════════════════════════════════════╗
+  ║      从配置中读取 root 路径，例如：           ║
+  ║         root ./www; index index.html;     ║
+  ║      请求路径是 /index.html                 ║
+  ║   → 拼接本地路径 = ./www/index.html         ║
+  ╚═══════════════════════════════════════════╝
+                    │
+      ┌─────────────▼────────────────┐
+      │   open() 打开这个文件        │
+      │   read() 读取 HTML 内容      │
+      └─────────────┬────────────────┘
+                    │
+                    ▼
+  ╔═════════════════════════════════════════════╗
+  ║     构建 HTTP 响应：                          ║
+  ║     HTTP/1.1 200 OK                         ║
+  ║     Content-Type: text/html                 ║
+  ║     Content-Length: 54                      ║
+  ║     <html>...网页内容...</html>              ║
+  ╚═════════════════════════════════════════════╝
+                    │
+                    ▼
+         ┌────────────────────────────┐
+         │   send() 把响应发给浏览器     │
+         └────────────┬──────────────┘
+                      │
+                      ▼
+┌───────────────────────────────┐
+│      浏览器收到响应！           │
+│    渲染网页，显示给用户 ✅        │
+└───────────────────────────────┘
+
+
+
+--------------------------
+test Token
+#include <iostream>
+#include <vector>
+#include "ConfigTokenizer.hpp"
+
+std::string tokenTypeToString(TokenType type) {
+	switch (type) {
+		case TK_IDENTIFIER: return "IDENTIFIER";
+		case TK_NUMBER:     return "NUMBER";
+		case TK_LBRACE:     return "LBRACE";
+		case TK_RBRACE:     return "RBRACE";
+		case TK_SEMICOLON:  return "SEMICOLON";
+		case TK_EOF:        return "EOF";
+		default:            return "UNKNOWN";
+	}
+}
+
+int main() {
+	std::string config = R"(
+		#comment
+		server {
+			listen 8080;
+			server_name localhost;
+
+			error_page 404 /errors/404.html;
+			error_page 403 /errors/403.html;
+			error_page 500 /errors/500.html;
+
+			client_max_body_size 1M;
+
+			# Location: root page with autoindex off
+			location / {
+				root /home/linliu/42_github/rank5/webserver/sites/static/index.html;
+				methods GET POST;
+				redirect http://example.com;
+				autoindex on;
+				index index.html;
+				cgi_path /usr/bin/python3;
+				upload_dir /tmp/uploads;
+			}
+	)";
+
+	Tokenizer tokenizer(config);
+	std::vector<Token> tokens = tokenizer.tokenize();
+
+	for (size_t i = 0; i < tokens.size(); ++i) {
+		const Token& tok = tokens[i];
+
+		std::cout << "Line " << tok.line
+		          << ", Col " << tok.col
+		          << " | Type: " << tokenTypeToString(tok.type)
+		          << " | Value: \"" << tok.value << "\""
+		          << std::endl;
+	}
+}
+--------------------------------------
+test configparser(AST)
+
+#include "ConfigBuilder.hpp"
+#include <iostream>
+
+using namespace config;
+
+int main() {
+    try {
+        // load config file
+        Parser parser("configuration/new.conf");
+
+        // parse into AST
+        std::vector<ServerNode> servers = parser.parse();
+		//std::vector<ServerConfig> cfg = ConfigBuilder::build(servers);
+
+        // print results
+        for (std::size_t i = 0; i < servers.size(); ++i) {
+            const ServerNode& server = servers[i];
+
+            std::cout << "==== Server " << i + 1 << " ====\n";
+            std::cout << "Listen: " << server.listen.first << ":" << server.listen.second << "\n";
+
+            std::cout << "Server Names:\n";
+            for (const std::string& name : server.server_names)
+                std::cout << "  - " << name << "\n";
+
+            std::cout << "Root: " << server.root << "\n";
+
+            std::cout << "Index:\n";
+            for (const std::string& idx : server.index)
+                std::cout << "  - " << idx << "\n";
+
+            std::cout << "Client Max Body Size: " << server.client_max_body_size << "\n";
+
+            std::cout << "Error Pages:\n";
+            for (const auto& [code, path] : server.error_pages)
+                std::cout << "  " << code << " => " << path << "\n";
+
+            std::cout << "Locations:\n";
+            for (const LocationNode& loc : server.locations) {
+                std::cout << "  --- Location ---\n";
+                std::cout << "  Path: " << loc.path << "\n";
+                std::cout << "  Root: " << loc.root << "\n";
+
+                std::cout << "  Index:\n";
+                for (const std::string& idx : loc.index)
+                    std::cout << "    - " << idx << "\n";
+
+                std::cout << "  Autoindex: " << (loc.autoindex ? "on" : "off") << "\n";
+                std::cout << "  Redirect: " << loc.redirect << "\n";
+                std::cout << "  CGI Pass: " << loc.cgi_pass << "\n";
+                std::cout << "  CGI Ext: " << loc.cgi_ext << "\n";
+                std::cout << "  Upload Dir: " << loc.upload_dir << "\n";
+
+                std::cout << "  Methods:\n";
+                for (const std::string& method : loc.methods)
+                    std::cout << "    - " << method << "\n";
+
+                std::cout << "\n";
+            }
+
+            std::cout << std::endl;
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error while parsing config: " << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;
+}
