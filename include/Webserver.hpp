@@ -1,6 +1,6 @@
 #pragma once
 #include "Server.hpp"
-#include "Config.hpp"
+#include "ConfigBuilder.hpp"
 #include "utils.hpp"
 #include <map>
 #include <sys/epoll.h>
@@ -9,6 +9,8 @@
 #include <vector>
 #include <string>
 #include <cstring>
+
+using namespace config;
 
 class Webserver {
 	private:
@@ -36,7 +38,7 @@ class Webserver {
 		Webserver& operator=(const Webserver& other) = delete;
 		~Webserver();
 
-		int  createServers(const Configuration& config);
+		int  createServers(const std::vector<ServerConfig>& config);
 		int  runWebserver(void);
 		void stopWebserver(void);
 };

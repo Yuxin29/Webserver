@@ -1,36 +1,36 @@
 #include "Webserver.hpp"
-#include "Config.hpp"
+#include "ConfigBuilder.hpp"
 #include "utils.hpp"
+
+using namespace config;
+using namespace utils;
 
 int main(int argc, char **argv){
 	try {
-		Configuration configFile;
+		std::vector<ServerConfig> configs;
 		if (argc == 1){
-			if (!configFile.load(utils::DEFAULT_CONFIG_PATH)){
-				return utils::returnErrorMessage(utils::FAILED_TO_LOAD_DEFAULT_PATH);
-			}
+			Parser parser(DEFAULT_CONFIG_PATH);
+			std::vector<ServerNode> servers = parser.parse();
+			configs = ConfigBuilder::build(servers);
 		} 
 		else if (argc == 2){
-			(void)argv;
-			/* Maybe a:
-				validateFile()
-				parseFile()
-				validateDataInFile()
-			*/
+			Parser parser(argv[1]);
+			std::vector<ServerNode> servers = parser.parse();
+			configs = ConfigBuilder::build(servers);
 		}
 		else {
-			return utils::returnErrorMessage(utils::WRONG_ARGUMENTS);
+			return returnErrorMessage(WRONG_ARGUMENTS);
 		}
 		Webserver miniNginx;
-		if (miniNginx.createServers(configFile) == utils::FAILURE){
-			return utils::returnErrorMessage(utils::FAILED_TO_CREATE_SERVERS);
+		if (miniNginx.createServers(configs) == FAILURE){
+			return returnErrorMessage(FAILED_TO_CREATE_SERVERS);
 		}
-		if (miniNginx.runWebserver() == utils::FAILURE){
-			return utils::returnErrorMessage(utils::ERROR_RUNNING_SERVERS);
+		if (miniNginx.runWebserver() == FAILURE){
+			return returnErrorMessage(ERROR_RUNNING_SERVERS);
 		}
-		return utils::SUCCESS;
+		return SUCCESS;
 	} catch (const std::exception& e){
 		std::cerr << "Error: " << e.what() << std::endl;
-		return utils::FAILURE;
+		return FAILURE;
 	}
 }

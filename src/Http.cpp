@@ -4,7 +4,7 @@ void Http::setName(const std::string& name) {
 	_name = name;
 }
 
-httpResponse Http::processRequest(const std::string& request, const Configuration::ServerBlock& server) {
+httpResponse Http::processRequest(const std::string& request, const ServerConfig& server) {
 	httpResponse response;
 	(void)server; // Will use this later for routing
 	

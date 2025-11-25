@@ -8,9 +8,11 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "Config.hpp"
+#include "ConfigBuilder.hpp"
 #include "Request.hpp"
 #include "Http.hpp"
+
+using namespace config;
 
 class Server {
 	public:
@@ -32,19 +34,19 @@ class Server {
 		std::string 	_host;
 		int				_listenFd;
 		int  			_port;
-		std::vector<Configuration::ServerBlock>	_virtualHosts;
+		std::vector<ServerConfig>	_virtualHosts;
 		sockaddr_in		_addr;
 		Http			_httpHandler;
 		std::map<int, std::string> _partialRequests;
 
-		const Configuration::ServerBlock* matchVirtualHost(const std::string& hostHeader);
+		const ServerConfig* matchVirtualHost(const std::string& hostHeader);
 		std::string extractHostHeader(const std::string& rawRequest) const;
-		const Configuration::ServerBlock::LocationBlock* findLocation(const Configuration::ServerBlock& server,
+		const LocationConfig* findLocation(const ServerConfig& server,
 						const std::string& path) const;
 
 	public:
 		Server() = delete;
-		explicit Server(const std::string& host, int port, const std::vector<Configuration::ServerBlock>& serverBlocks);
+		explicit Server(const std::string& host, int port, const std::vector<ServerConfig>& serverBlocks);
 		Server(const Server& other);
 		Server& operator=(const Server& other) = delete;
 		~Server();

@@ -119,7 +119,7 @@ namespace config{
 					Token sernameToken = get();
 					if(sernameToken.type != TK_IDENTIFIER)
 						throw std::runtime_error(makeError("Expect server_name ", sernameToken.line, sernameToken.col));
-					server.server_names.push_back(sernameToken.value);
+					server.serverNames.push_back(sernameToken.value);
 					if(peek().type == TK_SEMICOLON)
 					{
 						get(); //eat ;
@@ -136,18 +136,18 @@ namespace config{
 				Token pathTok = get();
 				if (pathTok.type != TK_IDENTIFIER)
 					throw std::runtime_error(makeError("Expect path ", codeTok.line, codeTok.col));
-				server.error_pages[std::stoi(codeTok.value)] = pathTok.value;
+				server.errorPages[std::stoi(codeTok.value)] = pathTok.value;
 				expect(TK_SEMICOLON, "Expected ';' after error path");
 			}
-			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
-				server.client_max_body_size = parseSimpleDirective();
-			// else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
+			else if(token.type == TK_IDENTIFIER && token.value == "clientMaxBodySize")
+				server.clientMaxBodySize = parseSimpleDirective();
+			// else if(token.type == TK_IDENTIFIER && token.value == "clientMaxBodySize")
 			// {
 			// 	get(); // eat client max body size
 			// 	Token sizeToken = get();
 			// 	if(sizeToken.type != TK_NUMBER)
 			// 		throw std::runtime_error(makeError("Expect size ", sizeToken.line, sizeToken.col));
-			// 	server.client_max_body_size = std::stoi(sizeToken.value);
+			// 	server.clientMaxBodySize = std::stoi(sizeToken.value);
 			// 	expect(TK_SEMICOLON, "Expected ';' after error path");
 			// }
 			else if (token.type == TK_IDENTIFIER && token.value == "root")
@@ -203,14 +203,14 @@ namespace config{
 				location.root = parseSimpleDirective();
 			else if(token.type == TK_IDENTIFIER && token.value == "redirect")
 				location.redirect = parseSimpleDirective();
-			else if(token.type==TK_IDENTIFIER && token.value == "cgi_pass")
-				location.cgi_pass = parseSimpleDirective();
-			else if(token.type==TK_IDENTIFIER && token.value == "cgi_ext")
-				location.cgi_ext = parseSimpleDirective();
-			else if(token.type==TK_IDENTIFIER && token.value == "upload_dir")
-				location.upload_dir = parseSimpleDirective();
-			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
-				location.client_max_body_size = parseSimpleDirective();
+			else if(token.type==TK_IDENTIFIER && token.value == "cgiPass")
+				location.cgiPass = parseSimpleDirective();
+			else if(token.type==TK_IDENTIFIER && token.value == "cgiExt")
+				location.cgiExt = parseSimpleDirective();
+			else if(token.type==TK_IDENTIFIER && token.value == "uploadDir")
+				location.uploadDir = parseSimpleDirective();
+			else if(token.type == TK_IDENTIFIER && token.value == "clientMaxBodySize")
+				location.clientMaxBodySize = parseSimpleDirective();
 			else if(token.type==TK_IDENTIFIER && token.value == "index")
 			{
 				get(); //eat index
