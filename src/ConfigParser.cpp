@@ -10,7 +10,7 @@ namespace config{
 	{
 		std::ifstream infile(filename);
 		if (!infile)
-			throw std::runtime_error("Failed to open config file" + filename);
+			throw std::runtime_error("Failed to open config file " + filename);
 		std::stringstream buffer;
 		buffer << infile.rdbuf();//.rdbuf() gives access to its underlying stream buffer.
 		std::string content = buffer.str();

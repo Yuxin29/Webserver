@@ -39,7 +39,7 @@ namespace config
 		std::string host;
 		int port;
 		std::vector<std::string> server_names;
-		std::map<int, std::string> error_pages;
+		std::map<int, std::string> error_pages;//cannot be empty
 		long client_max_body_size; //bytes
 		std::string root;//cannot be empty
 		std::vector<std::string> index;//cannot be empty
