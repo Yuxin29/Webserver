@@ -139,7 +139,7 @@ namespace config{
 				server.errorPages[std::stoi(codeTok.value)] = pathTok.value;
 				expect(TK_SEMICOLON, "Expected ';' after error path");
 			}
-			else if(token.type == TK_IDENTIFIER && token.value == "clientMaxBodySize")
+			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
 				server.clientMaxBodySize = parseSimpleDirective();
 			// else if(token.type == TK_IDENTIFIER && token.value == "clientMaxBodySize")
 			// {
@@ -203,13 +203,13 @@ namespace config{
 				location.root = parseSimpleDirective();
 			else if(token.type == TK_IDENTIFIER && token.value == "redirect")
 				location.redirect = parseSimpleDirective();
-			else if(token.type==TK_IDENTIFIER && token.value == "cgiPass")
+			else if(token.type==TK_IDENTIFIER && token.value == "cgi_pass")
 				location.cgiPass = parseSimpleDirective();
-			else if(token.type==TK_IDENTIFIER && token.value == "cgiExt")
+			else if(token.type==TK_IDENTIFIER && token.value == "cgi_ext")
 				location.cgiExt = parseSimpleDirective();
-			else if(token.type==TK_IDENTIFIER && token.value == "uploadDir")
+			else if(token.type==TK_IDENTIFIER && token.value == "upload_dir")
 				location.uploadDir = parseSimpleDirective();
-			else if(token.type == TK_IDENTIFIER && token.value == "clientMaxBodySize")
+			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
 				location.clientMaxBodySize = parseSimpleDirective();
 			else if(token.type==TK_IDENTIFIER && token.value == "index")
 			{

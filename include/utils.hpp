@@ -10,7 +10,7 @@ namespace utils {
 
 	// Default path to configuration if none is passed to the program
 	inline constexpr const char* DEFAULT_CONFIG_PATH 
-		= "../configuration/simple.conf";
+		= "configuration/simple.conf";
 
 	// Error messages
 	enum errorMacros{
