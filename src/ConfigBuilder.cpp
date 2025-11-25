@@ -1,24 +1,48 @@
 #include "ConfigBuilder.hpp"
+#include <iostream>
 
 namespace config{
 	std::vector<std::string> ConfigBuilder::defaultIndex()
 	{
-
+		std::vector<std::string> result;
+		result.push_back("index.html");
+		return result;
 	}
 
 	long ConfigBuilder::defaultClientMaxBodySize()
 	{
-
+		long size = 1*1024*1024;
+		return size;
 	}
 
-	long ConfigBuilder::parseSizeLiteral(const std::string& size)
+	long ConfigBuilder::parseSizeLiteral(const std::string& sizeStr)
 	{
-
+		std::string numberStr;
+		long num ;
+		size_t last = sizeStr.size() - 1;
+		char c = sizeStr[last];
+		if(isdigit(c))
+			num = std::stol(sizeStr);
+		else if(c == 'M' || c == 'm'){
+			numberStr = sizeStr.substr(0, last);
+			num = std::stol(numberStr) * 1024 * 1024;
+		}
+		else if(c == 'K'||c == 'k'){
+			numberStr = sizeStr.substr(0, last);
+			num = std::stol(numberStr) * 1024;
+		}
+		else
+			throw std::runtime_error("Invalid size in client_max_body_size");
+		return num;
 	}
 
 	std::vector<std::string> ConfigBuilder::defaultMethods()
 	{
-
+		std::vector<std::string> methods;
+		methods.push_back("GET");
+		methods.push_back("POST");
+		methods.push_back("DELETE");
+		return methods;
 	}
 
 	LocationConfig ConfigBuilder::buildLocationConfig(const LocationNode& node, const ServerConfig& parent)

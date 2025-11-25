@@ -62,14 +62,15 @@ namespace config
 		static std::vector<std::string> defaultMethods();
 		static long defaultClientMaxBodySize();
 		static long parseSizeLiteral(const std::string& size);
-		/*This function must:
-		Read the last char → check if it's M/m/K/k
-		Parse the number part
-		Convert to bytes*/
 	};
 }
 
-
-
-
 #endif
+
+
+/*
+1 KB = 1024 bytes
+1 MB = 1024 KB
+     = 1024 × 1024 bytes
+     = 1,048,576 bytes
+*/

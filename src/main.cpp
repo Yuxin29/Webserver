@@ -1,49 +1,62 @@
-#include "ConfigParser.hpp"
-#include "ConfigTokenizer.hpp"
+#include "ConfigBuilder.hpp"
 #include <iostream>
 
 using namespace config;
 
+static void printVector(const std::vector<std::string>& v) {
+    for (size_t i = 0; i < v.size(); i++)
+        std::cout << "    - " << v[i] << "\n";
+}
+
+static void printErrorPages(const std::map<int, std::string>& m) {
+    for (std::map<int, std::string>::const_iterator it = m.begin();
+         it != m.end(); it++)
+    {
+        std::cout << "    " << it->first << " => " << it->second << "\n";
+    }
+}
 int main() {
     try {
         // load config file
-        Parser parser("configuration/new.conf");
+        Parser parser("configuration/webserv.conf");
 
         // parse into AST
         std::vector<ServerNode> servers = parser.parse();
+		//convert AST to config
+		std::vector<ServerConfig> cfgs = ConfigBuilder::build(servers);
 
         // print results
-        for (std::size_t i = 0; i < servers.size(); ++i) {
-            const ServerNode& server = servers[i];
+         for (size_t i = 0; i < cfgs.size(); i++) {
+            const ServerConfig& s = cfgs[i];
+            std::cout << "=============================\n";
+            std::cout << "        SERVER " << i + 1 << "\n";
+            std::cout << "=============================\n";
 
-            std::cout << "==== Server " << i + 1 << " ====\n";
-            std::cout << "Listen: " << server.listen.first << ":" << server.listen.second << "\n";
+            std::cout << "Host: " << s.host << "\n";
+            std::cout << "Port: " << s.port << "\n";
 
-            std::cout << "Server Names:\n";
-            for (const std::string& name : server.server_names)
-                std::cout << "  - " << name << "\n";
-
-            std::cout << "Root: " << server.root << "\n";
+            std::cout << "Root: " << s.root << "\n";
 
             std::cout << "Index:\n";
-            for (const std::string& idx : server.index)
-                std::cout << "  - " << idx << "\n";
+            printVector(s.index);
 
-            std::cout << "Client Max Body Size: " << server.client_max_body_size << "\n";
+            std::cout << "Client Max Body Size: " << s.client_max_body_size << " bytes\n";
+
+            std::cout << "Server Names:\n";
+            printVector(s.server_names);
 
             std::cout << "Error Pages:\n";
-            for (const auto& [code, path] : server.error_pages)
-                std::cout << "  " << code << " => " << path << "\n";
+            printErrorPages(s.error_pages);
 
-            std::cout << "Locations:\n";
-            for (const LocationNode& loc : server.locations) {
-                std::cout << "  --- Location ---\n";
+            std::cout << "\nLocations:\n";
+            for (size_t j = 0; j < s.locations.size(); j++) {
+                const LocationConfig& loc = s.locations[j];
+                std::cout << "\n  --- Location " << j + 1 << " ---\n";
                 std::cout << "  Path: " << loc.path << "\n";
                 std::cout << "  Root: " << loc.root << "\n";
 
                 std::cout << "  Index:\n";
-                for (const std::string& idx : loc.index)
-                    std::cout << "    - " << idx << "\n";
+                printVector(loc.index);
 
                 std::cout << "  Autoindex: " << (loc.autoindex ? "on" : "off") << "\n";
                 std::cout << "  Redirect: " << loc.redirect << "\n";
@@ -51,20 +64,19 @@ int main() {
                 std::cout << "  CGI Ext: " << loc.cgi_ext << "\n";
                 std::cout << "  Upload Dir: " << loc.upload_dir << "\n";
 
-                std::cout << "  Methods:\n";
-                for (const std::string& method : loc.methods)
-                    std::cout << "    - " << method << "\n";
+                std::cout << "  Client Max Body Size: "
+                          << loc.client_max_body_size << " bytes\n";
 
-                std::cout << "\n";
+                std::cout << "  Methods:\n";
+                printVector(loc.methods);
             }
 
-            std::cout << std::endl;
+            std::cout << "\n";
         }
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error while parsing config: " << e.what() << std::endl;
+
+    } catch (const std::exception& e) {
+        std::cerr << "Error while parsing config: " << e.what() << "\n";
         return 1;
     }
-
-    return 0;
 }
+
