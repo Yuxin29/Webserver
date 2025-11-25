@@ -1,10 +1,50 @@
+//Lucio Part
+#include "Webserver.hpp"
+#include "Config.hpp"
+#include "utils.hpp"
+
+//Yuxin Part
 #include "Server.hpp"
 #include "HttpRequest.hpp"
 #include "HttpRequestParser.hpp"
 #include "HttpResponse.hpp"
 #include "HttpResponseHandler.hpp"
 
-//testing for yuxin request part, not the real main, can be commented if anyone is merging to main
+// //Lucio Main
+// int main(int argc, char **argv){
+// 	try {
+// 		Configuration configFile;
+// 		if (argc == 1){
+// 			if (!configFile.load(utils::DEFAULT_CONFIG_PATH)){
+// 				return utils::returnErrorMessage(utils::FAILED_TO_LOAD_DEFAULT_PATH);
+// 			}
+// 		} 
+// 		else if (argc == 2){
+// 			(void)argv;
+// 			/* Maybe a:
+// 				validateFile()
+// 				parseFile()
+// 				validateDataInFile()
+// 			*/
+// 		}
+// 		else {
+// 			return utils::returnErrorMessage(utils::WRONG_ARGUMENTS);
+// 		}
+// 		Webserver miniNginx;
+// 		if (miniNginx.createServers(configFile) == utils::FAILURE){
+// 			return utils::returnErrorMessage(utils::FAILED_TO_CREATE_SERVERS);
+// 		}
+// 		if (miniNginx.runWebserver() == utils::FAILURE){
+// 			return utils::returnErrorMessage(utils::ERROR_RUNNING_SERVERS);
+// 		}
+// 		return utils::SUCCESS;
+// 	} catch (const std::exception& e){
+// 		std::cerr << "Error: " << e.what() << std::endl;
+// 		return utils::FAILURE;
+// 	}
+// }
+
+// Yuxin Main
 int main() {
     std::cout << " ------------------------ testing http request ----------------------" << std::endl;
     HttpParser parser;
