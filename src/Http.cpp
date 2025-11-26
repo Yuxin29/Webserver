@@ -55,7 +55,7 @@ httpResponse Http::processRequest(const std::string& request, const ServerConfig
 	// Build response body with server info
 	std::ostringstream body;
 	body << "<html><head><title>Webserver Test</title></head><body>"
-	     << "<h1>🚀 Webserver Working!</h1>"
+	     << "<h1>Webserver Working!</h1>"
 	     << "<h2>Request Info:</h2>"
 	     << "<p><b>Method:</b> " << method << "</p>"
 	     << "<p><b>Path:</b> " << path << "</p>"

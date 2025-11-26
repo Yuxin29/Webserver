@@ -16,14 +16,6 @@ namespace config{
 		std::string content = buffer.str();
 		Tokenizer tokenizer(content);
 		_tokens = tokenizer.tokenize();
-
-		//debug
-		for (auto &tk : _tokens) {
-		std::cout << "[" << tk.value << "] "
-				<< tk.type
-				<< " line " << tk.line
-				<< " col " << tk.col << "\n";
-			} //for print the token list, debug
 	}
 
 	Token Parser::peek() const

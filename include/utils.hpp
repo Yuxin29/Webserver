@@ -25,6 +25,7 @@ namespace utils {
 }
 
 namespace config {
+	
 	inline std::string makeError(const std::string& msg, int line, int col)
 	{
 		std::ostringstream oss;
