@@ -63,17 +63,17 @@ namespace config{
 			throw std::runtime_error(makeError(msg, cur_token.line, cur_token.col));
 	}
 
-	std::string Parser::parseSimpleDirective()
+	std::string Parser::parseSimpleDirective(const std::string& str)
 	{
 		get();
 		Token valuetoken = get();
 		if (valuetoken.type != TK_IDENTIFIER)
-			throw std::runtime_error(makeError("Expect value ", valuetoken.line, valuetoken.col));
+			throw std::runtime_error("Expect value after " + str);
 		expect(TK_SEMICOLON, "Expected ';'");
 		return valuetoken.value;
 	}
 
-	std::vector<std::string> Parser::parseVectorStringDirective()
+	std::vector<std::string> Parser::parseVectorStringDirective(const std::string& str)
 	{
 		std::vector<std::string> results;
 		while(true)
@@ -82,6 +82,8 @@ namespace config{
 				throw std::runtime_error("Unexpected EOF while parsing index value");
 			}
 			Token tok = get();
+			if(isKeyword(tok.value))
+				throw std::runtime_error("Missing value after " + str);
 			if(tok.type != TK_IDENTIFIER)
 				throw std::runtime_error(makeError("Expect value", tok.line, tok.col));
 			results.push_back(tok.value);
@@ -104,15 +106,15 @@ namespace config{
 	{
 		return s == "path"
 		|| s == "redirect"
-        || s == "server_name"
-        || s == "root"
-        || s == "index"
-        || s == "autoindex"
-        || s == "cgi_pass"
+		|| s == "server_name"
+		|| s == "root"
+		|| s == "index"
+		|| s == "autoindex"
+		|| s == "cgi_pass"
 		|| s == "cgi_ext"
-        || s == "upload_dir"
-        || s == "client_max_body_size"
-        || s == "allowed_methods"
+		|| s == "upload_dir"
+		|| s == "client_max_body_size"
+		|| s == "allowed_methods"
 		|| s == "error_pages" ;
 	}
 
@@ -156,7 +158,7 @@ namespace config{
 			else if (token.type == TK_IDENTIFIER && token.value == "server_name")
 			{
 				get(); // eat server_name
-				server.serverNames = parseVectorStringDirective();
+				server.serverNames = parseVectorStringDirective("server_name");
 			}
 			else if(token.type == TK_IDENTIFIER && token.value == "error_page")
 			{
@@ -171,13 +173,13 @@ namespace config{
 				expect(TK_SEMICOLON, "Expected ';' after error path");
 			}
 			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
-				server.clientMaxBodySize = parseSimpleDirective();
+				server.clientMaxBodySize = parseSimpleDirective("client_max_body_size");
 			else if (token.type == TK_IDENTIFIER && token.value == "root")
-				server.root = parseSimpleDirective();
+				server.root = parseSimpleDirective("root");
 			else if(token.type==TK_IDENTIFIER && token.value == "index")
 			{
 				get(); //eat index
-				server.index = parseVectorStringDirective();
+				server.index = parseVectorStringDirective("index");
 			}
 			else if (token.type == TK_IDENTIFIER && token.value == "location")
 				server.locations.push_back(parseLocationBlock());
@@ -209,21 +211,21 @@ namespace config{
 				break;
 			}
 			if (token.type == TK_IDENTIFIER && token.value == "root")
-				location.root = parseSimpleDirective();
+				location.root = parseSimpleDirective("root");
 			else if(token.type == TK_IDENTIFIER && token.value == "redirect")
-				location.redirect = parseSimpleDirective();
+				location.redirect = parseSimpleDirective("redirect");
 			else if(token.type==TK_IDENTIFIER && token.value == "cgi_pass")
-				location.cgiPass = parseSimpleDirective();
+				location.cgiPass = parseSimpleDirective("cgi_pass");
 			else if(token.type==TK_IDENTIFIER && token.value == "cgi_ext")
-				location.cgiExt = parseSimpleDirective();
+				location.cgiExt = parseSimpleDirective("cgi_ext");
 			else if(token.type==TK_IDENTIFIER && token.value == "upload_dir")
-				location.uploadDir = parseSimpleDirective();
+				location.uploadDir = parseSimpleDirective("upload_dir");
 			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
-				location.clientMaxBodySize = parseSimpleDirective();
+				location.clientMaxBodySize = parseSimpleDirective("client_max_body_size");
 			else if(token.type==TK_IDENTIFIER && token.value == "index")
 			{
 				get(); //eat index
-				location.index = parseVectorStringDirective();
+				location.index = parseVectorStringDirective("index");
 			}
 			else if(token.type==TK_IDENTIFIER && token.value == "autoindex")
 			{
@@ -234,13 +236,13 @@ namespace config{
 				else if(autoindex.value == "off")
 					location.autoindex = false;
 				else
-					throw std::runtime_error(makeError("Expect on/off after autoindex ", autoindex.line, autoindex.col));
+					throw std::runtime_error("Expect on/off after autoindex.");
 				expect(TK_SEMICOLON, "Expected ';' after location path");
 			}
 			else if(token.type==TK_IDENTIFIER && (token.value == "methods" || token.value == "allowed_methods"))
 			{
 				get();
-				location.methods = parseVectorStringDirective();
+				location.methods = parseVectorStringDirective("allowed_methods");
 			}
 			else
 				throw std::runtime_error(makeError("Unknown keyword in location block ", token.line, token.col));
