@@ -18,13 +18,13 @@ namespace config{
 		_tokens = tokenizer.tokenize();
 
 		//debug
-		for (auto &tk : _tokens) {
+		for (auto &tk : _tokens)
+		{
 			std::cout << "[" << tk.value << "] "
 				<< tk.type
 				<< " line " << tk.line
 				<< " col " << tk.col << "\n";
-			} //for print the token list, debug
-
+		} //for print the token list, debug
 	}
 
 	Token Parser::peek() const
@@ -88,8 +88,9 @@ namespace config{
 				throw std::runtime_error(makeError("Expect value", tok.line, tok.col));
 			results.push_back(tok.value);
 			Token next = peek();
-			if(next.type == TK_SEMICOLON){
-				get(); //eat ;
+			if(next.type == TK_SEMICOLON)
+			{
+				get(); //eat
 				break;
 			}
 			if (next.type == TK_IDENTIFIER && isKeyword(next.value)) {
@@ -144,7 +145,8 @@ namespace config{
 				int port;
 				std::string listenValue = listenToken.value;
 				size_t colon = listenValue.find(':');
-				if(colon == std::string::npos){
+				if(colon == std::string::npos)
+				{
 					host = "0.0.0.0";
 					port = std::stoi(listenValue);
 				}
