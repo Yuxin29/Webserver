@@ -107,7 +107,7 @@ namespace config{
 					port = std::stoi(listenValue.substr(colon+1));
 				}
 				server.listen = std::make_pair(host, port);
-				expect(TK_SEMICOLON, "Expected ';' after port");
+				expect(TK_SEMICOLON, "Expected ';' after port ");
 			}
 			else if(token.type == TK_IDENTIFIER && token.value == "server_name")
 			{
