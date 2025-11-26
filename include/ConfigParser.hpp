@@ -12,20 +12,20 @@ namespace config{
 		std::string root;
 		std::string redirect;
 		std::vector<std::string> index;//
-		std::string cgi_pass;
-		std::string cgi_ext;
-		std::string upload_dir;
-		std::string client_max_body_size;
+		std::string cgiPass;
+		std::string cgiExt;
+		std::string uploadDir;
+		std::string clientMaxBodySize;
 		bool autoindex;
 		std::vector<std::string> methods;
 	};
 
 	struct ServerNode
 	{
-		std::vector<std::string> server_names;
+		std::vector<std::string> serverNames;
 		std::pair<std::string, int> listen; //might 127.0.0.1:8080 or just 8080; 127.0.0.1 is string
-		std::map<int, std::string> error_pages; //int: error code; string:path to html file
-		std::string client_max_body_size;
+		std::map<int, std::string> errorPages; //int: error code; string:path to html file
+		std::string clientMaxBodySize;
 		std::string root;
 		std::vector<std::string> index;
 		std::vector<LocationNode> locations;
@@ -49,6 +49,8 @@ namespace config{
 		ServerNode parseServerBlock();
 		LocationNode parseLocationBlock();
 		std::string parseSimpleDirective();
+		std::vector<std::string> parseVectorStringDirective();
+		bool isKeyword(std::string& s);
 	};
 }
 

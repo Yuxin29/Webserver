@@ -26,10 +26,10 @@ namespace config
 		std::string root; //inherit
 		std::string redirect;
 		std::vector<std::string> index;//inherit
-		std::string cgi_pass;
-		std::string cgi_ext;
+		std::string cgiPass;
+		std::string cgiExt;
 		std::string upload_dir;
-		long client_max_body_size;//inherit
+		long clientMaxBodySize;//inherit
 		bool autoindex;
 		std::vector<std::string> methods; //cannot be empty
 	};
@@ -38,9 +38,9 @@ namespace config
 	{
 		std::string host;
 		int port;
-		std::vector<std::string> server_names;
-		std::map<int, std::string> error_pages;//cannot be empty
-		long client_max_body_size; //bytes
+		std::vector<std::string> serverNames;
+		std::map<int, std::string> errorPages;//cannot be empty
+		long clientMaxBodySize; //bytes
 		std::string root;//cannot be empty
 		std::vector<std::string> index;//cannot be empty
 		std::vector<LocationConfig> locations;

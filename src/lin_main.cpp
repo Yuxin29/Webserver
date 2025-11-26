@@ -40,13 +40,13 @@ int main() {
             std::cout << "Index:\n";
             printVector(s.index);
 
-            std::cout << "Client Max Body Size: " << s.client_max_body_size << " bytes\n";
+            std::cout << "Client Max Body Size: " << s.clientMaxBodySize<< " bytes\n";
 
             std::cout << "Server Names:\n";
-            printVector(s.server_names);
+            printVector(s.serverNames);
 
             std::cout << "Error Pages:\n";
-            printErrorPages(s.error_pages);
+            printErrorPages(s.errorPages);
 
             std::cout << "\nLocations:\n";
             for (size_t j = 0; j < s.locations.size(); j++) {
@@ -60,12 +60,12 @@ int main() {
 
                 std::cout << "  Autoindex: " << (loc.autoindex ? "on" : "off") << "\n";
                 std::cout << "  Redirect: " << loc.redirect << "\n";
-                std::cout << "  CGI Pass: " << loc.cgi_pass << "\n";
-                std::cout << "  CGI Ext: " << loc.cgi_ext << "\n";
+                std::cout << "  CGI Pass: " << loc.cgiPass << "\n";
+                std::cout << "  CGI Ext: " << loc.cgiExt << "\n";
                 std::cout << "  Upload Dir: " << loc.upload_dir << "\n";
 
                 std::cout << "  Client Max Body Size: "
-                          << loc.client_max_body_size << " bytes\n";
+                          << loc.clientMaxBodySize << " bytes\n";
 
                 std::cout << "  Methods:\n";
                 printVector(loc.methods);
