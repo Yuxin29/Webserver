@@ -3,11 +3,22 @@
 #include <fstream>
 #include <sstream> //std::stringstream
 #include <iostream>
+#include <filesystem>
 
 namespace config{
 	Parser::Parser(const std::string& filename)
 	:_pos(0)
 	{
+		//does the file exist?
+		if(!std::filesystem::exists(filename))
+			throw std::runtime_error("Config file does not exist: " + filename);
+		// Is the path a directory?
+		if(std::filesystem::is_directory(filename))
+			throw std::runtime_error("Config path is a directory.");
+		//validate .conf extension
+		if(std::filesystem::path(filename).extension() != ".conf")
+			throw std::runtime_error("Config file should end with '.conf'.");
+			
 		std::ifstream infile(filename);
 		if (!infile)
 			throw std::runtime_error("Failed to open config file " + filename);
@@ -16,7 +27,8 @@ namespace config{
 		std::string content = buffer.str();
 		Tokenizer tokenizer(content);
 		_tokens = tokenizer.tokenize();
-
+		if(_tokens.size() == 1 && _tokens[0].type == TK_EOF)
+			throw std::runtime_error("Empty conf file!");
 		//debug
 		for (auto &tk : _tokens)
 		{
