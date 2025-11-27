@@ -18,7 +18,7 @@ namespace config{
 		//validate .conf extension
 		if(std::filesystem::path(filename).extension() != ".conf")
 			throw std::runtime_error("Config file should end with '.conf'.");
-			
+
 		std::ifstream infile(filename);
 		if (!infile)
 			throw std::runtime_error("Failed to open config file " + filename);
@@ -28,7 +28,7 @@ namespace config{
 		Tokenizer tokenizer(content);
 		_tokens = tokenizer.tokenize();
 		if(_tokens.size() == 1 && _tokens[0].type == TK_EOF)
-			throw std::runtime_error("Empty conf file!");
+			throw std::runtime_error("Empty conf file : " + filename);
 		//debug
 		for (auto &tk : _tokens)
 		{
