@@ -48,7 +48,9 @@ namespace config{
 		void expect(TokenType type, const std::string& msg);
 		ServerNode parseServerBlock();
 		LocationNode parseLocationBlock();
-		std::string parseSimpleDirective();
+		std::string parseSimpleDirective(const std::string& str);
+		std::vector<std::string> parseVectorStringDirective(const std::string& str);
+		bool isKeyword(std::string& s);
 	};
 }
 

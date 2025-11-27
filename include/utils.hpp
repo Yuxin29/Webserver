@@ -9,7 +9,7 @@ namespace utils {
 	constexpr int FAILURE = 1;
 
 	// Default path to configuration if none is passed to the program
-	inline constexpr const char* DEFAULT_CONFIG_PATH 
+	inline constexpr const char* DEFAULT_CONFIG_PATH
 		= "configuration/simple.conf";
 
 	// Error messages
@@ -20,12 +20,12 @@ namespace utils {
 			PARSE_ERROR,
 			FAILED_TO_LOAD_DEFAULT_PATH
 	};
-	
+
 	int returnErrorMessage(int errorCode);
 }
 
 namespace config {
-	
+
 	inline std::string makeError(const std::string& msg, int line, int col)
 	{
 		std::ostringstream oss;
