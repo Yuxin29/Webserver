@@ -18,7 +18,7 @@ static void printErrorPages(const std::map<int, std::string>& m) {
 int main() {
     try {
         // load config file
-        Parser parser("configuration/empty.conf");
+        Parser parser("configuration/simple.conf");
 
         // parse into AST
         std::vector<ServerNode> servers = parser.parse();

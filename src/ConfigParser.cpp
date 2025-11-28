@@ -83,7 +83,7 @@ namespace config{
 	{
 		get();
 		Token valuetoken = get();
-		if (valuetoken.type != TK_IDENTIFIER)
+		if (valuetoken.type != TK_IDENTIFIER && valuetoken.type != TK_STRING)
 			throw std::runtime_error("Expect value after " + str);
 		expect(TK_SEMICOLON, "Expected ';'");
 		return valuetoken.value;
@@ -100,7 +100,7 @@ namespace config{
 			Token tok = get();
 			if(isKeyword(tok.value))
 				throw std::runtime_error("Missing value after " + str);
-			if(tok.type != TK_IDENTIFIER)
+			if(tok.type != TK_IDENTIFIER && tok.type != TK_STRING)
 				throw std::runtime_error(makeError("Expect value", tok.line, tok.col));
 			results.push_back(tok.value);
 			Token next = peek();
