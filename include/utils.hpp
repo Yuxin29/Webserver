@@ -13,7 +13,7 @@ namespace utils {
 		= "configuration/simple.conf";
 
 	// Error messages
-	enum errorMacros{
+	enum errorMacros {
 			WRONG_ARGUMENTS = 1,
 			FAILED_TO_CREATE_SERVERS,
 			ERROR_RUNNING_SERVERS,
