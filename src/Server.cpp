@@ -91,10 +91,10 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
-
-	//constructiong a request
 	_partialRequests[clientFd].append(buffer, nBytes);
 	std::string& request_data = _partialRequests[clientFd];
+
+	//constructiong a request
 	HttpParser parser;
 	HttpRequest	req = parser.parseHttpRequest(request_data);
 	if (parser._state != DONE)
@@ -113,8 +113,8 @@ Server::ClientStatus Server::handleClient(int clientFd){
 
 	//constructiong a response
 	HttpResponse res = _httpHandler.handleRequest(req, virtualHost);
-	if (!res._requestComplete)
-		return CLIENT_INCOMPLETE;
+	// if (!res._requestComplete)
+	// 	return CLIENT_INCOMPLETE;
 	std::string response_string = res.buildResponseString();
 	ssize_t sent = send(clientFd, response_string.c_str(), response_string.size(), 0);
 	if (sent < 0){
