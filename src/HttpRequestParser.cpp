@@ -1,14 +1,5 @@
 #include "HttpRequestParser.hpp"
 
-// a helper to trim empty space
-static std::string trim_space(std::string str)
-{
-    size_t start = str.find_first_not_of(" \t");
-    size_t end = str.find_last_not_of(" \t");
-    return str.substr(start, end - start + 1);
-}
-
-// example of http request 
 // example http request with a content lenth
 // POST /login HTTP/1.1
 // Host: example.com
@@ -18,22 +9,37 @@ static std::string trim_space(std::string str)
 // \r\n
 // username=John&password=1234
 
-//  GET, POST, DELETE  ---> 405
-bool HttpParser::validateRequestMethod(){
-    return true;
-}
-
-//  Only accept HTTP/1.1
-bool HttpParser::validateHttpVersion(){
-    return true;
-}
-//--------------------------------
-
-bool    HttpParser::validateHeadersSetup()
+// a helper to trim empty space
+static std::string trim_space(std::string str)
 {
-    //validateMandatoryHeaders
-    //validateRepeatingHeaders
-    //validateContentLength
+    size_t start = str.find_first_not_of(" \t");
+    size_t end = str.find_last_not_of(" \t");
+    return str.substr(start, end - start + 1);
+}
+
+bool HttpParser::validateStartLine()
+{
+    if (_method != "GET" && _method != "POST" && _method != "DELETE") //  GET, POST, DELETE  ---> 405
+    {
+        _errStatus = 405;
+        return false;
+    }
+    if (_version != "HTTP/1.1") //  Only accept HTTP/1.1
+    {
+        _errStatus = 400;
+        return false;
+    }
+    return true;
+}
+
+bool    HttpParser::validateHeaders()
+{
+    //validateMandatoryHeaders: loop though all keys, has to find host
+
+    //validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
+
+    //validateContentLength: can not be too long like minus number ---> 300 or too big(Payload Too Large) ---> 413
+
     return true;
 }
 
@@ -50,18 +56,14 @@ void HttpParser::parseStartLine(const std::string& startline)
 
     if (_method.empty() || _path.empty() || _version.empty())
         throw std::runtime_error("Something missing in http request starting line");
-    if (!validateRequestMethod())
-        throw std::runtime_error("405 Method Not Allowed");
-    if (!validateHttpVersion())
-        throw std::runtime_error("400 Bad Request: invalid HTTP version");
-
     _state = HEADERS;
 }
 
 //below one is private, it will be recalled for a few times.
 void HttpParser::parseHeaderLine(const std::string& headerline){
     // first check if headers are done, \r\n will be removed \r\n
-    if (headerline.empty()){
+    if (headerline.empty())
+    {
         std::map<std::string, std::string>::iterator it = _requestHeaders.find("Content-Length"); // try to find content length in map to see it there is bodu
         // if the abouve find it, it returns the content length pair
         // if not find, return map.end. end of one step past the last element
@@ -95,7 +97,6 @@ void HttpParser::parseBody(size_t pos)
         _state = DONE;
 }
 
-// for LUCIO to use
 // this one is going to called mamy times, basically whenever recv() some new bytes, 
 // the data might be ramdom pieces, not neccessarily a full line
 HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
@@ -116,12 +117,14 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
                 line.pop_back();    //remove the last char \r
             if (_state == START_LINE)
                 parseStartLine(line);
+            if (!validateStartLine())
+                throw std::runtime_error("405 Method Not Allowed");
             if (_state == HEADERS)
             {
                 parseHeaderLine(line);
-                if (_state == DONE || _state == BODY)
+                if (_state > HEADERS)
                 {
-                    if (!validateHeadersSetup())
+                    if (!validateHeaders())
                         throw std::runtime_error("400 Bad Request: invalid headers");
                     break;
                 }

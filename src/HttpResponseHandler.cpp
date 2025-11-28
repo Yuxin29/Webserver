@@ -2,8 +2,6 @@
 #include "Server.hpp"
 #include "HttpRequestParser.hpp"
 
-using namespace config;
-
 namespace fs = std::filesystem; // Alias for filesystem
 
 // Function: map file extension to MIME type

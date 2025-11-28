@@ -2,9 +2,9 @@
 
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <map>
-#include <sstream>
 
 #include "HttpRequest.hpp"
 
@@ -17,33 +17,23 @@ enum State{
     DONE
 };
 
-// Accepts raw bytes (from non-blocking reads) and advances through states:
-// I might recerive something from Lucio like this:
-// GET /index.html HTTP/1.1\r\n
-// Host: example.com\r\n
-// Content-Length: 5\r\n
-// \r\n
-// hello
-// in this class, I put it into HttpRequest class
+// Accepts raw bytes (from non-blocking reads) from Lucio and advances through states:
 // I will use State Machine here
-// check state -> get input -> do a thin -> change to next state
+// check state -> get input -> do a thing -> change to next state
 class HttpParser{
 private:
     std::string                         _method, _path, _version;
+    int                                 _errStatus = 200;
     std::map<std::string, std::string>  _requestHeaders;
     std::string                         _body;
 
     std::string                         _buffer;
     size_t                              _bodyLength;
 
-    bool validateRequestMethod();    //  GET, POST, DELETE  ---> 405
-    bool validateHttpVersion();      //  Only accept HTTP/1.1
+    bool validateStartLine();
     void parseStartLine(const std::string& startline);
 
-    // bool validateMandatoryHeaders(); // Host
-    // bool validateRepeatingHeaders(); // eg: multiple Hosts
-    // bool validateContentLength();    // eg: like minus number ---> 300 or too big(Payload Too Large) ---> 413
-    bool validateHeadersSetup();
+    bool validateHeaders();
     void parseHeaderLine(const std::string& headerline);
 
     bool validateBody();             // Post must have body, body must fullfill ContentLength

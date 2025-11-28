@@ -14,7 +14,7 @@
 // --> can have  "Content-type": MIME type，eg text/html, text/plain）
 // --> Connection: close / Connection: keep-alive 
 
-//Body
+// Body
 // file content from GET or data from POST
 // size must be the same as Content-Length
 
