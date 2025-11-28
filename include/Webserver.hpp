@@ -40,4 +40,3 @@ class Webserver {
 		int  runWebserver(void);
 		void stopWebserver(void);
 };
-

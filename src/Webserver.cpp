@@ -60,6 +60,10 @@ int Webserver::createServers(const std::vector<ServerConfig>& config){
 		}
 		_listenFdToServerIndex[listenFd] = i;
 	}
+	for (size_t i = 0; i < _servers.size(); i++){
+		std::cout << "Server successfully listening on port: " 
+				<< _servers[i].getPort() << std::endl;
+	}
 	return utils::SUCCESS;
 }
 
