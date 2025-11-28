@@ -17,8 +17,6 @@ namespace utils {
 			WRONG_ARGUMENTS = 1,
 			FAILED_TO_CREATE_SERVERS,
 			ERROR_RUNNING_SERVERS,
-			PARSE_ERROR,
-			FAILED_TO_LOAD_DEFAULT_PATH
 	};
 
 	int returnErrorMessage(int errorCode);
