@@ -2,11 +2,14 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include "Config.hpp"
+#include "ConfigBuilder.hpp"
+
+//using namespace config;
 
 struct httpResponse {
 	std::string responseData;
 	bool keepConnectionAlive;
+	bool requestComplete;
 	int statusCode;
 };
 
@@ -17,7 +20,7 @@ class Http{
 
 	public:
 		void setName(const std::string& name);
-		httpResponse processRequest(const std::string& request, const Configuration::ServerBlock& server);
+		httpResponse processRequest(const std::string& request, const config::ServerConfig& server);
 
 	// maybe needed for Http
     // parseRequest(rawData) → Request object

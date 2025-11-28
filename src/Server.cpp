@@ -1,7 +1,9 @@
 #include "Server.hpp"
 
+using namespace config;
+
 Server::Server(const std::string& host, int port, 
-	const std::vector<Configuration::ServerBlock>& serverBlocks)
+	const std::vector<ServerConfig>& serverBlocks)
 	: _host(host), _listenFd(-1), _port(port), _virtualHosts(serverBlocks), _addr(){
 		_addr.sin_family = AF_INET;
 		if (inet_pton(AF_INET, _host.c_str(), &_addr.sin_addr) <= 0){
@@ -93,13 +95,18 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		return CLIENT_INCOMPLETE;
 	}
 	std::string hostHeader = extractHostHeader(request);
-	const Configuration::ServerBlock* virtualHost = matchVirtualHost(hostHeader);
+	const ServerConfig* virtualHost = matchVirtualHost(hostHeader);
 	if (!virtualHost){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
 	httpResponse response = _httpHandler.processRequest(request, *virtualHost);
-	// Maybe add that http is waiting more data response.requestComplete true/false
+	
+	// Check if request is complete (handles POST body)
+	if (!response.requestComplete) {
+		return CLIENT_INCOMPLETE;
+	}
+	
 	ssize_t sent = send(clientFd, response.responseData.c_str(), response.responseData.size(), 0);
 	if (sent < 0){
 		_partialRequests.erase(clientFd);
@@ -117,7 +124,7 @@ int Server::getPort() const {
 	return _port;
 }
 
-const Configuration::ServerBlock* Server::matchVirtualHost(const std::string& hostHeader){
+const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
 	for(size_t i = 0; i < _virtualHosts.size(); i++){
 		for (size_t j = 0; j < _virtualHosts[i].serverNames.size(); j++){
 			if (_virtualHosts[i].serverNames[j] == hostHeader){
@@ -158,10 +165,8 @@ std::string Server::extractHostHeader(const std::string& rawRequest) const {
 	return "";
 }
 
-const Configuration::ServerBlock::LocationBlock* 
-	Server::findLocation(const Configuration::ServerBlock& server,
-			const std::string& path) const {
-	const Configuration::ServerBlock::LocationBlock* bestMatch = nullptr;
+const LocationConfig* Server::findLocation(const ServerConfig& server, const std::string& path) const {
+	const LocationConfig* bestMatch = nullptr;
 	size_t longestPrefix = 0;
 
 	for (size_t i = 0; i < server.locations.size(); i++){

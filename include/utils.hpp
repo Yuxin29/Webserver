@@ -1,9 +1,6 @@
-#ifndef UTILS_HPP
-#define UTILS_HPP
-
-#include <sstream>
+#pragma once
 #include <iostream>
-
+#include <sstream>
 
 //if Declaration and definition in .hpp, we should use inline avoiding multiple definition
 namespace config {
@@ -23,7 +20,7 @@ namespace utils {
 
 	// Default path to configuration if none is passed to the program
 	inline constexpr const char* DEFAULT_CONFIG_PATH 
-		= "/configuration/simple.conf";
+		= "configuration/simple.conf";
 
 	// Error messages
 	enum errorMacros{
@@ -37,4 +34,3 @@ namespace utils {
 	int returnErrorMessage(int errorCode);
 }
 
-#endif

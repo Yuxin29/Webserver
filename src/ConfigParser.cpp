@@ -3,27 +3,40 @@
 #include <fstream>
 #include <sstream> //std::stringstream
 #include <iostream>
+#include <filesystem>
 
 namespace config{
 	Parser::Parser(const std::string& filename)
 	:_pos(0)
 	{
+		//does the file exist?
+		if(!std::filesystem::exists(filename))
+			throw std::runtime_error("Config file does not exist: " + filename);
+		// Is the path a directory?
+		if(std::filesystem::is_directory(filename))
+			throw std::runtime_error("Config path is a directory.");
+		//validate .conf extension
+		if(std::filesystem::path(filename).extension() != ".conf")
+			throw std::runtime_error("Config file should end with '.conf'.");
+			
 		std::ifstream infile(filename);
 		if (!infile)
-			throw std::runtime_error("Failed to open config file" + filename);
+			throw std::runtime_error("Failed to open config file " + filename);
 		std::stringstream buffer;
 		buffer << infile.rdbuf();//.rdbuf() gives access to its underlying stream buffer.
 		std::string content = buffer.str();
 		Tokenizer tokenizer(content);
 		_tokens = tokenizer.tokenize();
-
+		if(_tokens.size() == 1 && _tokens[0].type == TK_EOF)
+			throw std::runtime_error("Empty conf file!");
 		//debug
-		for (auto &tk : _tokens) {
-		std::cout << "[" << tk.value << "] "
+		for (auto &tk : _tokens)
+		{
+			std::cout << "[" << tk.value << "] "
 				<< tk.type
 				<< " line " << tk.line
 				<< " col " << tk.col << "\n";
-			} //for print the token list, debug
+		} //for print the token list, debug
 	}
 
 	Token Parser::peek() const
@@ -119,7 +132,7 @@ namespace config{
 					Token sernameToken = get();
 					if(sernameToken.type != TK_IDENTIFIER)
 						throw std::runtime_error(makeError("Expect server_name ", sernameToken.line, sernameToken.col));
-					server.server_names.push_back(sernameToken.value);
+					server.serverNames.push_back(sernameToken.value);
 					if(peek().type == TK_SEMICOLON)
 					{
 						get(); //eat ;
@@ -136,18 +149,18 @@ namespace config{
 				Token pathTok = get();
 				if (pathTok.type != TK_IDENTIFIER)
 					throw std::runtime_error(makeError("Expect path ", codeTok.line, codeTok.col));
-				server.error_pages[std::stoi(codeTok.value)] = pathTok.value;
+				server.errorPages[std::stoi(codeTok.value)] = pathTok.value;
 				expect(TK_SEMICOLON, "Expected ';' after error path");
 			}
 			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
-				server.client_max_body_size = parseSimpleDirective();
-			// else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
+				server.clientMaxBodySize = parseSimpleDirective();
+			// else if(token.type == TK_IDENTIFIER && token.value == "clientMaxBodySize")
 			// {
 			// 	get(); // eat client max body size
 			// 	Token sizeToken = get();
 			// 	if(sizeToken.type != TK_NUMBER)
 			// 		throw std::runtime_error(makeError("Expect size ", sizeToken.line, sizeToken.col));
-			// 	server.client_max_body_size = std::stoi(sizeToken.value);
+			// 	server.clientMaxBodySize = std::stoi(sizeToken.value);
 			// 	expect(TK_SEMICOLON, "Expected ';' after error path");
 			// }
 			else if (token.type == TK_IDENTIFIER && token.value == "root")
@@ -204,13 +217,13 @@ namespace config{
 			else if(token.type == TK_IDENTIFIER && token.value == "redirect")
 				location.redirect = parseSimpleDirective();
 			else if(token.type==TK_IDENTIFIER && token.value == "cgi_pass")
-				location.cgi_pass = parseSimpleDirective();
+				location.cgiPass = parseSimpleDirective();
 			else if(token.type==TK_IDENTIFIER && token.value == "cgi_ext")
-				location.cgi_ext = parseSimpleDirective();
+				location.cgiExt = parseSimpleDirective();
 			else if(token.type==TK_IDENTIFIER && token.value == "upload_dir")
-				location.upload_dir = parseSimpleDirective();
+				location.uploadDir = parseSimpleDirective();
 			else if(token.type == TK_IDENTIFIER && token.value == "client_max_body_size")
-				location.client_max_body_size = parseSimpleDirective();
+				location.clientMaxBodySize = parseSimpleDirective();
 			else if(token.type==TK_IDENTIFIER && token.value == "index")
 			{
 				get(); //eat index

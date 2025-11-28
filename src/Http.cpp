@@ -1,12 +1,14 @@
 #include "Http.hpp"
 
+using namespace config;
+
 void Http::setName(const std::string& name) {
 	_name = name;
 }
 
-httpResponse Http::processRequest(const std::string& request, const Configuration::ServerBlock& server) {
+httpResponse Http::processRequest(const std::string& request, const ServerConfig& server) {
 	httpResponse response;
-	(void)server; // Will use this later for routing
+	response.requestComplete = true;
 	
 	// Simple parsing - extract first line
 	std::istringstream stream(request);
@@ -27,15 +29,54 @@ httpResponse Http::processRequest(const std::string& request, const Configuratio
 		return response;
 	}
 	
-	// For testing: return simple 200 OK with request info
+	// Check for POST body - simple Content-Length check
+	if (method == "POST") {
+		size_t clPos = request.find("Content-Length:");
+		if (clPos != std::string::npos) {
+			size_t start = clPos + 15;
+			size_t end = request.find("\r\n", start);
+			if (end != std::string::npos) {
+				int contentLength = std::stoi(request.substr(start, end - start));
+				size_t bodyStart = request.find("\r\n\r\n");
+				if (bodyStart != std::string::npos) {
+					size_t bodyReceived = request.size() - (bodyStart + 4);
+					if (bodyReceived < static_cast<size_t>(contentLength)) {
+						response.requestComplete = false;
+						response.statusCode = 0;
+						response.responseData = "";
+						response.keepConnectionAlive = false;
+						return response;
+					}
+				}
+			}
+		}
+	}
+	
+	// Build response body with server info
 	std::ostringstream body;
-	body << "<html><body>"
+	body << "<html><head><title>Webserver Test</title></head><body>"
 	     << "<h1>Webserver Working!</h1>"
+	     << "<h2>Request Info:</h2>"
 	     << "<p><b>Method:</b> " << method << "</p>"
 	     << "<p><b>Path:</b> " << path << "</p>"
 	     << "<p><b>Version:</b> " << version << "</p>"
-	     << "<p><b>Server Block Port:</b> " << server.port << "</p>"
-	     << "</body></html>";
+	     << "<h2>Server Config:</h2>"
+	     << "<p><b>Host:</b> " << server.host << ":" << server.port << "</p>";
+	
+	if (!server.serverNames.empty()) {
+		body << "<p><b>Server Names:</b> ";
+		for (size_t i = 0; i < server.serverNames.size(); i++) {
+			body << server.serverNames[i];
+			if (i < server.serverNames.size() - 1) body << ", ";
+		}
+		body << "</p>";
+	}
+	
+	body << "<p><b>Root:</b> " << server.root << "</p>"
+	     << "<p><b>Max Body Size:</b> " << server.clientMaxBodySize << " bytes</p>"
+	     << "<p><b>Locations:</b> " << server.locations.size() << "</p>";
+	
+	body << "</body></html>";
 	
 	std::string bodyStr = body.str();
 	

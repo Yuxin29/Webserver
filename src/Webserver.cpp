@@ -1,5 +1,7 @@
 #include "Webserver.hpp"
 
+using namespace config;
+
 static volatile sig_atomic_t signalRunning = 1;
 
 static void signalHandler(int sig){
@@ -25,10 +27,10 @@ Webserver::~Webserver(){
 	}
 }
 
-int Webserver::createServers(const Configuration& config){
-	std::map<std::string, std::vector<Configuration::ServerBlock>> bindGroups;
-	for (size_t i = 0; i < config.getNumberOfServers(); i++){
-		const auto& block = config.getServerBlock(i);
+int Webserver::createServers(const std::vector<ServerConfig>& config){
+	std::map<std::string, std::vector<config::ServerConfig>> bindGroups;
+	for (size_t i = 0; i < config.size(); i++){
+		const auto& block = config[i];
 
 		std::string host = block.host;
 		if (host.empty() || host == "*"){
