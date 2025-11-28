@@ -34,11 +34,11 @@ public:
     std::string                         _body;
     std::map<std::string, std::string>  _responseHeaders;
     bool                                _keepConnectionAlive;
-    //requestComplete   to be added
+    bool                                _requestComplete;
 
     //getters: not needed since all is public
     HttpResponse() {};
-    HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders, bool alive);
+    HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders, bool alive, bool complete);
     std::string buildResponse();
 };
 

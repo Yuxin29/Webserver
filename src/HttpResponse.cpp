@@ -6,7 +6,7 @@
 // std::string                         _body;
 // std::map<std::string, std::string>  _responseHeaders;
 
-HttpResponse::HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders, bool alive)
+HttpResponse::HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders, bool alive, bool complete)
 {
     _version = version;
     _status = status;
@@ -14,6 +14,7 @@ HttpResponse::HttpResponse(const std::string& version, const int& status, const 
     _body = body;
     _responseHeaders = responseHeaders;
     _keepConnectionAlive = alive;
+    _requestComplete = complete;
 }
 
 std::string HttpResponse::buildResponse(){

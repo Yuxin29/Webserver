@@ -110,13 +110,8 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		return CLIENT_ERROR;
 	}
 	HttpResponse res = _httpHandler.handleRequest(req, virtualHost);
-
-	// httpResponse response = _httpHandler.processRequest(request, *virtualHost);
-	
-	// Check if request is complete (handles POST body)
-	// if (!response.requestComplete) {
-	// 	return CLIENT_INCOMPLETE;
-	// }
+	if (!res._requestComplete)
+		return CLIENT_INCOMPLETE;
 	std::string response_string = res.buildResponse();
 	ssize_t sent = send(clientFd, response_string.c_str(), response_string.size(), 0);
 	if (sent < 0){
