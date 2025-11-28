@@ -25,8 +25,12 @@ namespace config{
 		std::stringstream buffer;
 		buffer << infile.rdbuf();//.rdbuf() gives access to its underlying stream buffer.
 		std::string content = buffer.str();
+		//if really empty(noting, no new line)
+		if (content.empty())
+			throw std::runtime_error("Empty conf file: " + filename);
 		Tokenizer tokenizer(content);
 		_tokens = tokenizer.tokenize();
+		//has new line or comment
 		if(_tokens.size() == 1 && _tokens[0].type == TK_EOF)
 			throw std::runtime_error("Empty conf file : " + filename);
 		//debug
