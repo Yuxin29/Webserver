@@ -34,6 +34,7 @@ public:
     std::string                         _body;
     std::map<std::string, std::string>  _responseHeaders;
     bool                                _keepConnectionAlive;
+    //requestComplete   to be added
 
     //getters: not needed since all is public
     HttpResponse() {};

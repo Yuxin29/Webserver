@@ -1,7 +1,6 @@
 #include "Server.hpp"
 #include "HttpRequest.hpp"
 #include "HttpRequestParser.hpp"
-#include "HttpResponseHandler.hpp"
 
 using namespace config;
 
@@ -74,7 +73,6 @@ int  Server::acceptConnection(void){
 		return -1;
 	}
 	return clientFd;
-
 }
 
 Server::ClientStatus Server::handleClient(int clientFd){
@@ -87,25 +85,20 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
+
+	// --------------------------  yuxin take out
 	if (nBytes == 0){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
-	// -------------------------- yuxin probably needs to change --------------------------
-	// _partialRequests[clientFd].append(buffer, nBytes);
-	// std::string& request = _partialRequests[clientFd];
-	// size_t headerEnd = request.find("\r\n\r\n");
-	// if (headerEnd == std::string::npos){
-	// 	return CLIENT_INCOMPLETE;
-	// }
-	// -------------------------- yuxin probably needs to change --------------------------
 	_partialRequests[clientFd].append(buffer, nBytes);
 	std::string& request_data = _partialRequests[clientFd];
 	HttpParser parser;
 	HttpRequest	req = parser.parseHttpRequest(request_data);
 	if (parser._state != DONE)
 		return CLIENT_INCOMPLETE;
-	// -------------------------- yuxin added --------------------------
+	// --------------------------  yuxin take out
+
 	std::string hostHeader;
 	std::map<std::string, std::string> headers = req.getrequestHeaders();
 	std::map<std::string, std::string>::iterator it = headers.find("Host");
@@ -116,13 +109,11 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
-
-	HttpResponseHandler res_tool;
-	HttpResponse res = res_tool.handleRequest(req);
+	HttpResponse res = _httpHandler.handleRequest(req, virtualHost);
 
 	// httpResponse response = _httpHandler.processRequest(request, *virtualHost);
 	
-	// // Check if request is complete (handles POST body)
+	// Check if request is complete (handles POST body)
 	// if (!response.requestComplete) {
 	// 	return CLIENT_INCOMPLETE;
 	// }

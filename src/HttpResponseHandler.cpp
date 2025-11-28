@@ -1,17 +1,25 @@
 #include "HttpResponseHandler.hpp" 
 #include "HttpUtils.hpp"
 
+#include "Server.hpp"
+#include "HttpRequest.hpp"
+#include "HttpRequestParser.hpp"
+
+using namespace config;
+
 // this is the public over all call
 // for LUCIO to use
-HttpResponse HttpResponseHandler::handleRequest(const HttpRequest& req)
+HttpResponse HttpResponseHandler::handleRequest(const HttpRequest& req, const config::ServerConfig* vh)
 {
-    if (req.getMethod() == "GET")
-        return handleGET(req);
-    else if (req.getMethod() == "POST")
-        return handlePOST(req);
-    else if (req.getMethod() == "DELETE")
-        return handleDELETE(req);
-    return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false);
+   if (!vh)
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "", {}, false);
+   if (req.getMethod() == "GET")
+     return handleGET(req, vh);
+   else if (req.getMethod() == "POST")
+      return handlePOST(req, vh);
+   else if (req.getMethod() == "DELETE")
+      return handleDELETE(req, vh);
+   return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false);
 }
 
 /*
@@ -31,46 +39,53 @@ Content-Length: 13
 Hello, world!
 */
 //lin configuration/webserv.conf -> root, location, index,, error_page, cgi_path, upload_path and so on.
-HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req){
+HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req, const config::ServerConfig* vh){
    // 1. Server received GET /hello. /hello is supposed to be file
    std::string uri = req.getrequestPath(); // URI: uniform Resource Identifier, _path in the request
 
    // 2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
-   const std::string root = "linConfig/root"; //fake one, hard-coded, ask lin later: should be according to to lin configuration/webserv.conf
-   std::string fullpath = root + uri;
+   std::string fullpath;
+   if (uri == "/")
+      fullpath = vh->root + "/index.html";
+   else
+      fullpath = vh->root + uri;
+   std::cout << "fullpath = " << fullpath << std::endl;
 
-   // std::string root = server.root;    // <-- LIN CONFIG
-   // std::string index = server.index;  // <-- LIN CONFIG
-   
-   // std::string fullpath;
-   // if (uri == "/")
-   //    fullpath = root + "/" + index;
-   // else
-   //    fullpath = root + uri;
-   
    // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0) 
-      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>(), false);
+      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false);
    if (access(fullpath.c_str(), R_OK) < 0)
-      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false);
+      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>40331 Forbidden</h1>", std::map<std::string, std::string>(), false);
    if (!S_ISREG(st.st_mode))
-      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false);
+      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>40332 Forbidden</h1>", std::map<std::string, std::string>(), false); 
    
    // 4. Determined MIME type (text/plain for .txt or plain text).
    std::string mine_type = getMimeType(fullpath);
+   if (mine_type.empty())
+      mine_type = "text/html";
 
    // 5. Got file size (13) → set Content-Length.
 
    // 6. Read file content → sent as response body.
+   //std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    std::ifstream ifs(fullpath.c_str(), std::ios::binary);
-   std::string body((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>(ifs));
+   if (!ifs.is_open())
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Cannot open file</h1>", {}, false);
+   ifs.seekg(0, std::ios::end);
+   std::streamsize size = ifs.tellg();
+   ifs.seekg(0, std::ios::beg);
+
+   std::string body(size, '\0'); 
+   ifs.read(&body[0], size);
+   ifs.close();
+   std::cout << "[DEBUG] file size = " << size << ", body size = " << body.size() << std::endl;
 
    // 7. Filled headers like Date and Server.
    std::map<std::string, std::string> headers;
    headers["Content-Type"] = mine_type;
    headers["Content-Length"] = std::to_string(body.size());
-   // ... 
+   headers["Server"] = "MiniWebserv/1.0";
 
    return HttpResponse("HTTP/1.1", 200, "OK", body, headers, true);
 }
@@ -88,7 +103,7 @@ Content-Length: 23
 
 {"status":"success"}
 */
-HttpResponse HttpResponseHandler::handlePOST(const HttpRequest& req){
+HttpResponse HttpResponseHandler::handlePOST(const HttpRequest& req, const config::ServerConfig* vh){
    // 1. Server receives POST /submit-data.
    std::string uri = req.getrequestPath();
    
@@ -96,7 +111,7 @@ HttpResponse HttpResponseHandler::handlePOST(const HttpRequest& req){
    // - Typically a CGI script, an upload handler, or a location block.
    // - Example: /var/www/html/submit-data (or routed to CGI)
    const std::string root = "linConfig/static/uploads"; //fake one, hard-coded, ask lin later: should be according to to lin configuration/webserv.conf
-   std::string savepath = root + uri;
+   std::string savepath = vh->root + uri;
    // if save path is not existing, should we create it???
 
    // 3. Reads request body:
@@ -135,14 +150,14 @@ HTTP/1.1 204 No Content
 Date: Thu, 21 Nov 2025 11:00:00 GMT
 Server: ExampleServer/1.0
 */
-HttpResponse HttpResponseHandler::handleDELETE(const HttpRequest& req){
+HttpResponse HttpResponseHandler::handleDELETE(const HttpRequest& req, const config::ServerConfig* vh){
    // 1. Server receives DELETE /files/file1.txt.
    std::string uri = req.getrequestPath();
    
    // 2. Maps path:
    // - /files/file1.txt → /var/www/html/files/file1.txt
    const std::string root = "linConfig/root"; //fake one, hard-coded, ask lin later: should be according to to lin configuration/webserv.conf
-   std::string fullpath = root + uri;
+   std::string fullpath = vh->root + uri;
    
    // 3. Validates:
    // - Does file exist?
@@ -152,9 +167,9 @@ HttpResponse HttpResponseHandler::handleDELETE(const HttpRequest& req){
    if (stat(fullpath.c_str(), &st) < 0) 
       return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>(), false);
    if (access(fullpath.c_str(), W_OK) < 0) //to delete it, we need to have the writing right
-      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false);
+      return HttpResponse("HTTP/1.1", 40333, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false);
    if (!S_ISREG(st.st_mode))
-      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false);
+      return HttpResponse("HTTP/1.1", 40333, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false);
    
    // 5. Attempts deletion:
    // - unlink("/var/www/html/files/file1.txt")

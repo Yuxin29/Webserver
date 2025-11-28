@@ -1,7 +1,5 @@
 #pragma once
 
-#include "HttpRequest.hpp"
-#include "HttpResponse.hpp"
 #include <string>
 #include <fstream>
 #include <map>
@@ -9,6 +7,10 @@
 #include <sys/stat.h> //stat
 #include <unistd.h>
 
+#include "HttpResponse.hpp"
+#include "HttpRequest.hpp"
+#include "HttpRequestParser.hpp"
+#include "ConfigBuilder.hpp"
 
 //int stat(const char *pathname, struct stat *statbuf); Retrieve information about a file (size, type, permissions, timestamps, etc.) without opening it.
 // return 0 → success, statbuf filled.
@@ -21,10 +23,10 @@
 
 class HttpResponseHandler {
 public:
-    HttpResponse handleRequest(const HttpRequest& req);
+    HttpResponse handleRequest(const HttpRequest& req, const config::ServerConfig* vh);
 
 private:
-    HttpResponse handleGET(const HttpRequest& req);
-    HttpResponse handlePOST(const HttpRequest& req);
-    HttpResponse handleDELETE(const HttpRequest& req);
+    HttpResponse handleGET(const HttpRequest& req, const config::ServerConfig* vh);
+    HttpResponse handlePOST(const HttpRequest& req, const config::ServerConfig* vh);
+    HttpResponse handleDELETE(const HttpRequest& req, const config::ServerConfig* vh);
 };
