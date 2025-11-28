@@ -1,4 +1,7 @@
 #include "Server.hpp"
+#include "HttpRequest.hpp"
+#include "HttpRequestParser.hpp"
+#include "HttpResponseHandler.hpp"
 
 using namespace config;
 
@@ -88,32 +91,49 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
+	// -------------------------- yuxin probably needs to change --------------------------
+	// _partialRequests[clientFd].append(buffer, nBytes);
+	// std::string& request = _partialRequests[clientFd];
+	// size_t headerEnd = request.find("\r\n\r\n");
+	// if (headerEnd == std::string::npos){
+	// 	return CLIENT_INCOMPLETE;
+	// }
+	// -------------------------- yuxin probably needs to change --------------------------
 	_partialRequests[clientFd].append(buffer, nBytes);
-	std::string& request = _partialRequests[clientFd];
-	size_t headerEnd = request.find("\r\n\r\n");
-	if (headerEnd == std::string::npos){
+	std::string& request_data = _partialRequests[clientFd];
+	HttpParser parser;
+	HttpRequest	req = parser.parseHttpRequest(request_data);
+	if (parser._state != DONE)
 		return CLIENT_INCOMPLETE;
-	}
-	std::string hostHeader = extractHostHeader(request);
+	// -------------------------- yuxin added --------------------------
+	std::string hostHeader;
+	std::map<std::string, std::string> headers = req.getrequestHeaders();
+	std::map<std::string, std::string>::iterator it = headers.find("Host");
+	hostHeader = it->second;
+	
 	const ServerConfig* virtualHost = matchVirtualHost(hostHeader);
 	if (!virtualHost){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
-	httpResponse response = _httpHandler.processRequest(request, *virtualHost);
+
+	HttpResponseHandler res_tool;
+	HttpResponse res = res_tool.handleRequest(req);
+
+	// httpResponse response = _httpHandler.processRequest(request, *virtualHost);
 	
-	// Check if request is complete (handles POST body)
-	if (!response.requestComplete) {
-		return CLIENT_INCOMPLETE;
-	}
-	
-	ssize_t sent = send(clientFd, response.responseData.c_str(), response.responseData.size(), 0);
+	// // Check if request is complete (handles POST body)
+	// if (!response.requestComplete) {
+	// 	return CLIENT_INCOMPLETE;
+	// }
+	std::string response_string = res.buildResponse();
+	ssize_t sent = send(clientFd, response_string.c_str(), response_string.size(), 0);
 	if (sent < 0){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
 	_partialRequests.erase(clientFd);
-	return response.keepConnectionAlive ? CLIENT_KEEP_ALIVE : CLIENT_COMPLETE;
+	return res._keepConnectionAlive ? CLIENT_KEEP_ALIVE : CLIENT_COMPLETE;
 }
 
 int Server::getListenFd() const {

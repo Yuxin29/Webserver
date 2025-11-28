@@ -1,4 +1,3 @@
-
 #include "HttpResponseHandler.hpp" 
 #include "HttpUtils.hpp"
 
@@ -12,7 +11,7 @@ HttpResponse HttpResponseHandler::handleRequest(const HttpRequest& req)
         return handlePOST(req);
     else if (req.getMethod() == "DELETE")
         return handleDELETE(req);
-    return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {});
+    return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false);
 }
 
 /*
@@ -40,14 +39,23 @@ HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req){
    const std::string root = "linConfig/root"; //fake one, hard-coded, ask lin later: should be according to to lin configuration/webserv.conf
    std::string fullpath = root + uri;
 
+   // std::string root = server.root;    // <-- LIN CONFIG
+   // std::string index = server.index;  // <-- LIN CONFIG
+   
+   // std::string fullpath;
+   // if (uri == "/")
+   //    fullpath = root + "/" + index;
+   // else
+   //    fullpath = root + uri;
+   
    // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0) 
-      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>());
+      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>(), false);
    if (access(fullpath.c_str(), R_OK) < 0)
-      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>());
+      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false);
    if (!S_ISREG(st.st_mode))
-      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>());
+      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false);
    
    // 4. Determined MIME type (text/plain for .txt or plain text).
    std::string mine_type = getMimeType(fullpath);
@@ -64,7 +72,7 @@ HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req){
    headers["Content-Length"] = std::to_string(body.size());
    // ... 
 
-   return HttpResponse("HTTP/1.1", 200, "OK", body, headers);
+   return HttpResponse("HTTP/1.1", 200, "OK", body, headers, true);
 }
 
 /*
@@ -104,7 +112,7 @@ HttpResponse HttpResponseHandler::handlePOST(const HttpRequest& req){
    // - Example: store in a database, write to a file, pass to CGI, etc.
    std::ofstream ofs(savepath.c_str(), std::ios::binary);
    if (!ofs.is_open())
-      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", std::map<std::string, std::string>());
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", std::map<std::string, std::string>(), false);
    ofs.write(body.c_str(), body.size());
    ofs.close();
 
@@ -114,7 +122,7 @@ HttpResponse HttpResponseHandler::handlePOST(const HttpRequest& req){
    std::map<std::string, std::string> headers;
    headers["Content-Length"] = std::to_string(body.size());
    
-   return HttpResponse("HTTP/1.1", 222, "Created", "{\"status\":\"success\"}", std::map<std::string, std::string>());
+   return HttpResponse("HTTP/1.1", 222, "Created", "{\"status\":\"success\"}", std::map<std::string, std::string>(), true);
 }
 
 /*
@@ -142,17 +150,17 @@ HttpResponse HttpResponseHandler::handleDELETE(const HttpRequest& req){
    // - Is DELETE method allowed in this location?
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0) 
-      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>());
+      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>(), false);
    if (access(fullpath.c_str(), W_OK) < 0) //to delete it, we need to have the writing right
-      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>());
+      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false);
    if (!S_ISREG(st.st_mode))
-      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>());
+      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false);
    
    // 5. Attempts deletion:
    // - unlink("/var/www/html/files/file1.txt")
    if (unlink(fullpath.c_str()) < 0)
       //sth worng: (io err, permission)
-      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", std::map<std::string, std::string>());
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", std::map<std::string, std::string>(), false);
    
    // 6. Generates response:
    // - If success → 204 No Content (most common)
@@ -161,5 +169,5 @@ HttpResponse HttpResponseHandler::handleDELETE(const HttpRequest& req){
    headers["Content-Length"] = "0";  // No response body
    headers["Content-Type"]   = "text/plain";
 
-   return HttpResponse("HTTP/1.1", 204, "No content", "", std::map<std::string, std::string>());
+   return HttpResponse("HTTP/1.1", 204, "No content", "", std::map<std::string, std::string>(), true);
 }

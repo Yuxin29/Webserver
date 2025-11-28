@@ -135,5 +135,3 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
         return HttpRequest(_method, _path, _version, _body, _requestHeaders);
     return HttpRequest();
 }
-/*  ******************************HttpRequest Parsing********************************  */
-

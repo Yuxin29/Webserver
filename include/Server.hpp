@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "ConfigBuilder.hpp"
-#include "Http.hpp"
 
 class Server {
 	public:
@@ -33,7 +32,7 @@ class Server {
 		int  						_port;
 		std::vector<config::ServerConfig>	_virtualHosts;
 		sockaddr_in					_addr;
-		Http						_httpHandler;
+		//Http						_httpHandler;
 		std::map<int, std::string> _partialRequests;
 
 		const config::ServerConfig* matchVirtualHost(const std::string& hostHeader);
