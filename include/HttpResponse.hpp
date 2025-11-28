@@ -18,7 +18,6 @@
 // file content from GET or data from POST
 // size must be the same as Content-Length
 
-// -----------------------------------------------------------------------------------------------------
 // Example of a HttpResponse
 // HTTP/1.1 <status_code> <reason_phrase>\r\n
 // Header1: value1\r\n
@@ -36,10 +35,10 @@ public:
     bool                                _keepConnectionAlive;
     bool                                _requestComplete;
 
-    //getters: not needed since all is public
     HttpResponse() {};
     HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders, bool alive, bool complete);
-    std::string buildResponse();
+    
+    std::string buildResponseString();
 };
 
 // how to check the content of a full HTTP request and respongs

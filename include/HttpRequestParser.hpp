@@ -6,7 +6,7 @@
 #include <map>
 #include <sstream>
 
-class HttpRequest;
+#include "HttpRequest.hpp"
 
 // this is used in both HttpRequest and HttpResponse
 enum State{
@@ -17,7 +17,7 @@ enum State{
     DONE
 };
 
-//Accepts raw bytes (from non-blocking reads) and advances through states:
+// Accepts raw bytes (from non-blocking reads) and advances through states:
 // I might recerive something from Lucio like this:
 // GET /index.html HTTP/1.1\r\n
 // Host: example.com\r\n

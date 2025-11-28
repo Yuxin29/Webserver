@@ -6,6 +6,11 @@
 #include <sys/types.h>
 #include <sys/stat.h> //stat
 #include <unistd.h>
+#include <iostream>
+#include <ctime>
+#include <sstream>
+#include <filesystem>  
+
 
 #include "HttpResponse.hpp"
 #include "HttpRequest.hpp"

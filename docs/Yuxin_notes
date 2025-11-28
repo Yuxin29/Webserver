@@ -112,7 +112,7 @@ Day 5 — 状态机（非阻塞需要）                                        
 
 Day 6 — Response Builder                                                      
 学习：status line, headers, Content-Length, Connection
-实现：HttpResponse::buildResponse()
+实现：HttpResponse::buildResponseString()
 测试：与 NGINX 对比：curl -v localhost:8080
 
 Day 7 — GET（静态文件）                                                    

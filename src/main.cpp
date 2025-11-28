@@ -2,10 +2,9 @@
 #include "Webserver.hpp"
 #include "ConfigBuilder.hpp"
 #include "utils.hpp"
+#include "Server.hpp"
 
 //Yuxin Part
-#include "Server.hpp"
-#include "HttpRequest.hpp"
 #include "HttpRequestParser.hpp"
 #include "HttpResponse.hpp"
 #include "HttpResponseHandler.hpp"

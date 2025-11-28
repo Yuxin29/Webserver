@@ -17,7 +17,7 @@ HttpResponse::HttpResponse(const std::string& version, const int& status, const 
     _requestComplete = complete;
 }
 
-std::string HttpResponse::buildResponse(){
+std::string HttpResponse::buildResponseString(){
     std::ostringstream response;  //out string stream
 
     response << _version << " " << _status << " " << _reason << "\r\n";

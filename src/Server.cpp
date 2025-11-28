@@ -75,7 +75,9 @@ int  Server::acceptConnection(void){
 	return clientFd;
 }
 
+//yuxin changed this part from Lucio: same flow but actual http functions
 Server::ClientStatus Server::handleClient(int clientFd){
+	//getting raw bits
 	char buffer[8192];
 	ssize_t nBytes = recv(clientFd, buffer, sizeof(buffer), 0);
 	if (nBytes < 0){
@@ -85,34 +87,35 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
-
-	// --------------------------  yuxin take out
 	if (nBytes == 0){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
+
+	//constructiong a request
 	_partialRequests[clientFd].append(buffer, nBytes);
 	std::string& request_data = _partialRequests[clientFd];
 	HttpParser parser;
 	HttpRequest	req = parser.parseHttpRequest(request_data);
 	if (parser._state != DONE)
 		return CLIENT_INCOMPLETE;
-	// --------------------------  yuxin take out
 
+	//find a server
 	std::string hostHeader;
 	std::map<std::string, std::string> headers = req.getrequestHeaders();
 	std::map<std::string, std::string>::iterator it = headers.find("Host");
 	hostHeader = it->second;
-	
 	const ServerConfig* virtualHost = matchVirtualHost(hostHeader);
 	if (!virtualHost){
 		_partialRequests.erase(clientFd);
 		return CLIENT_ERROR;
 	}
+
+	//constructiong a response
 	HttpResponse res = _httpHandler.handleRequest(req, virtualHost);
 	if (!res._requestComplete)
 		return CLIENT_INCOMPLETE;
-	std::string response_string = res.buildResponse();
+	std::string response_string = res.buildResponseString();
 	ssize_t sent = send(clientFd, response_string.c_str(), response_string.size(), 0);
 	if (sent < 0){
 		_partialRequests.erase(clientFd);

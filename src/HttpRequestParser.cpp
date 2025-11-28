@@ -1,6 +1,12 @@
 #include "HttpRequestParser.hpp"
-#include "HttpRequest.hpp"
-#include "HttpUtils.hpp"
+
+// a helper to trim empty space
+static std::string trim_space(std::string str)
+{
+    size_t start = str.find_first_not_of(" \t");
+    size_t end = str.find_last_not_of(" \t");
+    return str.substr(start, end - start + 1);
+}
 
 // example of http request 
 // example http request with a content lenth

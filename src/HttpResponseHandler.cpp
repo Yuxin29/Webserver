@@ -1,11 +1,37 @@
 #include "HttpResponseHandler.hpp" 
-#include "HttpUtils.hpp"
-
 #include "Server.hpp"
-#include "HttpRequest.hpp"
 #include "HttpRequestParser.hpp"
 
 using namespace config;
+
+namespace fs = std::filesystem; // Alias for filesystem
+
+// Function: map file extension to MIME type
+std::string getMimeType(const std::string& path) {
+    static const std::map<std::string, std::string> mimeMap = 
+    {
+        {".html","text/html"},
+        {".htm","text/html"},
+        {".css","text/css"}, 
+        {".js","application/javascript"},
+        {".json","application/json"},
+        {".png","image/png"},
+        {".jpg","image/jpeg"},
+        {".jpeg","image/jpeg"},
+        {".gif","image/gif"},
+        {".txt","text/plain"}
+    };
+    auto ext = fs::path(path).extension().string();  // get file extension
+    auto it = mimeMap.find(ext);                     // lookup in map
+    return it != mimeMap.end() ? it->second : "application/octet-stream"; // default MIME
+}
+
+// Format time as GMT string for Last-Modified header
+std::string formatTime(std::time_t t) {
+    std::ostringstream ss;
+    ss << std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT"); // gmtime -> UTC, put_time 格式化
+    return ss.str();
+}
 
 // this is the public over all call
 // for LUCIO to use

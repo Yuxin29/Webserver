@@ -6,13 +6,7 @@
 #include <map>
 #include <sstream>
 
-// -----------------------------------------------------------------------------------------------------
-// method required by this subject: 
-// enum Method{
-//     GET,
-//     POST,
-//     DELETE
-// };
+// method required by this subject:    GET, POST, DELETE
 
 // a Request class: method, target/path, version, headers map, body buffer, maybe query params and parsed cookies.
 // <start-line>\r\n
@@ -33,17 +27,15 @@ private:
     const std::map<std::string, std::string>  _requestHeaders;
 
 public:
-    //Orthodox * 4 
+    //Orthodox not all needed: defined just here
     HttpRequest() {}
-    HttpRequest(const std::string& method, const std::string& requestpath, const std::string& version, const std::string& body, const std::map<std::string, std::string>& requestHeaders);
-    HttpRequest(const HttpRequest& other);               
-    HttpRequest& operator=(const HttpRequest &other) = delete;
-    ~HttpRequest();
+    HttpRequest(const std::string& method, const std::string& requestpath, const std::string& version, const std::string& body, const std::map<std::string, std::string>& requestHeaders)
+    : _method(method), _requestPath(requestpath), _version(version), _body(body), _requestHeaders(requestHeaders) {}
 
     //getters
     const std::string&                         getMethod() const;
     const std::string&                         getrequestPath() const;
-    const std::string&                          getVersion() const;
+    const std::string&                         getVersion() const;
     const std::map<std::string, std::string>&  getrequestHeaders() const;
     const std::string&                         getBody() const;
 };
