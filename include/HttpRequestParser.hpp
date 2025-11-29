@@ -14,7 +14,8 @@ enum State{
     HEADERS,
     EMPTY,   // might not be neccessary ??
     BODY,
-    DONE
+    DONE,
+    ERROR //Lucio addition, set the status to error and generate an error response.
 };
 
 // Accepts raw bytes (from non-blocking reads) from Lucio and advances through states:

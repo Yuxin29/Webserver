@@ -104,7 +104,7 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
     _buffer += rawLine;
     
     size_t pos = 0;
-    while (_state != DONE )
+    while (_state != DONE  ) // Lucio addition, maybe add || _state != ERROR
     {
         if (_state == START_LINE || _state == HEADERS)
         {
@@ -118,6 +118,7 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
             if (_state == START_LINE)
                 parseStartLine(line);
             if (!validateStartLine())
+                // _state = ERROR
                 throw std::runtime_error("405 Method Not Allowed");
             if (_state == HEADERS)
             {
@@ -125,6 +126,7 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
                 if (_state > HEADERS)
                 {
                     if (!validateHeaders())
+                        // _state = ERROR
                         throw std::runtime_error("400 Bad Request: invalid headers");
                     break;
                 }
@@ -134,6 +136,7 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
         {
             parseBody(pos);
             if (!validateBody())
+                // _state = ERROR
                 throw std::runtime_error("400 Bad Request: something wrong with body");
             break;
         }
@@ -142,5 +145,7 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
         _buffer.erase(0, pos);
     if (_state == DONE)
         return HttpRequest(_method, _path, _version, _body, _requestHeaders);
+//  if (_state == ERROR)
+//      return 
     return HttpRequest();
 }

@@ -80,7 +80,7 @@ int Webserver::runWebserver(){
 			}
 			return utils::FAILURE;
 		}
-		if (nfds == 0){ //expand here eventually to timeout idle connections
+		if (nfds == 0){
 			continue;
 		}
 		for (int i = 0; i < nfds; i++){
@@ -126,6 +126,7 @@ void Webserver::handleNewConnection(int listenFd){
 }
 
 void Webserver::handleClientRequest(int clientFd){
+	_lastActivity[clientFd] = time(NULL);
 	const auto& it = _clientFdToServerIndex.find(clientFd);
 	if (it == _clientFdToServerIndex.end()){
 		return;
@@ -134,7 +135,13 @@ void Webserver::handleClientRequest(int clientFd){
 	Server::ClientStatus status = _servers[serverIndex].handleClient(clientFd);
 	switch (status){
 	case Server::CLIENT_INCOMPLETE:
+		if (time(NULL) - _lastActivity[clientFd] > CONNECTION_TIMEOUT){
+			std::cerr << "Connection timedout on Fd: " << clientFd << std::endl;
+			removeClientFd(clientFd);
+		}
+		break;
 	case Server::CLIENT_KEEP_ALIVE:
+		_lastActivity[clientFd] = time(NULL);
 		break;
 	case Server::CLIENT_COMPLETE:
 	case Server::CLIENT_ERROR:
@@ -165,6 +172,7 @@ void Webserver::removeFdFromPoll(int fd){
 }
 
 void Webserver::removeClientFd(int clientFd){
+	_lastActivity.erase(clientFd);
 	const auto& it = _clientFdToServerIndex.find(clientFd);
 	if (it != _clientFdToServerIndex.end()){
 		_clientFdToServerIndex.erase(it);
