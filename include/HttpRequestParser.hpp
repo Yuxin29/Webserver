@@ -45,4 +45,5 @@ public:
     HttpParser() :_bodyLength(0){};
 
     HttpRequest parseHttpRequest(const std::string& rawLine);
+    
 };

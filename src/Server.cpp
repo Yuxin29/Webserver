@@ -96,6 +96,9 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	HttpParser& parser = _parsers[clientFd];
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
+	if (parser._state == ERROR){
+		//Lucio will update this part later when we have an errorResponse for malformed request
+	}
 	if (parser._state != DONE){
 		return CLIENT_INCOMPLETE;
 	}

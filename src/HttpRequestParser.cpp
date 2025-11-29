@@ -119,7 +119,8 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
                 parseStartLine(line);
             if (!validateStartLine())
                 // _state = ERROR
-                throw std::runtime_error("405 Method Not Allowed");
+                // _errStatus = 405;
+                throw std::runtime_error("405 Method Not Allowed"); //do not throw, it is killing the server
             if (_state == HEADERS)
             {
                 parseHeaderLine(line);
@@ -127,6 +128,7 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
                 {
                     if (!validateHeaders())
                         // _state = ERROR
+                        // _errStatus = 400;
                         throw std::runtime_error("400 Bad Request: invalid headers");
                     break;
                 }
@@ -137,6 +139,7 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
             parseBody(pos);
             if (!validateBody())
                 // _state = ERROR
+                // _errStatus = 400;
                 throw std::runtime_error("400 Bad Request: something wrong with body");
             break;
         }
@@ -145,7 +148,13 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
         _buffer.erase(0, pos);
     if (_state == DONE)
         return HttpRequest(_method, _path, _version, _body, _requestHeaders);
-//  if (_state == ERROR)
-//      return 
     return HttpRequest();
 }
+
+/* Lucio Suggestion, maybe generate an error response here that will return a page according to the error code
+Currently HttpResponseHandler just deals with requests that have GET, POST, DELETE. What happen if the request never
+has any of them? So far it throws and kills the program, in error it should just return one of the error pages.
+
+Could be added a generateErrorRequestResponse()
+*/
+
