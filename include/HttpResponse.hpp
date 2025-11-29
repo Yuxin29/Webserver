@@ -32,7 +32,7 @@ public:
     std::string                         _reason;
     std::string                         _body;
     std::map<std::string, std::string>  _responseHeaders;
-    bool                                _keepConnectionAlive;
+    bool                                _keepConnectionAlive = true; //keep this true by default, HTTP1.1 keeps connection alive unless there is an error OR client requests comes with a Connection:close
     bool                                _requestComplete;
 
     HttpResponse() {};

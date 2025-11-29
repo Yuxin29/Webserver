@@ -1,6 +1,4 @@
 #include "Server.hpp"
-#include "HttpRequest.hpp"
-#include "HttpRequestParser.hpp"
 
 using namespace config;
 
@@ -18,9 +16,13 @@ Server::~Server(){
 	shutdown();
 }
 
-Server::Server(const Server& other)
-	: _host(other._host), _listenFd(other._listenFd), _port(other._port),
-		 _virtualHosts(other._virtualHosts), _addr(other._addr){}
+Server::Server(Server&& other) noexcept
+	: _host(std::move(other._host)), _listenFd(other._listenFd), _port(other._port),
+		 _virtualHosts(std::move(other._virtualHosts)), _addr(other._addr),
+		 	_requestCount(std::move(other._requestCount)), _parsers(std::move(other._parsers)),
+				 _httpHandler(std::move(other._httpHandler)){
+		other._listenFd = -1;			
+}
 
 Server::StartResult Server::start(){
 	_listenFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -50,7 +52,7 @@ Server::StartResult Server::start(){
 
 void Server::shutdown(){
 	if (_listenFd != -1){
-		std::cout << "\nStopping servers listening on port: " << _port << std::endl;
+		std::cout << "Stopping servers listening on port: " << _port << std::endl;
 		close (_listenFd);
 		_listenFd = -1;
 	}
@@ -75,54 +77,67 @@ int  Server::acceptConnection(void){
 	return clientFd;
 }
 
-//yuxin changed this part from Lucio: same flow but actual http functions
 Server::ClientStatus Server::handleClient(int clientFd){
-	//getting raw bits
 	char buffer[8192];
 	ssize_t nBytes = recv(clientFd, buffer, sizeof(buffer), 0);
 	if (nBytes < 0){
 		if (errno == EAGAIN || errno == EWOULDBLOCK){
 			return CLIENT_INCOMPLETE;
 		}
-		_partialRequests.erase(clientFd);
+		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
 	if (nBytes == 0){
-		_partialRequests.erase(clientFd);
+		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-	_partialRequests[clientFd].append(buffer, nBytes);
-	std::string& request_data = _partialRequests[clientFd];
-
-	//constructiong a request
-	HttpParser parser;
-	HttpRequest	req = parser.parseHttpRequest(request_data);
-	if (parser._state != DONE)
+	if (_requestCount[clientFd] >= 100){
+		cleanMaps(clientFd);
+		return CLIENT_COMPLETE;
+	}
+	_requestCount[clientFd]++;
+	HttpParser& parser = _parsers[clientFd];
+	std::string chunk(buffer, nBytes);
+	HttpRequest request = parser.parseHttpRequest(chunk);
+	if (parser._state == ERROR) {
+		// Hardcoded, to be obtained from Parser to send error response (400/405 based on parser._errStatus)
+		std::string errorResponse = "HTTP/1.1 400 Bad Request\r\n"
+									"Content-Length: 0\r\n"
+									"Connection: close\r\n\r\n";
+		send(clientFd, errorResponse.c_str(), errorResponse.size(), 0);
+		cleanMaps(clientFd);
+		return CLIENT_ERROR;
+	}
+	if (parser._state != DONE){
 		return CLIENT_INCOMPLETE;
-
-	//find a server
-	std::string hostHeader;
-	std::map<std::string, std::string> headers = req.getrequestHeaders();
-	std::map<std::string, std::string>::iterator it = headers.find("Host");
-	hostHeader = it->second;
+	}
+	std::map<std::string, std::string> headers = request.getrequestHeaders();
+	auto it = headers.find("Host");
+	if (it == headers.end()){
+		cleanMaps(clientFd);
+		return CLIENT_ERROR;
+	}
+	std::string hostHeader = it->second;
 	const ServerConfig* virtualHost = matchVirtualHost(hostHeader);
 	if (!virtualHost){
-		_partialRequests.erase(clientFd);
+		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-
-	//constructiong a response
-	HttpResponse res = _httpHandler.handleRequest(req, virtualHost);
-	// if (!res._requestComplete)
-	// 	return CLIENT_INCOMPLETE;
-	std::string response_string = res.buildResponseString();
-	ssize_t sent = send(clientFd, response_string.c_str(), response_string.size(), 0);
+	HttpResponse response = _httpHandler.handleRequest(request, virtualHost);
+	std::string responseString = response.buildResponseString();
+	ssize_t sent = send(clientFd, responseString.c_str(), responseString.size(), 0);
 	if (sent < 0){
-		_partialRequests.erase(clientFd);
+		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-	_partialRequests.erase(clientFd);
-	return res._keepConnectionAlive ? CLIENT_KEEP_ALIVE : CLIENT_COMPLETE;
+	bool keepAlive = response._keepConnectionAlive; //do i need to access it directly? 
+	if (keepAlive){
+		_parsers[clientFd] = HttpParser();
+		return CLIENT_KEEP_ALIVE;
+	} else {
+		cleanMaps(clientFd);
+		return CLIENT_COMPLETE;
+	}
 }
 
 int Server::getListenFd() const {
@@ -147,45 +162,7 @@ const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
 	return nullptr;
 }
 
-std::string Server::extractHostHeader(const std::string& rawRequest) const {
-	std::istringstream streamRequest(rawRequest);
-	std::string line;
-	while (std::getline(streamRequest, line)){
-		if (!line.empty() && line.back() == '\r'){
-			line.pop_back();
-		}
-		if (line.size() >= 5 && line.compare(0, 5, "Host:") == 0){
-			size_t start = line.find_first_not_of(" \t", 5);
-			if (start == std::string::npos){
-				return "";
-			}
-			std::string host = line.substr(start);
-			size_t end = host.find_last_not_of(" \t");
-			if (end != std::string::npos){
-				host = host.substr(0, end + 1);
-			}
-			size_t colonPos = host.find(":");
-			if (colonPos != std::string::npos){
-				host = host.substr(0, colonPos);
-			}
-			return host;		
-		}
-	}
-	return "";
-}
-
-const LocationConfig* Server::findLocation(const ServerConfig& server, const std::string& path) const {
-	const LocationConfig* bestMatch = nullptr;
-	size_t longestPrefix = 0;
-
-	for (size_t i = 0; i < server.locations.size(); i++){
-		const std::string& locPath = server.locations[i].path;
-		if (path.find(locPath) == 0){
-			if (locPath.length() > longestPrefix){
-				longestPrefix = locPath.length();
-				bestMatch = &server.locations[i];
-			}
-		}
-	}
-	return bestMatch;
+void  Server::cleanMaps(int clientFd){
+	_parsers.erase(clientFd);
+	_requestCount.erase(clientFd);
 }

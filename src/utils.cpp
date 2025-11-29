@@ -14,12 +14,6 @@ namespace utils {
 			case ERROR_RUNNING_SERVERS:
 				errorMessage = "One or more servers could not be started";
 				break;
-			case PARSE_ERROR:
-				errorMessage = "Some parsing error for Lin to check";
-				break;
-			case FAILED_TO_LOAD_DEFAULT_PATH:
-				errorMessage = "Could not find the file in default path";
-				break;
 		}
 		std::cerr << "Error: " << errorMessage << std::endl;
 		return FAILURE;

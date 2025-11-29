@@ -104,7 +104,7 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
     _buffer += rawLine;
     
     size_t pos = 0;
-    while (_state != DONE )
+    while (_state != DONE  ) // Lucio addition, maybe add || _state != ERROR
     {
         if (_state == START_LINE || _state == HEADERS)
         {
@@ -118,13 +118,17 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
             if (_state == START_LINE)
                 parseStartLine(line);
             if (!validateStartLine())
-                throw std::runtime_error("405 Method Not Allowed");
+                // _state = ERROR
+                // _errStatus = 405;
+                throw std::runtime_error("405 Method Not Allowed"); //do not throw, it is killing the server
             if (_state == HEADERS)
             {
                 parseHeaderLine(line);
                 if (_state > HEADERS)
                 {
                     if (!validateHeaders())
+                        // _state = ERROR
+                        // _errStatus = 400;
                         throw std::runtime_error("400 Bad Request: invalid headers");
                     break;
                 }
@@ -134,6 +138,8 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
         {
             parseBody(pos);
             if (!validateBody())
+                // _state = ERROR
+                // _errStatus = 400;
                 throw std::runtime_error("400 Bad Request: something wrong with body");
             break;
         }
@@ -144,3 +150,11 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
         return HttpRequest(_method, _path, _version, _body, _requestHeaders);
     return HttpRequest();
 }
+
+/* Lucio Suggestion, maybe generate an error response here that will return a page according to the error code
+Currently HttpResponseHandler just deals with requests that have GET, POST, DELETE. What happen if the request never
+has any of them? So far it throws and kills the program, in error it should just return one of the error pages.
+
+Could be added a generateErrorRequestResponse()
+*/
+

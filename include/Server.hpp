@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "ConfigBuilder.hpp"
+
+#include "HttpRequestParser.hpp"
 #include "HttpResponseHandler.hpp"
 
 class Server {
@@ -33,18 +35,18 @@ class Server {
 		int  						_port;
 		std::vector<config::ServerConfig>	_virtualHosts;
 		sockaddr_in					_addr;
-		//Http						_httpHandler;
-		HttpResponseHandler		_httpHandler;
-		std::map<int, std::string> _partialRequests;
+		std::map<int, int>			_requestCount;
+		std::map<int, HttpParser>	_parsers;
+		HttpResponseHandler			_httpHandler;
 
 		const config::ServerConfig* matchVirtualHost(const std::string& hostHeader);
-		std::string extractHostHeader(const std::string& rawRequest) const;
-		const config::LocationConfig* findLocation(const config::ServerConfig& server, const std::string& path) const;
+		void  cleanMaps(int clientFd);
 
 	public:
 		Server() = delete;
 		explicit Server(const std::string& host, int port, const std::vector<config::ServerConfig>& serverBlocks);
-		Server(const Server& other);
+		Server(Server&& other) noexcept;
+		Server(const Server& other) = delete;
 		Server& operator=(const Server& other) = delete;
 		~Server();
 

@@ -60,6 +60,11 @@ int Webserver::createServers(const std::vector<ServerConfig>& config){
 		}
 		_listenFdToServerIndex[listenFd] = i;
 	}
+	
+	for (size_t i = 0; i < _servers.size(); i++){
+		std::cout << "Server successfully listening on port: " 
+				<< _servers[i].getPort() << std::endl;
+	}
 	return utils::SUCCESS;
 }
 
@@ -75,7 +80,7 @@ int Webserver::runWebserver(){
 			}
 			return utils::FAILURE;
 		}
-		if (nfds == 0){ //expand here eventually to timeout idle connections
+		if (nfds == 0){
 			continue;
 		}
 		for (int i = 0; i < nfds; i++){
@@ -125,11 +130,20 @@ void Webserver::handleClientRequest(int clientFd){
 	if (it == _clientFdToServerIndex.end()){
 		return;
 	}
+	time_t now = time(NULL);
 	size_t serverIndex = it->second;
 	Server::ClientStatus status = _servers[serverIndex].handleClient(clientFd);
 	switch (status){
 	case Server::CLIENT_INCOMPLETE:
+		if (now - _lastActivity[clientFd] > CONNECTION_TIMEOUT){ 
+			std::cerr << "Connection timedout on Fd: " << clientFd << std::endl;
+			removeClientFd(clientFd);
+			return;
+		}
+		_lastActivity[clientFd] = now;
+		break;
 	case Server::CLIENT_KEEP_ALIVE:
+		_lastActivity[clientFd] = now;
 		break;
 	case Server::CLIENT_COMPLETE:
 	case Server::CLIENT_ERROR:
@@ -148,6 +162,7 @@ void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 		return;
 	}
 	_clientFdToServerIndex[clientFd] = serverIndex;
+	_lastActivity[clientFd] = time(NULL);
 }
 
 void Webserver::removeFdFromPoll(int fd){
@@ -160,6 +175,7 @@ void Webserver::removeFdFromPoll(int fd){
 }
 
 void Webserver::removeClientFd(int clientFd){
+	_lastActivity.erase(clientFd);
 	const auto& it = _clientFdToServerIndex.find(clientFd);
 	if (it != _clientFdToServerIndex.end()){
 		_clientFdToServerIndex.erase(it);
