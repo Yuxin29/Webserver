@@ -1,22 +1,8 @@
 #pragma once
 
 #include <map>
+#include <string>
 #include <sstream>
-
-//constom status_code
-// 200 OK
-// 404 NOT FOUND 
-// 500 INTERNAL SERVER ERROR 
-// 413 Payload too large 
-
-//Headers:
-// --> must have "Content-Length"
-// --> can have  "Content-type": MIME type，eg text/html, text/plain）
-// --> Connection: close / Connection: keep-alive 
-
-// Body
-// file content from GET or data from POST
-// size must be the same as Content-Length
 
 // Example of a HttpResponse
 // HTTP/1.1 <status_code> <reason_phrase>\r\n
@@ -41,19 +27,18 @@ public:
     std::string buildResponseString();
 };
 
-// how to check the content of a full HTTP request and respongs
-// eg: curl -v http://localhost:8080/test.txt
-/*
-> GET /test.txt HTTP/1.1
-> Host: localhost:8080
-> User-Agent: curl/7.68.0
-> Accept: *
-< HTTP/1.1 200 OK
-< Content-Length: 12
-< Content-Type: text/plain
-< Connection: keep-alive
-< Hello World
-*/
 
-// > Request  
-// < Reponse 
+//constom status_code
+// 200 OK
+// 404 NOT FOUND 
+// 500 INTERNAL SERVER ERROR 
+// 413 Payload too large 
+
+//Headers:
+// --> must have "Content-Length"
+// --> can have  "Content-type": MIME type，eg text/html, text/plain）
+// --> Connection: close / Connection: keep-alive 
+
+// Body
+// file content from GET or data from POST
+// size must be the same as Content-Length

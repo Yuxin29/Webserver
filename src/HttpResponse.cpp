@@ -5,7 +5,6 @@
 // std::string                         _reason;
 // std::string                         _body;
 // std::map<std::string, std::string>  _responseHeaders;
-
 HttpResponse::HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders, bool alive, bool complete)
 {
     _version = version;
@@ -30,18 +29,14 @@ std::string HttpResponse::buildResponseString(){
             hasContentLength = true;
         response << header.first << ": " << header.second << "\r\n";
     }
-
     if (!hasContentLength) {
         response << "Content-Length: " << _body.size() << "\r\n";
     }
-
     // if not set be the user, by default, the connection is closed
     if (_responseHeaders.find("Connection") == _responseHeaders.end()) {
         response << "Connection: close\r\n";
     }
-
     response << "\r\n";
-
     response << _body;
 
     return response.str();

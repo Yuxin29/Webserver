@@ -316,3 +316,21 @@ Accept: */*
 here the request path is empty:
 - Nginx and Apache tolerate this: they treat an empty request-target as / (the root).
 - Some stricter HTTP parsers will return 400 Bad Request because the request-target is required by the spec (RFC 9110).  ⚠️ YUXIN WANTS TO FOLLOW THIS
+
+
+// how to check the content of a full HTTP request and respongs
+// eg: curl -v http://localhost:8080/test.txt
+/*
+> GET /test.txt HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/7.68.0
+> Accept: *
+< HTTP/1.1 200 OK
+< Content-Length: 12
+< Content-Type: text/plain
+< Connection: keep-alive
+< Hello World
+*/
+
+// > Request  
+// < Reponse 

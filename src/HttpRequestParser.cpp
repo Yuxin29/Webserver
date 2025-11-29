@@ -21,7 +21,7 @@ bool HttpParser::validateStartLine()
 {
     if (_method != "GET" && _method != "POST" && _method != "DELETE") //  GET, POST, DELETE  ---> 405
     {
-        _errStatus = 405;
+        _errStatus = 405; //mathod not allowed
         return false;
     }
     if (_version != "HTTP/1.1") //  Only accept HTTP/1.1
@@ -34,21 +34,85 @@ bool HttpParser::validateStartLine()
 
 bool    HttpParser::validateHeaders()
 {
-    //validateMandatoryHeaders: loop though all keys, has to find host
+    bool hasHost = false;
 
-    //validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
+    for (std::map<std::string, std::string>::const_iterator it = _requestHeaders.begin(); it != _requestHeaders.end(); ++it)
+    {
+        const std::string& key = it->first;
+        const std::string& value = it->second;
 
-    //validateContentLength: can not be too long like minus number ---> 300 or too big(Payload Too Large) ---> 413
+        if (key == "Host")
+        {
+            //validateMandatoryHeaders: loop though all keys, has to find host
+            if (hasHost)   // 多个 Host
+            {
+                _errStatus = 400;  // Bad Request
+                return false;
+            }
+            hasHost = true;
+        }
+
+        //validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
+        
+        //validateContentLength: can not be too long like minus number ---> 300 or too big(Payload Too Large) ---> 413
+        if (key == "Content-Length")
+        {
+            for (size_t i = 0; i < value.length(); ++i) // all digits
+            {
+                if (!isdigit(value[i]))
+                {
+                    _errStatus = 400;
+                    return false;
+                }
+            }
+            long long len = atoll(value.c_str()); 
+            if (len < 0)                                //positive
+            {
+                _errStatus = 400; // negative length
+                return false;
+            }
+            if (len > 1024 * 1024 * 100)  // 100 MB, max, ask lin or lucio what should be the max
+            {
+                _errStatus = 413; // Payload Too Large
+                return false;
+            }
+            _bodyLength = static_cast<size_t>(len);
+        }
+    }
+    if (!hasHost) {
+        _errStatus = 400;
+        return false;
+    }
 
     return true;
 }
 
- // Post must have body, body must fullfill ContentLength
+ // Post must have body, body must fullfill ContentLength, for GET / DELETE, it is not an error to have body
 bool HttpParser::validateBody(){
+    if (_method == "POST")
+    {
+        if (_bodyLength == 0 && !_requestHeaders.count("Content-Length"))
+        {
+            _errStatus = 400;
+            return false;
+        }
+        if (_body.size() < _bodyLength)
+        {
+            _errStatus = 400;
+            return false;
+        }
+        if (_body.size() > _bodyLength) // in theory, it should not happen
+        {
+            _errStatus = 400;
+            return false;
+        }
+    }
     return true;
 }
 
 //below one is private, tool to be called in parseHttpRequest.
+// <start-line>\r\n: Method sp _path sp version crlf(Carriage Return and Line Feed)
+// Get /index.html HTTP/1.1\r\n
 void HttpParser::parseStartLine(const std::string& startline)
 {
     std::istringstream ss(startline);   //ss : stringstream
@@ -104,7 +168,8 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
     _buffer += rawLine;
     
     size_t pos = 0;
-    while (_state != DONE  ) // Lucio addition, maybe add || _state != ERROR
+    // first startine and headers and body 
+    while (_state != DONE) // Lucio addition, maybe add || _state != ERROR
     {
         if (_state == START_LINE || _state == HEADERS)
         {
@@ -117,38 +182,36 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
                 line.pop_back();    //remove the last char \r
             if (_state == START_LINE)
                 parseStartLine(line);
-            if (!validateStartLine())
-                // _state = ERROR
-                // _errStatus = 405;
-                throw std::runtime_error("405 Method Not Allowed"); //do not throw, it is killing the server
-            if (_state == HEADERS)
-            {
+            if (_state == HEADERS){
                 parseHeaderLine(line);
                 if (_state > HEADERS)
-                {
-                    if (!validateHeaders())
-                        // _state = ERROR
-                        // _errStatus = 400;
-                        throw std::runtime_error("400 Bad Request: invalid headers");
                     break;
-                }
             }
         }
-        if (_state == BODY)
-        {
+        if (_state == BODY){
             parseBody(pos);
-            if (!validateBody())
-                // _state = ERROR
-                // _errStatus = 400;
-                throw std::runtime_error("400 Bad Request: something wrong with body");
             break;
         }
     }
+    //move post
     if (pos > 0)
         _buffer.erase(0, pos);
+    //at the end, validate 
+    if (!validateStartLine() || !validateHeaders() || !validateBody()){ 
+        _state = ERROR;
+        return HttpRequest("", "", "", "", {});
+    }
     if (_state == DONE)
         return HttpRequest(_method, _path, _version, _body, _requestHeaders);
     return HttpRequest();
+}
+
+int HttpParser::getState(){
+    return _state;
+}
+
+int HttpParser::getErrStatus(){
+    return _errStatus;
 }
 
 /* Lucio Suggestion, maybe generate an error response here that will return a page according to the error code

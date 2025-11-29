@@ -1,11 +1,10 @@
 #include "HttpResponseHandler.hpp" 
 #include "Server.hpp"
-#include "HttpRequestParser.hpp"
 
 namespace fs = std::filesystem; // Alias for filesystem
 
 // Function: map file extension to MIME type
-std::string getMimeType(const std::string& path) {
+static std::string getMimeType(const std::string& path) {
     static const std::map<std::string, std::string> mimeMap = 
     {
         {".html","text/html"},
@@ -25,11 +24,12 @@ std::string getMimeType(const std::string& path) {
 }
 
 // Format time as GMT string for Last-Modified header
-std::string formatTime(std::time_t t) {
-    std::ostringstream ss;
-    ss << std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT"); // gmtime -> UTC, put_time 格式化
-    return ss.str();
-}
+// not used yet but might be needed later
+// static std::string formatTime(std::time_t t) {
+//     std::ostringstream ss;
+//     ss << std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT"); // gmtime -> UTC, put_time 格式化
+//     return ss.str();
+// }
 
 // this is the public over all call
 // for LUCIO to use
@@ -60,7 +60,11 @@ Server: ExampleServer/1.0
 Content-Type: text/plain
 Content-Length: 13
 
-Hello, world!
+Hello, world!static std::string formatTime(std::time_t t) {
+//     std::ostringstream ss;
+//     ss << std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT"); // gmtime -> UTC, put_time 格式化
+//     return ss.str();
+// }
 */
 //lin configuration/webserv.conf -> root, location, index,, error_page, cgi_path, upload_path and so on.
 HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req, const config::ServerConfig* vh){

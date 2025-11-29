@@ -99,16 +99,15 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	HttpParser& parser = _parsers[clientFd];
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
-	if (parser._state == ERROR) {
+	if (parser.getState() == ERROR) {
 		// Hardcoded, to be obtained from Parser to send error response (400/405 based on parser._errStatus)
-		std::string errorResponse = "HTTP/1.1 400 Bad Request\r\n"
-									"Content-Length: 0\r\n"
-									"Connection: close\r\n\r\n";
-		send(clientFd, errorResponse.c_str(), errorResponse.size(), 0);
+		HttpResponse error_res("HTTP/1.1", parser.getErrStatus() , "Bad Request", "empty_error body", {}, false, false);
+		std::string error_res_string = error_res.buildResponseString();
+		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-	if (parser._state != DONE){
+	if (parser.getState() != DONE){
 		return CLIENT_INCOMPLETE;
 	}
 	std::map<std::string, std::string> headers = request.getrequestHeaders();

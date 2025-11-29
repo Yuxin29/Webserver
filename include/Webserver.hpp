@@ -1,13 +1,11 @@
 #pragma once
 #include "Server.hpp"
 #include "ConfigBuilder.hpp"
+
 #include "utils.hpp"
-#include <map>
 #include <sys/epoll.h>
 #include <csignal>
-#include <iostream>
 #include <vector>
-#include <string>
 #include <cstring>
 
 class Webserver {
