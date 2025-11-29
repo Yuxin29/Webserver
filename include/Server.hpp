@@ -44,7 +44,8 @@ class Server {
 	public:
 		Server() = delete;
 		explicit Server(const std::string& host, int port, const std::vector<config::ServerConfig>& serverBlocks);
-		Server(const Server& other);
+		Server(Server&& other) noexcept;
+		Server(const Server& other) = delete;
 		Server& operator=(const Server& other) = delete;
 		~Server();
 

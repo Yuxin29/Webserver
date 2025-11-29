@@ -126,22 +126,24 @@ void Webserver::handleNewConnection(int listenFd){
 }
 
 void Webserver::handleClientRequest(int clientFd){
-	_lastActivity[clientFd] = time(NULL);
 	const auto& it = _clientFdToServerIndex.find(clientFd);
 	if (it == _clientFdToServerIndex.end()){
 		return;
 	}
+	time_t now = time(NULL);
 	size_t serverIndex = it->second;
 	Server::ClientStatus status = _servers[serverIndex].handleClient(clientFd);
 	switch (status){
 	case Server::CLIENT_INCOMPLETE:
-		if (time(NULL) - _lastActivity[clientFd] > CONNECTION_TIMEOUT){
+		if (now - _lastActivity[clientFd] > CONNECTION_TIMEOUT){ 
 			std::cerr << "Connection timedout on Fd: " << clientFd << std::endl;
 			removeClientFd(clientFd);
+			return;
 		}
+		_lastActivity[clientFd] = now;
 		break;
 	case Server::CLIENT_KEEP_ALIVE:
-		_lastActivity[clientFd] = time(NULL);
+		_lastActivity[clientFd] = now;
 		break;
 	case Server::CLIENT_COMPLETE:
 	case Server::CLIENT_ERROR:
@@ -160,6 +162,7 @@ void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 		return;
 	}
 	_clientFdToServerIndex[clientFd] = serverIndex;
+	_lastActivity[clientFd] = time(NULL);
 }
 
 void Webserver::removeFdFromPoll(int fd){

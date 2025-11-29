@@ -16,10 +16,13 @@ Server::~Server(){
 	shutdown();
 }
 
-Server::Server(const Server& other)
-	: _host(other._host), _listenFd(other._listenFd), _port(other._port),
-		 _virtualHosts(other._virtualHosts), _addr(other._addr),
-		 	_requestCount(other._requestCount), _parsers(other._parsers){}
+Server::Server(Server&& other) noexcept
+	: _host(std::move(other._host)), _listenFd(other._listenFd), _port(other._port),
+		 _virtualHosts(std::move(other._virtualHosts)), _addr(other._addr),
+		 	_requestCount(std::move(other._requestCount)), _parsers(std::move(other._parsers)),
+				 _httpHandler(std::move(other._httpHandler)){
+		other._listenFd = -1;			
+}
 
 Server::StartResult Server::start(){
 	_listenFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -81,7 +84,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		if (errno == EAGAIN || errno == EWOULDBLOCK){
 			return CLIENT_INCOMPLETE;
 		}
-		_parsers.erase(clientFd);
+		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
 	if (nBytes == 0){
@@ -96,8 +99,14 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	HttpParser& parser = _parsers[clientFd];
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
-	if (parser._state == ERROR){
-		//Lucio will update this part later when we have an errorResponse for malformed request
+	if (parser._state == ERROR) {
+		// Hardcoded, to be obtained from Parser to send error response (400/405 based on parser._errStatus)
+		std::string errorResponse = "HTTP/1.1 400 Bad Request\r\n"
+									"Content-Length: 0\r\n"
+									"Connection: close\r\n\r\n";
+		send(clientFd, errorResponse.c_str(), errorResponse.size(), 0);
+		cleanMaps(clientFd);
+		return CLIENT_ERROR;
 	}
 	if (parser._state != DONE){
 		return CLIENT_INCOMPLETE;
@@ -111,14 +120,14 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	std::string hostHeader = it->second;
 	const ServerConfig* virtualHost = matchVirtualHost(hostHeader);
 	if (!virtualHost){
-		_parsers.erase(clientFd);
+		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
 	HttpResponse response = _httpHandler.handleRequest(request, virtualHost);
 	std::string responseString = response.buildResponseString();
 	ssize_t sent = send(clientFd, responseString.c_str(), responseString.size(), 0);
 	if (sent < 0){
-		_parsers.erase(clientFd);
+		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
 	bool keepAlive = response._keepConnectionAlive; //do i need to access it directly? 
