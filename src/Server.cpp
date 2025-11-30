@@ -78,6 +78,7 @@ int  Server::acceptConnection(void){
 }
 
 Server::ClientStatus Server::handleClient(int clientFd){
+	// listening
 	char buffer[8192];
 	ssize_t nBytes = recv(clientFd, buffer, sizeof(buffer), 0);
 	if (nBytes < 0){
@@ -96,20 +97,20 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		return CLIENT_COMPLETE;
 	}
 	_requestCount[clientFd]++;
+	// parsing request and validating
 	HttpParser& parser = _parsers[clientFd];
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
 	if (parser.getState() == ERROR) {
-		// Hardcoded, to be obtained from Parser to send error response (400/405 based on parser._errStatus)
-		HttpResponse error_res("HTTP/1.1", parser.getErrStatus() , "Bad Request", "empty_error body", {}, false, false);
+		HttpResponse error_res = buildErrorResponse(parser.getErrStatus());
 		std::string error_res_string = error_res.buildResponseString();
 		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-	if (parser.getState() != DONE){
+	if (parser.getState() != DONE)
 		return CLIENT_INCOMPLETE;
-	}
+	// if good req, finder server
 	std::map<std::string, std::string> headers = request.getHeaders();
 	auto it = headers.find("Host");
 	if (it == headers.end()){
@@ -122,6 +123,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
+	// build response
 	HttpResponse response = _httpHandler.handleRequest(request, virtualHost);
 	std::string responseString = response.buildResponseString();
 	ssize_t sent = send(clientFd, responseString.c_str(), responseString.size(), 0);
@@ -129,11 +131,12 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-	bool keepAlive = response._keepConnectionAlive; //do i need to access it directly? 
+	bool keepAlive = response._keepConnectionAlive;
 	if (keepAlive){
 		_parsers[clientFd] = HttpParser();
 		return CLIENT_KEEP_ALIVE;
-	} else {
+	}
+	else {
 		cleanMaps(clientFd);
 		return CLIENT_COMPLETE;
 	}

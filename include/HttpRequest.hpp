@@ -20,8 +20,6 @@ private:
 public:
     //Orthodox not all needed: defined just here
     HttpRequest() {}
-    // HttpRequest(const std::string& method, const std::string& requestpath, const std::string& version, const std::string& body, const std::map<std::string, std::string>& requestHeaders)
-    // : _method(method), _requestPath(requestpath), _version(version), _body(body), _requestHeaders(requestHeaders) {}
 
     //getters
     std::string&                         getMethod();

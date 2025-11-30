@@ -2,8 +2,10 @@
 
 #include <iostream>
 #include <sstream>
+#include <set>
 
 #include "HttpRequest.hpp"  // map, string here
+#include "HttpResponse.hpp"
 
 // this is used in HttpRequest
 enum State{
@@ -39,3 +41,5 @@ public:
     int             getErrStatus();
     HttpRequest     parseHttpRequest(const std::string& rawLine);
 };
+
+HttpResponse buildErrorResponse(int status);

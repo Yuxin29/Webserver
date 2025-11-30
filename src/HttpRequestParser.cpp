@@ -17,8 +17,60 @@ static std::string trim_space(std::string str)
     return str.substr(start, end - start + 1);
 }
 
+// Lucio Suggestion, 
+// maybe generate an error response here that will return a page according to the error code
+// Currently HttpResponseHandler just deals with requests that have GET, POST, DELETE. 
+// What happen if the request never has any of them? 
+// So far it throws and kills the program, in error it should just return one of the error pages.
+// Could be added a generateErrorRequestResponse()
+// Yuxin Done
+HttpResponse buildErrorResponse(int status)
+{
+    std::string reason;
+    std::string body;
+
+    switch (status)
+    {
+        case 400:
+            reason = "Bad Request";
+            body = "<h1>400 Bad Request</h1>";
+            break;
+        case 405:
+            reason = "Method Not Allowed";
+            body = "<h1>405 Method Not Allowed</h1>";
+            break;
+        case 413:
+            reason = "Payload Too Large";
+            body = "<h1>413 Payload Too Large</h1>";
+            break;
+        // case 414:  addable, not mandatory
+        //     reason = "URI Too Long";
+        //     body = "<h1>414 URI Too Long</h1>";
+            // break;
+        case 431:
+            reason = "Request Header Fields Too Large";
+            body = "<h1>431 Request Header Fields Too Large</h1>";
+            break;
+        default:
+            reason = "Bad Request";
+            body = "<h1>400 Bad Request</h1>";
+            break;
+    }
+    std::map<std::string, std::string> headers;
+    headers["Content-Type"] = "text/html";
+    headers["Content-Length"] = std::to_string(body.size());
+
+    return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
+}
+
 bool HttpParser::validateStartLine()
 {
+    //something missing, this one check first to avoid seg fault, 400 bad request
+    if (_req.getMethod().empty() || _req.getPath().empty() || _req.getVersion().empty())
+    {
+        _errStatus = 400;
+        return false;
+    }
     //  GET, POST, DELETE  ---> 405: mathod not allowed
     if (_req.getMethod() != "GET" && _req.getMethod() != "POST" && _req.getMethod() != "DELETE"){
         _errStatus = 405;
@@ -29,12 +81,7 @@ bool HttpParser::validateStartLine()
         _errStatus = 400;
         return false;
     }
-    //something missing
-    if (_req.getMethod().empty() || _req.getPath().empty() || _req.getVersion().empty())
-    {
-        _errStatus = 400;
-        return false;
-    }
+    //path cannot have empty space or path cannot be too lond check, i think it is not necessary
     return true;
 }
 
@@ -46,50 +93,73 @@ bool    HttpParser::validateHeaders()
     {
         const std::string& key = it->first;
         const std::string& value = it->second;
+        std::set<std::string> seenKeys;
 
-        if (key == "Host")
-        {
-            //validateMandatoryHeaders: loop though all keys, has to find host
-            if (hasHost)   // 多个 Host
-            {
-                _errStatus = 400;  // Bad Request
+        // validator key: key cannot has space in it
+        for (size_t i = 0; i < key.size(); ++i) {
+            if (!isgraph(key[i]) || key[i] == ':') {
+                _errStatus = 400;
+                return false;
+            }
+        }
+        //validateMandatoryHeaders: loop though all keys, has to find host      400;  Bad Request
+        if (key == "Host"){
+            if (hasHost){
+                _errStatus = 400; 
                 return false;
             }
             hasHost = true;
         }
-
-        //validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
-        
-        //validateContentLength: can not be too long like minus number ---> 300 or too big(Payload Too Large) ---> 413
+        // //validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
+        /* if (seenKeys.count(key)) {
+            _errStatus = 400;  // Repeating header is not allowed (except RFC multi-value headers)
+            return false;
+        }
+        seenKeys.insert(key);  */
+        //validateContentLength: can not be too long like minus number ---> 400 or too big(Payload Too Large) ---> 443113
         if (key == "Content-Length")
         {
-            for (size_t i = 0; i < value.length(); ++i) // all digits
+            if (value.empty())                          // can not be empty
             {
-                if (!isdigit(value[i]))
-                {
+                _errStatus = 400;
+                return false;
+            }
+            if (value.size() > 1 && value[0] == '0')    // can not start with zero
+            {
+                _errStatus = 400;
+                return false;
+            }
+            for (size_t i = 0; i < value.length(); ++i) // can not have non digits
+            {
+                if (!isdigit(value[i])){
                     _errStatus = 400;
                     return false;
                 }
             }
             long long len = atoll(value.c_str()); 
-            if (len < 0)                                //positive
+            if (len < 0)                                // can not be minus
             {
-                _errStatus = 400; // negative length
+                _errStatus = 400;
                 return false;
             }
-            if (len > 1024 * 1024 * 100)  // 100 MB, max, ask lin or lucio what should be the max
+            if (len > 1024 * 1024 * 100)                // can not be too big, 100 MB, max, ask lin or lucio what should be the max
             {
-                _errStatus = 413; // Payload Too Large
+                _errStatus = 413;
                 return false;
             }
             _bodyLength = static_cast<size_t>(len);
         }
+        // header can not be too long:   431, Request Header Fields Too Large
+        if (key.size() > 1024 || value.size() > 4096){
+            _errStatus = 431; 
+            return false;
+        }
     }
-    if (!hasHost) {
+    if (!hasHost)       // it has to have ont and only one host
+    {
         _errStatus = 400;
         return false;
     }
-
     return true;
 }
 
@@ -97,18 +167,19 @@ bool    HttpParser::validateHeaders()
 bool HttpParser::validateBody(){
     if (_req.getMethod() == "POST")
     {
-        if (_bodyLength == 0 && !_req.getHeaders().count("Content-Length"))
-        {
+        // It has to have body string and in headers, it has to have ontent-Length"
+        if (_bodyLength == 0 && !_req.getHeaders().count("Content-Length")){
             _errStatus = 400;
             return false;
         }
+        // body string length has to be as long as the sontent-Length says
         if (_req.getBody().size() < _bodyLength)
         {
             _errStatus = 400;
             return false;
         }
-        if (_req.getBody().size() > _bodyLength) // in theory, it should not happen
-        {
+        // body lenth can not be too long: in theory it should not happen
+        if (_req.getBody().size() > _bodyLength){
             _errStatus = 400;
             return false;
         }
@@ -207,13 +278,12 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
     if (pos > 0)
         _buffer.erase(0, pos);
     //at the end, validate 
-    if (!validateStartLine() || !validateHeaders() || !validateBody()){ 
+    if (!validateStartLine() || !validateHeaders() || !validateBody())
         _state = ERROR;
+    // not finished or error
+    if (_state != DONE || _state == ERROR)
         return HttpRequest();
-    }
-    if (_state == DONE)
-        return _req;
-    return HttpRequest();
+    return _req;
 }
 
 int HttpParser::getState(){
@@ -223,11 +293,3 @@ int HttpParser::getState(){
 int HttpParser::getErrStatus(){
     return _errStatus;
 }
-
-/* Lucio Suggestion, maybe generate an error response here that will return a page according to the error code
-Currently HttpResponseHandler just deals with requests that have GET, POST, DELETE. What happen if the request never
-has any of them? So far it throws and kills the program, in error it should just return one of the error pages.
-
-Could be added a generateErrorRequestResponse()
-*/
-
