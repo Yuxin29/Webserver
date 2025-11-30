@@ -13,12 +13,12 @@
 
 class HttpResponseHandler {
 public:
-    HttpResponse handleRequest(const HttpRequest& req, const config::ServerConfig* vh);
+    HttpResponse handleRequest(HttpRequest& req, const config::ServerConfig* vh);
 
 private:
-    HttpResponse handleGET(const HttpRequest& req, const config::ServerConfig* vh);
-    HttpResponse handlePOST(const HttpRequest& req, const config::ServerConfig* vh);
-    HttpResponse handleDELETE(const HttpRequest& req, const config::ServerConfig* vh);
+    HttpResponse handleGET(HttpRequest& req, const config::ServerConfig* vh);
+    HttpResponse handlePOST(HttpRequest& req, const config::ServerConfig* vh);
+    HttpResponse handleDELETE(HttpRequest& req, const config::ServerConfig* vh);
 };
 
 //int stat(const char *pathname, struct stat *statbuf); Retrieve information about a file (size, type, permissions, timestamps, etc.) without opening it.

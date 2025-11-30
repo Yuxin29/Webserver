@@ -20,10 +20,7 @@ enum State{
 // check state -> get input -> do a thing -> change to next state
 class HttpParser{
 private:
-    std::string                         _method, _path, _version;
-    std::map<std::string, std::string>  _requestHeaders;
-    std::string                         _body;
-
+    HttpRequest                         _req;
     int                                 _errStatus = 0; //set the err to specific error code(404) and generate an error response.
     State                               _state = START_LINE;
 
@@ -36,7 +33,6 @@ private:
     void parseHeaderLine(const std::string& headerline);
     bool validateBody();
     void parseBody(size_t pos);
-
 public:
     HttpParser() :_bodyLength(0){};
     int             getState();

@@ -1,22 +1,42 @@
 #include "HttpRequest.hpp"
 
 //just getters
-const std::string& HttpRequest::getMethod() const{
+std::string& HttpRequest::getMethod(){
     return _method;
 }
 
-const std::string& HttpRequest::getrequestPath() const{
+std::string& HttpRequest::getPath(){
     return _requestPath;
 }   
 
-const std::string& HttpRequest::getVersion() const{
+std::string& HttpRequest::getVersion(){
     return _version;
 }   
 
-const std::map<std::string, std::string>&  HttpRequest::getrequestHeaders() const{
+std::map<std::string, std::string>&  HttpRequest::getHeaders(){
     return _requestHeaders;
 }
 
-const std::string& HttpRequest::getBody() const{
+std::string& HttpRequest::getBody(){
     return _body;
+}
+
+void HttpRequest::setMethod(const std::string &m){
+    _method = m;
+}
+
+void HttpRequest::setPath(const std::string &p){
+    _requestPath = p;
+}
+
+void HttpRequest::setVersion(const std::string &v){
+    _version = v;
+}
+
+void HttpRequest::addHeader(const std::string& k, const std::string& v){ 
+    _requestHeaders[k] = v;
+}
+
+void HttpRequest::setBody(const std::string &b){
+    _body = b;
 }

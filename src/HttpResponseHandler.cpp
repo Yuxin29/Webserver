@@ -33,7 +33,7 @@ static std::string getMimeType(const std::string& path) {
 
 // this is the public over all call
 // for LUCIO to use
-HttpResponse HttpResponseHandler::handleRequest(const HttpRequest& req, const config::ServerConfig* vh)
+HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::ServerConfig* vh)
 {
    if (!vh)
       return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "", {}, false, false);
@@ -67,9 +67,9 @@ Hello, world!static std::string formatTime(std::time_t t) {
 // }
 */
 //lin configuration/webserv.conf -> root, location, index,, error_page, cgi_path, upload_path and so on.
-HttpResponse HttpResponseHandler::handleGET(const HttpRequest& req, const config::ServerConfig* vh){
+HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh){
    // 1. Server received GET /hello. /hello is supposed to be file
-   std::string uri = req.getrequestPath(); // URI: uniform Resource Identifier, _path in the request
+   std::string uri = req.getPath(); // URI: uniform Resource Identifier, _path in the request
 
    // 2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
    std::string fullpath;
@@ -131,9 +131,9 @@ Content-Length: 23
 
 {"status":"success"}
 */
-HttpResponse HttpResponseHandler::handlePOST(const HttpRequest& req, const config::ServerConfig* vh){
+HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::ServerConfig* vh){
    // 1. Server receives POST /submit-data.
-   std::string uri = req.getrequestPath();
+   std::string uri = req.getPath();
    
    // 2. Determines the target resource:
    // - Typically a CGI script, an upload handler, or a location block.
@@ -178,9 +178,9 @@ HTTP/1.1 204 No Content
 Date: Thu, 21 Nov 2025 11:00:00 GMT
 Server: ExampleServer/1.0
 */
-HttpResponse HttpResponseHandler::handleDELETE(const HttpRequest& req, const config::ServerConfig* vh){
+HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::ServerConfig* vh){
    // 1. Server receives DELETE /files/file1.txt.
-   std::string uri = req.getrequestPath();
+   std::string uri = req.getPath();
    
    // 2. Maps path:
    // - /files/file1.txt → /var/www/html/files/file1.txt

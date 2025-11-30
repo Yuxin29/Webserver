@@ -19,12 +19,18 @@ static std::string trim_space(std::string str)
 
 bool HttpParser::validateStartLine()
 {
-    if (_method != "GET" && _method != "POST" && _method != "DELETE") //  GET, POST, DELETE  ---> 405
-    {
-        _errStatus = 405; //mathod not allowed
+    //  GET, POST, DELETE  ---> 405: mathod not allowed
+    if (_req.getMethod() != "GET" && _req.getMethod() != "POST" && _req.getMethod() != "DELETE"){
+        _errStatus = 405;
         return false;
     }
-    if (_version != "HTTP/1.1") //  Only accept HTTP/1.1
+    //  Only accept HTTP/1.1
+    if (_req.getVersion() != "HTTP/1.1"){
+        _errStatus = 400;
+        return false;
+    }
+    //something missing
+    if (_req.getMethod().empty() || _req.getPath().empty() || _req.getVersion().empty())
     {
         _errStatus = 400;
         return false;
@@ -36,7 +42,7 @@ bool    HttpParser::validateHeaders()
 {
     bool hasHost = false;
 
-    for (std::map<std::string, std::string>::const_iterator it = _requestHeaders.begin(); it != _requestHeaders.end(); ++it)
+    for (std::map<std::string, std::string>::const_iterator it = _req.getHeaders().begin(); it != _req.getHeaders().end(); ++it)
     {
         const std::string& key = it->first;
         const std::string& value = it->second;
@@ -89,19 +95,19 @@ bool    HttpParser::validateHeaders()
 
  // Post must have body, body must fullfill ContentLength, for GET / DELETE, it is not an error to have body
 bool HttpParser::validateBody(){
-    if (_method == "POST")
+    if (_req.getMethod() == "POST")
     {
-        if (_bodyLength == 0 && !_requestHeaders.count("Content-Length"))
+        if (_bodyLength == 0 && !_req.getHeaders().count("Content-Length"))
         {
             _errStatus = 400;
             return false;
         }
-        if (_body.size() < _bodyLength)
+        if (_req.getBody().size() < _bodyLength)
         {
             _errStatus = 400;
             return false;
         }
-        if (_body.size() > _bodyLength) // in theory, it should not happen
+        if (_req.getBody().size() > _bodyLength) // in theory, it should not happen
         {
             _errStatus = 400;
             return false;
@@ -116,10 +122,11 @@ bool HttpParser::validateBody(){
 void HttpParser::parseStartLine(const std::string& startline)
 {
     std::istringstream ss(startline);   //ss : stringstream
-    ss >> _method >> _path >> _version;
-
-    if (_method.empty() || _path.empty() || _version.empty())
-        throw std::runtime_error("Something missing in http request starting line");
+    std::string method, path, version;
+    ss >> method >> path >> version;
+    _req.setMethod(method);
+    _req.setPath(path);
+    _req.setVersion(version);
     _state = HEADERS;
 }
 
@@ -128,11 +135,13 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     // first check if headers are done, \r\n will be removed \r\n
     if (headerline.empty())
     {
-        std::map<std::string, std::string>::iterator it = _requestHeaders.find("Content-Length"); // try to find content length in map to see it there is bodu
+        // try to find content length in map to see it there is bodu
+        const std::map<std::string, std::string>& headers = _req.getHeaders();
+        std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
         // if the abouve find it, it returns the content length pair
         // if not find, return map.end. end of one step past the last element
         //so this is find it 
-        if (it != _requestHeaders.end()){
+        if (it != headers.end()){
             _bodyLength = std::stoi(it->second);
             _state = BODY;
         }
@@ -148,16 +157,17 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     std::string value = headerline.substr(dd + 1);
     key = trim_space(key);
     value = trim_space(value);
-    _requestHeaders[key] = value;
+    _req.addHeader(key, value); 
 }
 
 void HttpParser::parseBody(size_t pos)
 {   
     size_t available = _buffer.size() - pos;
-    size_t toRead = std::min(available, _bodyLength - _body.size());
-    _body += _buffer.substr(pos, toRead);
+    const std::string& curBody = _req.getBody();
+    size_t toRead = std::min(available, _bodyLength - curBody.size());
+    _req.getBody() += _buffer.substr(pos, toRead);
     pos += toRead;
-    if (_body.size() >= _bodyLength)
+    if (_req.getBody().size() >= _bodyLength)
         _state = DONE;
 }
 
@@ -199,10 +209,10 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
     //at the end, validate 
     if (!validateStartLine() || !validateHeaders() || !validateBody()){ 
         _state = ERROR;
-        return HttpRequest("", "", "", "", {});
+        return HttpRequest();
     }
     if (_state == DONE)
-        return HttpRequest(_method, _path, _version, _body, _requestHeaders);
+        return _req;
     return HttpRequest();
 }
 

@@ -110,7 +110,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	if (parser.getState() != DONE){
 		return CLIENT_INCOMPLETE;
 	}
-	std::map<std::string, std::string> headers = request.getrequestHeaders();
+	std::map<std::string, std::string> headers = request.getHeaders();
 	auto it = headers.find("Host");
 	if (it == headers.end()){
 		cleanMaps(clientFd);
