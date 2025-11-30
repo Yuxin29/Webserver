@@ -60,11 +60,7 @@ Server: ExampleServer/1.0
 Content-Type: text/plain
 Content-Length: 13
 
-Hello, world!static std::string formatTime(std::time_t t) {
-//     std::ostringstream ss;
-//     ss << std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT"); // gmtime -> UTC, put_time 格式化
-//     return ss.str();
-// }
+Hello, world!
 */
 //lin configuration/webserv.conf -> root, location, index,, error_page, cgi_path, upload_path and so on.
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh){
