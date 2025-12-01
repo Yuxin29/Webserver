@@ -1,6 +1,7 @@
 #include "Webserver.hpp"
 
 using namespace config;
+using namespace utils;
 
 static volatile sig_atomic_t signalRunning = 1;
 
@@ -49,14 +50,14 @@ int Webserver::createServers(const std::vector<ServerConfig>& config){
 
 	for (size_t i = 0; i < _servers.size(); i++){
 		if (_servers[i].start() != Server::START_SUCCESS){
-			return utils::FAILURE;
+			return FAILURE;
 		}
 		int listenFd = _servers[i].getListenFd();
 		struct epoll_event ev;
 		ev.events = EPOLLIN;
 		ev.data.fd = listenFd;
 		if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, listenFd, &ev) < 0){
-			return utils::FAILURE;
+			return FAILURE;
 		}
 		_listenFdToServerIndex[listenFd] = i;
 	}
@@ -65,7 +66,7 @@ int Webserver::createServers(const std::vector<ServerConfig>& config){
 		std::cout << "Server successfully listening on port: " 
 				<< _servers[i].getPort() << std::endl;
 	}
-	return utils::SUCCESS;
+	return SUCCESS;
 }
 
 int Webserver::runWebserver(){	
@@ -97,7 +98,7 @@ int Webserver::runWebserver(){
 			}
 		}
 	}
-	return utils::SUCCESS;
+	return SUCCESS;
 }
 
 void Webserver::stopWebserver(){
