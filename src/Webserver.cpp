@@ -1,6 +1,7 @@
 #include "Webserver.hpp"
 
 using namespace config;
+using namespace utils;
 
 static volatile sig_atomic_t signalRunning = 1;
 
@@ -49,22 +50,23 @@ int Webserver::createServers(const std::vector<ServerConfig>& config){
 
 	for (size_t i = 0; i < _servers.size(); i++){
 		if (_servers[i].start() != Server::START_SUCCESS){
-			return utils::FAILURE;
+			return FAILURE;
 		}
 		int listenFd = _servers[i].getListenFd();
 		struct epoll_event ev;
 		ev.events = EPOLLIN;
 		ev.data.fd = listenFd;
 		if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, listenFd, &ev) < 0){
-			return utils::FAILURE;
+			return FAILURE;
 		}
 		_listenFdToServerIndex[listenFd] = i;
 	}
+	
 	for (size_t i = 0; i < _servers.size(); i++){
 		std::cout << "Server successfully listening on port: " 
 				<< _servers[i].getPort() << std::endl;
 	}
-	return utils::SUCCESS;
+	return SUCCESS;
 }
 
 int Webserver::runWebserver(){	
@@ -79,7 +81,7 @@ int Webserver::runWebserver(){
 			}
 			return utils::FAILURE;
 		}
-		if (nfds == 0){ //expand here eventually to timeout idle connections
+		if (nfds == 0){
 			continue;
 		}
 		for (int i = 0; i < nfds; i++){
@@ -96,7 +98,7 @@ int Webserver::runWebserver(){
 			}
 		}
 	}
-	return utils::SUCCESS;
+	return SUCCESS;
 }
 
 void Webserver::stopWebserver(){
@@ -129,11 +131,20 @@ void Webserver::handleClientRequest(int clientFd){
 	if (it == _clientFdToServerIndex.end()){
 		return;
 	}
+	time_t now = time(NULL);
 	size_t serverIndex = it->second;
 	Server::ClientStatus status = _servers[serverIndex].handleClient(clientFd);
 	switch (status){
 	case Server::CLIENT_INCOMPLETE:
+		if (now - _lastActivity[clientFd] > CONNECTION_TIMEOUT){ 
+			std::cerr << "Connection timedout on Fd: " << clientFd << std::endl;
+			removeClientFd(clientFd);
+			return;
+		}
+		_lastActivity[clientFd] = now;
+		break;
 	case Server::CLIENT_KEEP_ALIVE:
+		_lastActivity[clientFd] = now;
 		break;
 	case Server::CLIENT_COMPLETE:
 	case Server::CLIENT_ERROR:
@@ -152,6 +163,7 @@ void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 		return;
 	}
 	_clientFdToServerIndex[clientFd] = serverIndex;
+	_lastActivity[clientFd] = time(NULL);
 }
 
 void Webserver::removeFdFromPoll(int fd){
@@ -164,6 +176,7 @@ void Webserver::removeFdFromPoll(int fd){
 }
 
 void Webserver::removeClientFd(int clientFd){
+	_lastActivity.erase(clientFd);
 	const auto& it = _clientFdToServerIndex.find(clientFd);
 	if (it != _clientFdToServerIndex.end()){
 		_clientFdToServerIndex.erase(it);
