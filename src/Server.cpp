@@ -91,7 +91,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-	if (_requestCount[clientFd] >= 100){
+	if (_requestCount[clientFd] >= MAX_REQUESTS){
 		cleanMaps(clientFd);
 		return CLIENT_COMPLETE;
 	}

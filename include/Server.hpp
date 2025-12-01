@@ -29,6 +29,8 @@ class Server {
 		};
 
 	private:
+		static constexpr int	MAX_REQUESTS = 20;
+
 		std::string 				_host;
 		int							_listenFd;
 		int  						_port;
