@@ -3,6 +3,7 @@
 
 #include <string>
 #include "ConfigBuilder.hpp"
+#include "HttpRequest.hpp"
 
 class CGI
 {
@@ -18,8 +19,9 @@ private:
 	std::string _body;        //POST body
 
 public:
-	CGI();
+	CGI(const HttpRequest& req, const config::LocationConfig& lc);
 	bool isCGI()const;
+	std::string execute();
 };
 
 #endif
