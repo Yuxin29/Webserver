@@ -1,9 +1,25 @@
-#pragma once
+#ifndef CGI_HPP
+#define CGI_HPP
 
-//Placeholder for CGI request processing
-class Cgi{
+#include <string>
+#include "ConfigBuilder.hpp"
 
-	private:
+class CGI
+{
+private:
+	//from server.locConfig
+	std::string _cgiPass;
+	std::string _cgiExt;
 
-	public:
+	//request
+	std::string _scriptPath;  //real CGI path
+	std::string _method;      //GET/POST
+	std::string _query;       //QUERY_STRING
+	std::string _body;        //POST body
+
+public:
+	CGI();
+	bool isCGI()const;
 };
+
+#endif
