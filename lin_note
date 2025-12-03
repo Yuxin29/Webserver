@@ -1,0 +1,334 @@
+⭐ 🔥 3-Day CGI Plan (Single Interpreter, e.g. Python)
+🟦 DAY 1 — Build the CGI Execution Engine (core fork/exec part)
+
+Goal: Make execve() run your CGI script and capture output.
+NO POST yet, NO headers parsing yet. Only GET.
+
+Morning (2 hours) — Set up detection
+✔ Implement these in your runtime router:
+
+loc.cgi_pass not empty
+
+request path ends with loc.cgi_ext (e.g. .py)
+
+If both true → this request is “CGI request”.
+
+Do not run script yet, just detect it.
+
+Test with prints:
+
+Request /test.py → PRINT “Run CGI”
+
+Afternoon (3 hours) — Build fork/exec + pipes
+✔ You must implement:
+Parent:
+pipe(stdin_pipe)
+pipe(stdout_pipe)
+fork()
+
+Child:
+dup2(stdin_pipe[0], STDIN_FILENO)
+dup2(stdout_pipe[1], STDOUT_FILENO)
+close unused ends
+execve(cgi_pass, argv, envp)
+
+Parent:
+close childs pipe ends
+write body (empty for GET)
+read stdout into string
+waitpid()
+
+Minimum argv:
+argv[0] = interpreter_path (e.g. /usr/bin/python3)
+argv[1] = script_path
+
+Minimal env:
+
+Set ONE env var:
+
+REQUEST_METHOD=GET
+
+Evening (2 hours) — First real test
+
+Create a file:
+
+cgi-bin/test.py:
+
+#!/usr/bin/python3
+print("Content-Type: text/plain\n")
+print("Hello CGI")
+
+
+Run:
+
+GET /cgi-bin/test.py
+
+
+If your server prints:
+
+Content-Type: text/plain
+
+Hello CGI
+
+
+🎉 CGI engine works. Day 1 complete.
+
+🟩 DAY 2 — POST body + Environment Variables + Header Parsing
+
+Goal: CGI can receive POST body and return valid HTTP headers.
+
+Morning (2 hours) — Environment Variables
+
+You must add:
+
+REQUEST_METHOD=POST/GET
+CONTENT_LENGTH=<body size>
+CONTENT_TYPE=<from request header>
+PATH_INFO=<file being run>
+SCRIPT_FILENAME=<full script path>
+QUERY_STRING=<URL ?a=b>
+SERVER_PROTOCOL=HTTP/1.1
+SERVER_NAME=<server_name>
+
+
+Only these are required for 42 testing.
+
+Afternoon (3 hours) — POST → CGI stdin
+
+For POST:
+
+read request body (already done in Part B)
+
+write to stdin_pipe[1]
+
+Make sure:
+
+close write end after writing (VERY IMPORTANT)
+
+flush buffer (optional)
+
+Test:
+
+cgi-bin/poster.py:
+
+#!/usr/bin/python3
+import sys
+body = sys.stdin.read()
+print("Content-Type: text/plain\n")
+print(body)
+
+
+CURL test:
+
+curl -X POST -d "hello" localhost:8080/cgi-bin/poster.py
+
+
+Expected output in browser:
+
+hello
+
+Evening (2 hours) — Parse CGI Output
+
+CGI output format:
+
+Status: 200 OK
+Content-Type: text/html
+Set-Cookie: cake=yummy
+
+<html>....</html>
+
+You must split output at the FIRST blank line:
+\ r\n\r\n
+
+
+or
+
+\n\n
+
+
+Store:
+
+headers in a map
+
+body as string
+
+If CGI didn’t provide Status: → default = 200 OK
+
+🎉 At this point:
+
+GET works
+
+POST works
+
+You can parse CGI headers
+
+You can return CGI output as HTTP response
+
+Day 2 success.
+
+🟥 DAY 3 — Error Handling, Timeouts, File Upload, Stabilizing
+
+Goal: Make CGI stable enough to pass evaluation.
+
+Morning (2 hours) — Timeouts
+
+CGI might hang or read forever.
+
+Use alarm(5) or poll() for timeouts.
+
+Simplest (works for 42):
+
+Parent after fork:
+
+alarm(5);
+waitpid(child, ...);
+alarm(0);
+
+
+If timeout triggers → kill CGI → return 504.
+
+Midday (2 hours) — Error Cases
+
+Handle:
+
+❌ CGI file not found → 404
+❌ execve fails → 502 Bad Gateway
+❌ CGI returns no output → 500
+❌ CGI missing Content-Type → 500
+Afternoon (2 hours) — Upload (if needed)
+
+Only required if you support:
+
+upload_dir /path;
+
+
+If POST request is in an upload location:
+
+write body to file in loc.upload_dir
+
+DO NOT run CGI
+
+This is usually 1–2 hours.
+
+Evening (1 hour) — Final Integration Tests
+
+Test:
+
+✔ GET CGI
+✔ POST CGI with body
+✔ Redirect + CGI resolution order
+✔ Error pages
+✔ Timeout
+✔ Bad CGI script
+
+Example bad CGI:
+
+print("zzzzz")
+
+
+Should return 500.
+
+🟦 TOTAL: 3 DAYS
+
+Day 1 → core engine
+
+Day 2 → POST + headers
+
+Day 3 → stability + errors + upload
+
+This is a realistic, tested schedule.
+
+⭐ If you want, I can give you:
+✔ A full CGI runner skeleton
+✔ The exact code structure you need
+✔ Example unit tests
+✔ Python test scripts
+✔ How your CGI module connects to your Router and Response builder
+
+Just say:
+
+👉 “Give me the CGI skeleton.”
+
+
+
+┌─────────────────────┐
+│   浏览器（Chrome）   │
+│ http://localhost:8080│
+└────────────┬────────┘
+             │   发出 HTTP 请求：
+             │   GET /index.html HTTP/1.1
+             ▼
+     ┌────────────────────────────┐
+     │        操作系统（OS）       │
+     │ 网络传输 & 找目标端口:8080 │
+     └────────────┬──────────────┘
+                  │
+                  ▼
+      ╔═════════════════════════════════╗
+      ║     你写的 webserv 程序启动了     ║
+      ║---------------------------------║
+      ║ ① socket() 创建 socket           ║
+      ║ ② bind() 绑定到端口 8080        ║
+      ║ ③ listen() 开始监听请求         ║
+      ╚═════════════╤═══════════════════╝
+                    │ 浏览器连接到 8080
+                    ▼
+         ┌────────────────────────────┐
+         │    accept() 建立连接       │
+         │ 生成一个“会话 socket”fd     │
+         └────────────┬──────────────┘
+                      │
+                      ▼
+       ┌──────────────────────────────┐
+       │    read() 读取请求内容       │
+       │ 解析：GET /index.html 等等   │
+       └────────────┬────────────────┘
+                    │
+                    ▼
+  ╔═══════════════════════════════════════════╗
+  ║      从配置中读取 root 路径，例如：           ║
+  ║         root ./www; index index.html;     ║
+  ║      请求路径是 /index.html                 ║
+  ║   → 拼接本地路径 = ./www/index.html         ║
+  ╚═══════════════════════════════════════════╝
+                    │
+      ┌─────────────▼────────────────┐
+      │   open() 打开这个文件        │
+      │   read() 读取 HTML 内容      │
+      └─────────────┬────────────────┘
+                    │
+                    ▼
+  ╔═════════════════════════════════════════════╗
+  ║     构建 HTTP 响应：                          ║
+  ║     HTTP/1.1 200 OK                         ║
+  ║     Content-Type: text/html                 ║
+  ║     Content-Length: 54                      ║
+  ║     <html>...网页内容...</html>              ║
+  ╚═════════════════════════════════════════════╝
+                    │
+                    ▼
+         ┌────────────────────────────┐
+         │   send() 把响应发给浏览器     │
+         └────────────┬──────────────┘
+                      │
+                      ▼
+┌───────────────────────────────┐
+│      浏览器收到响应！           │
+│    渲染网页，显示给用户 ✅        │
+└───────────────────────────────┘
+
+
+----------------------------------
+
+想象你的程序（webserv）是老师，CGI 程序是一个助教：
+
+学生（浏览器）问一个问题
+
+老师 (your server) 把问题变成 助教能理解的格式（环境变量 + stdin）
+
+助教（CGI 程序）写答案（stdout）
+
+老师整理答案，交给学生（浏览器）
+
+助教 不需要知道 HTTP 是什么。
+助教只需要“读输入 → 写输出”。

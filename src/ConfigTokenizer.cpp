@@ -56,11 +56,13 @@ namespace config{
 		int start_col = _col;
 		if (eof())
 			return Token{TK_EOF, "", start_line, start_col};
-		char c = peek(); //should put it after peek aviding go over the boundary
-		if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-') //identifier or path
+		char c = peek(); //aviding go over the boundary
+		if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-' || c == ':') //identifier or path
 			return tokenizeIdentifier();
 		if (c == '{' || c == '}' || c == ';')
 			return tokenizeSymbol();
+		if (c == '"')
+			return tokenizeString();
 		throw std::runtime_error(makeError("Unexpected character ", start_line, start_col));
 	}
 
@@ -73,7 +75,7 @@ namespace config{
 		while (!eof())
 		{
 			char c = peek();
-			if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-')
+			if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-'|| c == ':')
 				get();
 			else
 				break;
@@ -89,6 +91,24 @@ namespace config{
 		}
 		TokenType type = is_number ? TK_NUMBER: TK_IDENTIFIER;
 		return Token{type, keyword, start_line, start_col};
+	}
+
+	Token Tokenizer::tokenizeString()
+	{
+		int start_line = _line;
+		int start_col = _col;
+		std::string value;
+		get(); //eat the first "
+		while(!eof())
+		{
+			char c = get();
+			if (c == '"')
+				break;
+			if (c == '\n')
+				throw std::runtime_error(makeError("Unterminated string starting at ", start_line, start_col));
+			value += c;
+		}
+		return Token{TK_STRING, value, _line, _col};
 	}
 
 	Token Tokenizer::tokenizeSymbol()
@@ -121,5 +141,4 @@ namespace config{
 		return tokens;
 	}
 }
-// Token Tokenizer::tokenizeNumber();
-// Token Tokenizer::tokenizerString();
+

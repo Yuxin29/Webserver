@@ -1,23 +1,23 @@
 #include "HttpRequest.hpp"
 
 //just getters
-std::string& HttpRequest::getMethod(){
+const std::string& HttpRequest::getMethod() const{
     return _method;
 }
 
-std::string& HttpRequest::getPath(){
+const std::string& HttpRequest::getPath() const{
     return _requestPath;
 }   
 
-std::string& HttpRequest::getVersion(){
+const std::string& HttpRequest::getVersion() const{
     return _version;
 }   
 
-std::map<std::string, std::string>&  HttpRequest::getHeaders(){
+const std::map<std::string, std::string>&  HttpRequest::getHeaders() const{
     return _requestHeaders;
 }
 
-std::string& HttpRequest::getBody(){
+const std::string& HttpRequest::getBody() const{
     return _body;
 }
 

@@ -13,7 +13,7 @@ namespace config{
 		TK_RBRACE,//}
 		TK_SEMICOLON,
 		TK_EOF,
-		//TK_STRING, //"/var/www/html"
+		TK_STRING, //"/var/www/html"
 	};
 
 	struct Token
@@ -42,8 +42,7 @@ namespace config{
 		Token nextToken();
 		Token tokenizeIdentifier();
 		Token tokenizeSymbol(); //{}
-		//Token tokenizeNumber();
-		//Token tokenizeString();
+		Token tokenizeString();
 		//error()?
 	};
 }

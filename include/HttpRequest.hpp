@@ -22,11 +22,11 @@ public:
     HttpRequest() {}
 
     //getters
-    std::string&                         getMethod();
-    std::string&                         getPath();
-    std::string&                         getVersion();
-    std::map<std::string, std::string>&  getHeaders();
-    std::string&                         getBody();
+    const std::string&                         getMethod() const;
+    const std::string&                         getPath() const;
+    const std::string&                         getVersion() const;
+    const std::map<std::string, std::string>&  getHeaders() const;
+    const std::string&                         getBody() const;
 
     //setters
     void setMethod(const std::string &m);
@@ -36,4 +36,5 @@ public:
     void setBody(const std::string &m);
 };
 
-// method required by this subject:    GET, POST, DELETE
+// method required by this subject: GET, POST, DELETE
+// method required by this subject: GET, POST, DELETE

@@ -236,7 +236,9 @@ void HttpParser::parseBody(size_t pos)
     size_t available = _buffer.size() - pos;
     const std::string& curBody = _req.getBody();
     size_t toRead = std::min(available, _bodyLength - curBody.size());
-    _req.getBody() += _buffer.substr(pos, toRead);
+    std::string newBody = _req.getBody();     // copy (const ok)
+    newBody += _buffer.substr(pos, toRead);   // modify copy
+    _req.setBody(newBody);  
     pos += toRead;
     if (_req.getBody().size() >= _bodyLength)
         _state = DONE;

@@ -1,4 +1,4 @@
-#include "HttpResponseHandler.hpp" 
+#include "HttpResponseHandler.hpp"
 #include "Server.hpp"
 
 namespace fs = std::filesystem; // Alias for filesystem
@@ -9,7 +9,7 @@ static std::string getMimeType(const std::string& path) {
     {
         {".html","text/html"},
         {".htm","text/html"},
-        {".css","text/css"}, 
+        {".css","text/css"},
         {".js","application/javascript"},
         {".json","application/json"},
         {".png","image/png"},
@@ -77,13 +77,13 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
    // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
-   if (stat(fullpath.c_str(), &st) < 0) 
+   if (stat(fullpath.c_str(), &st) < 0)
       return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false, false);
    if (access(fullpath.c_str(), R_OK) < 0)
       return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>40331 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
-      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>40332 Forbidden</h1>", std::map<std::string, std::string>(), false, false); 
-   
+      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>40332 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
+
    // 4. Determined MIME type (text/plain for .txt or plain text).
    std::string mine_type = getMimeType(fullpath);
    if (mine_type.empty())
@@ -100,7 +100,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    std::streamsize size = ifs.tellg();
    ifs.seekg(0, std::ios::beg);
 
-   std::string body(size, '\0'); 
+   std::string body(size, '\0');
    ifs.read(&body[0], size);
    ifs.close();
    //std::cout << "[DEBUG] file size = " << size << ", body size = " << body.size() << std::endl;
@@ -142,11 +142,11 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // - Content-Length = 27 → read exactly 27 bytes.
    // - Body = {"name":"Alice","age":30}
    std::string body = req.getBody();
-   
+
    // 4. Validates:
    // - Validate Content-Type
    // - Optional: Check if JSON is valid
-   
+
    // 5. Processes the data:
    // - Example: store in a database, write to a file, pass to CGI, etc.
    std::ofstream ofs(savepath.c_str(), std::ios::binary);
@@ -160,7 +160,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // - Set headers (Content-Type, Content-Length, Date, Server)
    std::map<std::string, std::string> headers;
    headers["Content-Length"] = std::to_string(body.size());
-   
+
    return HttpResponse("HTTP/1.1", 222, "Created", "{\"status\":\"success\"}", std::map<std::string, std::string>(), true, true);
 }
 
@@ -186,23 +186,23 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    else
       fullpath = vh->root + uri;
    std::cout << "fullpath = " << fullpath << std::endl;
-   
+
    // 3. Validates:
    // - Does file exist? Is it allowed to delete this path? (check directory permissions)? Is DELETE method allowed in this location?
    struct stat st;
-   if (stat(fullpath.c_str(), &st) < 0) 
+   if (stat(fullpath.c_str(), &st) < 0)
       return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>(), false, false);
    if (access(fullpath.c_str(), W_OK) < 0) //to delete it, we need to have the writing right
       return HttpResponse("HTTP/1.1", 40333, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
    if (!S_ISREG(st.st_mode))
       return HttpResponse("HTTP/1.1", 40333, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
-   
+
    // 5. Attempts deletion:
    // - unlink("/var/www/html/files/file1.txt")
    if (unlink(fullpath.c_str()) < 0)
       //sth worng: (io err, permission)
       return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", std::map<std::string, std::string>(), false, false);
-   
+
    // 6. Generates response:
    // - If success → 204 No Content (most common)
    // - Or 200 OK with optional message
