@@ -1,5 +1,6 @@
 #include "HttpResponseHandler.hpp"
 #include "Server.hpp"
+#include "Cgi.hpp"
 
 namespace fs = std::filesystem; // Alias for filesystem
 
@@ -63,9 +64,22 @@ Content-Length: 13
 Hello, world!
 */
 //lin configuration/webserv.conf -> root, location, index,, error_page, cgi_path, upload_path and so on.
+// need to check CGI first, it has priority over static files
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh){
-   // 1. Server received GET /hello. /hello is supposed to be file
+   // 0. Server received GET /hello. /hello is supposed to be file
    std::string uri = req.getPath(); // URI: uniform Resource Identifier, _path in the request
+
+   // 0. First check if it is cgi
+   // const config::LocationConfig* lc = findLocationConfig(vh, uri);
+   // if (!lc)
+   //    return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false, false);
+   // CGI cgi(req, *lc);
+   // if (cgi.isCGI()){
+   //    std::string cgi_output = cgi.execute();
+   //    if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+   //       return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false, false);
+   //    return parseCGIOutput(cgi_output);   
+   // }
 
    // 2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
    std::string fullpath;
@@ -128,14 +142,28 @@ Content-Length: 23
 {"status":"success"}
 */
 HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::ServerConfig* vh){
-   // 1. Server receives POST /submit-data.
+   // 0. Server receives POST /submit-data.
    std::string uri = req.getPath();
-   
-   // 2. Determines the target resource:
-   // - Typically a CGI script, an upload handler, or a location block.
+
+   // Determines the target resource:
+   // 1.Typically a CGI script, an upload handler, or a location block.
    // - Example: /var/www/html/submit-data (or routed to CGI)
-   const std::string root = "linConfig/static/uploads"; //fake one, hard-coded, ask lin later: should be according to to lin configuration/webserv.conf
-   std::string savepath = vh->root + uri;
+   // below are fake code, waiting for lins CGI
+   // const config::LocationConfig* lc = findLocationConfig(vh, uri);
+   // if (!lc) 
+   //    return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: No Location Match</h1>", {}, false, false);
+   // CGI cgi(req, *lc); 
+   // if (cgi.isCGI()) {
+   //      std::string cgi_output = cgi.execute();
+   //      if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+   //          return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI 执行失败</h1>", {}, false, false);
+   //      return parseCGIOutput(cgi_output);
+   // }
+
+   // 2. Other wise, it is a static one
+   std::string  uploadDir = vh->root; //fake one, hard-coded, ask lin later: should be according to to lin configuration/webserv.conf
+   std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
+   std::string savepath = uploadDir + "/" + filename;
    // if save path is not existing, should we create it???
 
    // 3. Reads request body:
@@ -175,10 +203,22 @@ Date: Thu, 21 Nov 2025 11:00:00 GMT
 Server: ExampleServer/1.0
 */
 HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::ServerConfig* vh){
-   // 1. Server receives DELETE /files/file1.txt.
+   // 0. Server receives DELETE /files/file1.txt.
    std::string uri = req.getPath();
    
-   // 2. Maps path:
+   // 1. first check CGI, below are fake code
+   // const config::LocationConfig* lc = findLocationConfig(vh, uri);
+   // if (!lc) 
+   //    return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: No Location Match</h1>", {}, false, false);
+   // CGI cgi(req, *lc); 
+   // if (cgi.isCGI()) {
+   //      std::string cgi_output = cgi.execute();
+   //      if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+   //          return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI 执行失败</h1>", {}, false, false);
+   //      return parseCGIOutput(cgi_output);
+   // }
+
+   // 2. otherwie, it is a static delete. Maps path:
    // - /files/file1.txt → /var/www/html/files/file1.txt
    std::string fullpath;
    if (uri == "/")
@@ -212,3 +252,13 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
 
    return HttpResponse("HTTP/1.1", 204, "No content", "", std::map<std::string, std::string>(), true, true);
 }
+
+// lin's cgi 
+// class CGI
+// {
+// public:
+// 	CGI(const HttpRequest& req, const config::LocationConfig& lc);
+// 	bool isCGI()const;
+// 	std::string execute();
+// };
+
