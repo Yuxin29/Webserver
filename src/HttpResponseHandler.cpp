@@ -68,6 +68,9 @@ Hello, world!
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh){
    // 0. Server received GET /hello. /hello is supposed to be file
    std::string uri = req.getPath(); // URI: uniform Resource Identifier, _path in the request
+   
+   // findLocationConfig
+   // longest match
 
    // 0. First check if it is cgi
    // const config::LocationConfig* lc = findLocationConfig(vh, uri);
@@ -84,9 +87,9 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    // 2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
    std::string fullpath;
    if (uri == "/")
-      fullpath = vh->root + "/index.html";
+      fullpath = vh->root + "/index.html"; //findLocationConfig
    else
-      fullpath = vh->root + uri;
+      fullpath = vh->root + uri; //findLocationConfig
    //std::cout << "fullpath = " << fullpath << std::endl;
 
    // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
@@ -222,7 +225,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    // - /files/file1.txt → /var/www/html/files/file1.txt
    std::string fullpath;
    if (uri == "/")
-      fullpath = vh->root + "/index.html";
+      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Cannot Delete Root Path</h1>", {}, false, false);
    else
       fullpath = vh->root + uri;
    std::cout << "fullpath = " << fullpath << std::endl;
@@ -248,7 +251,6 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    // - Or 200 OK with optional message
    std::map<std::string, std::string> headers;
    headers["Content-Length"] = "0";  // No response body
-   headers["Content-Type"]   = "text/plain";
 
    return HttpResponse("HTTP/1.1", 204, "No content", "", std::map<std::string, std::string>(), true, true);
 }

@@ -37,4 +37,3 @@ public:
 };
 
 // method required by this subject: GET, POST, DELETE
-// method required by this subject: GET, POST, DELETE
