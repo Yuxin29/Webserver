@@ -19,11 +19,11 @@ private:
 	std::string _body;        //POST body
 
 	//for child process exec
-	std::vector<std::string> _env;
-	std::vector<char*> _envp; // execve 格式
+	// std::vector<std::string> _env;
+	// std::vector<char*> _envp; // execve 格式
 
-	std::vector<std::string> _argv;
-	std::vector<char*> _argvp;
+	// std::vector<std::string> _argv;
+	// std::vector<char*> _argvp;
 public:
 	CGI(const HttpRequest& req, const config::LocationConfig& lc);
 	bool isCGI()const;

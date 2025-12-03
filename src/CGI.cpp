@@ -12,8 +12,8 @@ CGI::CGI(const HttpRequest& req, const config::LocationConfig& lc)
 :_cgiPass(lc.cgiPass),
 _cgiExt(lc.cgiExt),
 _method(req.getMethod()),
- _query(""),
- _body(req.getBody())
+_query(""),
+_body(req.getBody())
 {
 	std::string raw = req.getrequestPath();
 	size_t pos = raw.find('?');
@@ -66,7 +66,6 @@ Body size
 Script path
 Protocol
 None of these exist in the OS environment.
-
 */
 std::string CGI::execute()
 {
@@ -80,12 +79,12 @@ std::string CGI::execute()
 	pid_t pid = fork();
 	if(pid < 0){
 		std::cerr << "[CGI] fork() failed: " << strerror(errno) << std::endl;
-		_exit(42); //confused about code??
+		return "";
 	}
 	if(pid == 0){
 		if(dup2(stdin_pipe[0], STDIN_FILENO) < 0 || dup2(stdout_pipe[1], STDOUT_FILENO)){
 			std::cerr << "[CGI] dup2() failed: " << strerror(errno) << std::endl;
-			return "";
+			_exit(42);
 		}
 		// close all pipe ends not used
 		close(stdin_pipe[1]);
@@ -105,15 +104,37 @@ std::string CGI::execute()
 		argv.push_back(NULL);
 		execve(_cgiPass.c_str(), argv.data(), env.data()); //argv.data() returns: char** (pointer to first element of vector)
 		std::cerr << "[CGI] execve failed: " << strerror(errno) << std::endl;
-		_exit(42); //confused about code??
+		_exit(42);
 	}
 	else{
 		close(stdin_pipe[0]);
 		close(stdout_pipe[1]);
 		//Write POST body (GET writes nothing)
-		//Step 3.3 — CLOSE stdin write-end (CRITICAL)
+		if(_method=="POST" && !_body.empty())
+			write(stdin_pipe[1], _body.c_str(), _body.size());
+		//CLOSE stdin write-end (CRITICAL)
+		close(stdin_pipe[1]);
 		//Read CGI output from stdout_pipe[0]
+		char buffer[4096];
+		std::string output;
+		size_t bytes;
+		/*Why a loop is required
+		Because:
+		Pipes are streams, not fixed-size containers
+		read() may return less than the buffer size
+		read() returns 0 only when the write end is closed
+		read() can also be interrupted (errno = EINTR)
+		So cannot assume one read gets everything.*/
+		while((bytes = read(stdout_pipe[0], buffer, sizeof(buffer))) > 0)
+			output.append(buffer, bytes);
+		close(stdin_pipe[0]);
 		//Wait for the child process
-		//return
+		int status;
+		waitpid(pid, &status, 0);
+		if(WIFEXITED(status) && WEXITSTATUS(status) == 42){
+			std::cerr << "[CGI] child process failed"<<std::endl;
+			return "";
+		}
+		return output;
 	}
 }
