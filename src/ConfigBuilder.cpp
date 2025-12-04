@@ -17,14 +17,14 @@ static void validatePath(const std::string& path)
 }
 static void validateindex(const std::vector<std::string>& index)
 {
-	for(int i = 0; i < index.size(); i++){
+	for(size_t i = 0; i < index.size(); i++){
 		if(index[i][0] == '/' || index[i].empty())
 			throw std::runtime_error("Invalidated index file : " + index[i]);
 	}
 }
 static void validateMethod(const std::vector<std::string>& methods)
 {
-	for(int i = 0; i < methods.size(); i++)
+	for(size_t i = 0; i < methods.size(); i++)
 	{
 		if (methods[i] != "GET" ||methods[i] != "POST"||methods[i] != "DELETE")
 			throw std::runtime_error("Invalidate method : "+methods[i]);
