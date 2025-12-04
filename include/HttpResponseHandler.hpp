@@ -10,6 +10,8 @@
 #include "HttpResponse.hpp"
 #include "HttpRequest.hpp"
 #include "ConfigBuilder.hpp"
+// #include "Server.hpp"
+#include "Cgi.hpp"
 
 class HttpResponseHandler {
 public:
@@ -19,6 +21,10 @@ private:
     HttpResponse handleGET(HttpRequest& req, const config::ServerConfig* vh);
     HttpResponse handlePOST(HttpRequest& req, const config::ServerConfig* vh);
     HttpResponse handleDELETE(HttpRequest& req, const config::ServerConfig* vh);
+    //helpers:
+    const config::LocationConfig* findLocationConfig (const config::ServerConfig* vh, const std::string& uri);
+    HttpResponse parseCGIOutput(const std::string& out);
+    std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri);
 };
 
 //int stat(const char *pathname, struct stat *statbuf); Retrieve information about a file (size, type, permissions, timestamps, etc.) without opening it.

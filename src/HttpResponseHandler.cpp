@@ -1,6 +1,13 @@
 #include "HttpResponseHandler.hpp"
 #include "Server.hpp"
-#include "Cgi.hpp"
+
+// a helper to trim empty space
+static std::string trim_space(std::string str)
+{
+    size_t start = str.find_first_not_of(" \t");
+    size_t end = str.find_last_not_of(" \t");
+    return str.substr(start, end - start + 1);
+}
 
 namespace fs = std::filesystem; // Alias for filesystem
 
@@ -24,16 +31,14 @@ static std::string getMimeType(const std::string& path) {
     return it != mimeMap.end() ? it->second : "application/octet-stream"; // default MIME
 }
 
-// Format time as GMT string for Last-Modified header
-// not used yet but might be needed later
+// Format time as GMT string for Last-Modified header (not used yet but might be needed later)
 // static std::string formatTime(std::time_t t) {
 //     std::ostringstream ss;
 //     ss << std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT"); // gmtime -> UTC, put_time 格式化
 //     return ss.str();
 // }
 
-// this is the public over all call
-// for LUCIO to use
+// this is the public over-all call for LUCIO server to use
 HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::ServerConfig* vh)
 {
    if (!vh)
@@ -45,6 +50,97 @@ HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::
    else if (req.getMethod() == "DELETE")
       return handleDELETE(req, vh);
    return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false, false);
+}
+
+// the out here comes from lin CGIExecute, it is a string
+// it can be like this: need to comfirm with lin
+// Content-Type: text/html
+// Status: 200 OK                   headers
+//                                    empty lines
+// <html> ... </html>               body
+HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out){
+   size_t pos = out.find("\r\n\r\n");   //it is after ok and then the empty line
+   if (pos == std::string::npos)
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>Invalid CGI Output</h1>", {}, false, false);
+   
+   std::string headersString = out.substr(0, pos);
+   std::string bodyString = out.substr(pos + 4);
+
+   std::string statusCode = "200";
+   std::string statusMsg = "OK";
+
+   std::map<std::string, std::string>  headersMap;
+
+   std::istringstream ss(headersString);
+   std::string       line;
+
+   while (std::getline(ss, line))
+   {
+      if (!line.empty() && line.back() == '\r')
+         line.pop_back(); //getline removes \n but not \related
+
+      size_t dd = line.find(":");
+      std::string key = line.substr(0, dd);
+      std::string val = line.substr(dd + 1);
+      key = trim_space(key);
+      val = trim_space(val);
+
+      // check if it is special status code in headerlines
+      // eg: Status: 404 Not Found
+      if (key == "Status") 
+      {
+         size_t space = val.find(" ");
+         statusCode = val.substr(0, space);
+         statusMsg  = val.substr(space + 1);
+      }
+      else
+         headersMap[key] = val;
+   }
+   // manually setup this one
+   headersMap["Content-Length"] = std::to_string(bodyString.size());
+      return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, true, true);
+}
+
+// longest match
+const config::LocationConfig* HttpResponseHandler::findLocationConfig (const config::ServerConfig* vh, const std::string& uri)
+{
+    const config::LocationConfig* best = NULL;
+    size_t bestLen = 0;
+
+    for (size_t i = 0; i < vh->locations.size(); i++) {
+        const config::LocationConfig& loc = vh->locations[i];
+        if (uri.rfind(loc.path, 0) == 0)  // rfind == 0 → prefix match
+        {
+            if (loc.path.length() > bestLen) {
+                best = &loc;
+                bestLen = loc.path.length();
+            }
+        }
+    }
+    return best;
+}
+
+std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc, const std::string& uri)
+{
+   if (!loc)
+     return "";
+
+   // remove prefix from URI
+   std::string relative = uri.substr(loc->path.length());
+
+   // Case 1: request points to a directory
+   if (relative.empty() || relative == "/")
+   {
+      // index list is not empty → use first index
+      if (!loc->index.empty())
+         return loc->root + "/" + loc->index[0];
+
+      // no index defined → return directory itself
+      return loc->root;
+   }
+
+   // Case 2: regular file
+   return loc->root + relative;
 }
 
 /*
@@ -68,28 +164,21 @@ Hello, world!
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh){
    // 0. Server received GET /hello. /hello is supposed to be file
    std::string uri = req.getPath(); // URI: uniform Resource Identifier, _path in the request
-   
-   // findLocationConfig
-   // longest match
 
    // 0. First check if it is cgi
-   // const config::LocationConfig* lc = findLocationConfig(vh, uri);
-   // if (!lc)
-   //    return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false, false);
-   // CGI cgi(req, *lc);
-   // if (cgi.isCGI()){
-   //    std::string cgi_output = cgi.execute();
-   //    if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-   //       return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false, false);
-   //    return parseCGIOutput(cgi_output);   
-   // }
+   const config::LocationConfig* lc = findLocationConfig(vh, uri);
+   if (!lc)
+      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false, false);
+   CGI cgi(req, *lc);
+   if (cgi.isCGI()){
+      std::string cgi_output = cgi.execute();
+      if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+         return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false, false);
+      return parseCGIOutput(cgi_output);   
+   }
 
    // 2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
-   std::string fullpath;
-   if (uri == "/")
-      fullpath = vh->root + "/index.html"; //findLocationConfig
-   else
-      fullpath = vh->root + uri; //findLocationConfig
+   std::string fullpath = mapUriToPath(lc, uri);
    //std::cout << "fullpath = " << fullpath << std::endl;
 
    // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
