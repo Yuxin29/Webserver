@@ -102,28 +102,38 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out){
 }
 
 // longest match
-const config::LocationConfig* HttpResponseHandler::findLocationConfig (const config::ServerConfig* vh, const std::string& uri)
+const config::LocationConfig* HttpResponseHandler::findLocationConfig (const config::ServerConfig* vh, const std::string& uri_raw)
 {
-    const config::LocationConfig* best = NULL;
-    size_t bestLen = 0;
+   std::string uri = uri_raw;
+   size_t qpos = uri.find('?');
+   if (qpos != std::string::npos)
+      uri = uri.substr(0, qpos);
+   
+   const config::LocationConfig* best = NULL;
+   size_t bestLen = 0;
 
-    for (size_t i = 0; i < vh->locations.size(); i++) {
-        const config::LocationConfig& loc = vh->locations[i];
-        if (uri.rfind(loc.path, 0) == 0)  // rfind == 0 → prefix match
-        {
-            if (loc.path.length() > bestLen) {
-                best = &loc;
-                bestLen = loc.path.length();
-            }
-        }
-    }
-    return best;
+   for (size_t i = 0; i < vh->locations.size(); i++) {
+      const config::LocationConfig& loc = vh->locations[i];
+      if (uri.rfind(loc.path, 0) == 0)  // rfind == 0 → prefix match
+      {
+         if (loc.path.length() > bestLen) {
+            best = &loc;
+            bestLen = loc.path.length();
+         }
+      }
+   }
+   return best;
 }
 
-std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc, const std::string& uri)
+std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
 {
    if (!loc)
      return "";
+
+   std::string uri = uri_raw;
+   size_t qpos = uri.find('?');
+   if (qpos != std::string::npos)
+      uri = uri.substr(0, qpos); 
 
    // remove prefix from URI
    std::string relative = uri.substr(loc->path.length());
@@ -173,7 +183,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    if (cgi.isCGI()){
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-         return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false, false);
+         return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40412 Not Found</h1>", std::map<std::string, std::string>(), false, false);
       return parseCGIOutput(cgi_output);   
    }
 
@@ -184,7 +194,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0)
-      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false, false);
+      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40413 Not Found</h1>", std::map<std::string, std::string>(), false, false);
    if (access(fullpath.c_str(), R_OK) < 0)
       return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>40331 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
@@ -240,20 +250,19 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // Determines the target resource:
    // 1.Typically a CGI script, an upload handler, or a location block.
    // - Example: /var/www/html/submit-data (or routed to CGI)
-   // below are fake code, waiting for lins CGI
-   // const config::LocationConfig* lc = findLocationConfig(vh, uri);
-   // if (!lc) 
-   //    return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: No Location Match</h1>", {}, false, false);
-   // CGI cgi(req, *lc); 
-   // if (cgi.isCGI()) {
-   //      std::string cgi_output = cgi.execute();
-   //      if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-   //          return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI 执行失败</h1>", {}, false, false);
-   //      return parseCGIOutput(cgi_output);
-   // }
+   const config::LocationConfig* lc = findLocationConfig(vh, uri);
+   if (!lc) 
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: No Location Match</h1>", {}, false, false);
+   CGI cgi(req, *lc); 
+   if (cgi.isCGI()) {
+      std::string cgi_output = cgi.execute();
+      if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+         return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI 执行失败</h1>", {}, false, false);
+      return parseCGIOutput(cgi_output);
+   }
 
    // 2. Other wise, it is a static one
-   std::string  uploadDir = vh->root; //fake one, hard-coded, ask lin later: should be according to to lin configuration/webserv.conf
+   std::string uploadDir = mapUriToPath(lc, uri);
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string savepath = uploadDir + "/" + filename;
    // if save path is not existing, should we create it???
@@ -299,25 +308,21 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    std::string uri = req.getPath();
    
    // 1. first check CGI, below are fake code
-   // const config::LocationConfig* lc = findLocationConfig(vh, uri);
-   // if (!lc) 
-   //    return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: No Location Match</h1>", {}, false, false);
-   // CGI cgi(req, *lc); 
-   // if (cgi.isCGI()) {
-   //      std::string cgi_output = cgi.execute();
-   //      if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-   //          return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI 执行失败</h1>", {}, false, false);
-   //      return parseCGIOutput(cgi_output);
-   // }
+   const config::LocationConfig* lc = findLocationConfig(vh, uri);
+   if (!lc) 
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: No Location Match</h1>", {}, false, false);
+   CGI cgi(req, *lc); 
+   if (cgi.isCGI()) {
+        std::string cgi_output = cgi.execute();
+        if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+            return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI 执行失败</h1>", {}, false, false);
+        return parseCGIOutput(cgi_output);
+   }
 
    // 2. otherwie, it is a static delete. Maps path:
    // - /files/file1.txt → /var/www/html/files/file1.txt
-   std::string fullpath;
-   if (uri == "/")
-      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Cannot Delete Root Path</h1>", {}, false, false);
-   else
-      fullpath = vh->root + uri;
-   std::cout << "fullpath = " << fullpath << std::endl;
+   std::string fullpath = mapUriToPath(lc, uri);
+   //std::cout << "fullpath = " << fullpath << std::endl;
 
    // 3. Validates:
    // - Does file exist? Is it allowed to delete this path? (check directory permissions)? Is DELETE method allowed in this location?
@@ -331,8 +336,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
 
    // 5. Attempts deletion:
    // - unlink("/var/www/html/files/file1.txt")
-   if (unlink(fullpath.c_str()) < 0)
-      //sth worng: (io err, permission)
+   if (unlink(fullpath.c_str()) < 0)   //sth worng: (io err, permission)
       return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", std::map<std::string, std::string>(), false, false);
 
    // 6. Generates response:
