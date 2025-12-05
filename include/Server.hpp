@@ -26,7 +26,8 @@ class Server {
 		};
 
 	private:
-		static constexpr int	MAX_REQUESTS = 20;
+		static constexpr int MAX_REQUESTS = 20;
+		static constexpr int NOT_VALID_FD = -1;
 
 		std::string 				_host;
 		int							_listenFd;
