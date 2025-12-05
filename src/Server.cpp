@@ -166,3 +166,19 @@ void  Server::cleanMaps(int clientFd){
 	_parsers.erase(clientFd);
 	_requestCount.erase(clientFd);
 }
+
+// const LocationConfig* Server::findLocation(const ServerConfig& server, const std::string& path) const {
+// 	const LocationConfig* bestMatch = nullptr;
+// 	size_t longestPrefix = 0;
+
+// 	for (size_t i = 0; i < server.locations.size(); i++){
+// 		const std::string& locPath = server.locations[i].path;
+// 		if (path.find(locPath) == 0){
+// 			if (locPath.length() > longestPrefix){
+// 				longestPrefix = locPath.length();
+// 				bestMatch = &server.locations[i];
+// 			}
+// 		}
+// 	}
+// 	return bestMatch;
+// }
