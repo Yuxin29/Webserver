@@ -1,10 +1,13 @@
 #include "HttpResponse.hpp"
 
-// std::string                         _version;
-// int                                 _status;
-// std::string                         _reason;
-// std::string                         _body;
-// std::map<std::string, std::string>  _responseHeaders;
+/**
+ * @brief constructor for HttpResponse class
+ *
+ * @param strs and map of strings
+ * @return an HttpResponse object
+ *
+ * @note initializes all member variables of the HttpResponse class
+ */
 HttpResponse::HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders, bool alive, bool complete)
 {
     _version = version;
@@ -16,6 +19,14 @@ HttpResponse::HttpResponse(const std::string& version, const int& status, const 
     _requestComplete = complete;
 }
 
+/**
+ * @brief builds the HTTP response string
+ *
+ * @param void
+ * @return a string representing the full HTTP response
+ *
+ * @note constructs the response string including status line, headers, and body
+ */
 std::string HttpResponse::buildResponseString(){
     std::ostringstream response;  //out string stream
 

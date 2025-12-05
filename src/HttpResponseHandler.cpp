@@ -263,7 +263,6 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 
    // 2. Other wise, it is a static one
    std::string uploadDir = "./uploads";
-   //std::string uploadDir = mapUriToPath(lc, uri);
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string savepath = uploadDir + "/" + filename;
 

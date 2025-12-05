@@ -1,15 +1,13 @@
 #include "HttpRequestParser.hpp"
 
-// example http request with a content lenth
-// POST /login HTTP/1.1
-// Host: example.com
-// User-Agent: curl/7.81.0 
-// Content-Type: application/x-www-form-urlencoded 
-// Content-Length: 27 
-// \r\n
-// username=John&password=1234
-
-// a helper to trim empty space
+/**
+ * @brief Trims the empty space \t at the beginning and the end of a string
+ *
+ * @param str a string with possible '\t' at the beginning and end
+ * @return a string without any '\t' at the beginning or end
+ *
+ * @note Currently supports 400, 405, 413, 431. Default is 400.
+ */
 static std::string trim_space(std::string str)
 {
     size_t start = str.find_first_not_of(" \t");
@@ -17,13 +15,14 @@ static std::string trim_space(std::string str)
     return str.substr(start, end - start + 1);
 }
 
-// Lucio Suggestion, 
-// maybe generate an error response here that will return a page according to the error code
-// Currently HttpResponseHandler just deals with requests that have GET, POST, DELETE. 
-// What happen if the request never has any of them? 
-// So far it throws and kills the program, in error it should just return one of the error pages.
-// Could be added a generateErrorRequestResponse()
-// Yuxin Done
+/**
+ * @brief Builds an HTTP error response for a given status code.
+ *
+ * @param status HTTP status code (e.g., 400, 405, 413, 431)
+ * @return HttpResponse object representing the error page
+ *
+ * @note Currently supports 400, 405, 413, 414(addable, not mandatory), 431. Default is 400.
+ */
 HttpResponse buildErrorResponse(int status)
 {
     std::string reason;
@@ -33,7 +32,7 @@ HttpResponse buildErrorResponse(int status)
     {
         case 400:
             reason = "Bad Request";
-            body = "<h1>222 Bad Request</h1>";  //here
+            body = "<h1>400 Bad Request</h1>";
             break;
         case 405:
             reason = "Method Not Allowed";
@@ -43,10 +42,10 @@ HttpResponse buildErrorResponse(int status)
             reason = "Payload Too Large";
             body = "<h1>413 Payload Too Large</h1>";
             break;
-        // case 414:  addable, not mandatory
-        //     reason = "URI Too Long";
-        //     body = "<h1>414 URI Too Long</h1>";
-            // break;
+        case 414:
+            reason = "URI Too Long";
+            body = "<h1>414 URI Too Long</h1>";
+            break;
         case 431:
             reason = "Request Header Fields Too Large";
             body = "<h1>431 Request Header Fields Too Large</h1>";
@@ -59,15 +58,21 @@ HttpResponse buildErrorResponse(int status)
     std::map<std::string, std::string> headers;
     headers["Content-Type"] = "text/html";
     headers["Content-Length"] = std::to_string(body.size());
-
     return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
 }
 
+/**
+ * @brief validates the startline of a http request
+ *
+ * @param HttpParser _method within class HttpRequest nested in HttpParser
+ * @return true or false, on false, set the _errStatus the coresponding error code
+ *
+ * @note exxample of startline: GET /index.html HTTP/1.1
+ */
 bool HttpParser::validateStartLine()
 {
-    //something missing, this one check first to avoid seg fault, four hundred bad request
-    if (_req.getMethod().empty() || _req.getPath().empty() || _req.getVersion().empty())
-    {
+    //something missing, this one check first to avoid seg fault
+    if (_req.getMethod().empty() || _req.getPath().empty() || _req.getVersion().empty()){
         _errStatus = 400;
         return false;
     }
@@ -81,10 +86,23 @@ bool HttpParser::validateStartLine()
         _errStatus = 400;
         return false;
     }
-    //path cannot have empty space or path cannot be too lond check, i think it is not necessary
+    //path cannot have empty space or path cannot be too long check, i think it is not necessary
     return true;
 }
 
+/**
+ * @brief validates the headers of a http request
+ *
+ * @param HttpParser map headers within class HttpRequest nested in HttpParser
+ * @return true or false, on false, set the _errStatus the coresponding error code
+ *
+ * @note exxample of headers: 
+ * POST /login HTTP/1.1
+ * Host: example.com
+ * User-Agent: curl/7.81.0 
+ * Content-Type: application/x-www-form-urlencoded 
+ * Content-Length: 27 
+ */
 bool    HttpParser::validateHeaders()
 {
     bool hasHost = false;
@@ -102,7 +120,7 @@ bool    HttpParser::validateHeaders()
                 return false;
             }
         }
-        //validateMandatoryHeaders: loop though all keys, has to find host      four hundred ;  Bad Request
+        //validateMandatoryHeaders: loop though all keys, has to find host
         if (key == "Host"){
             if (hasHost){
                 _errStatus = 400; 
@@ -110,40 +128,39 @@ bool    HttpParser::validateHeaders()
             }
             hasHost = true;
         }
-        // //validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
-        /* if (seenKeys.count(key)) {
-            _errStatus = four hundred ;  // Repeating header is not allowed (except RFC multi-value headers)
+        // validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
+        if (seenKeys.count(key)) {
+            _errStatus = 400;
             return false;
         }
-        seenKeys.insert(key);  */
-        //validateContentLength: can not be too long like minus number ---> four hundred  or too big(Payload Too Large) ---> 443113
-        if (key == "Content-Length")
-        {
-            if (value.empty())                          // can not be empty
-            {
+        seenKeys.insert(key);
+        //validateContentLength: can not be too long like minus number ---> four hundred  or too big(Payload Too Large) ---> 43113
+        if (key == "Content-Length"){
+            // can not be empty
+            if (value.empty()){
                 _errStatus = 400;
                 return false;
             }
-            if (value.size() > 1 && value[0] == '0')    // can not start with zero
-            {
+            // can not start with zero
+            if (value.size() > 1 && value[0] == '0'){
                 _errStatus = 400;
                 return false;
             }
-            for (size_t i = 0; i < value.length(); ++i) // can not have non digits
-            {
+            // can not have non digits
+            for (size_t i = 0; i < value.length(); ++i){
                 if (!isdigit(value[i])){
                     _errStatus = 400;
                     return false;
                 }
             }
+            // can not be minus
             long long len = atoll(value.c_str()); 
-            if (len < 0)                                // can not be minus
-            {
+            if (len < 0){
                 _errStatus = 400;
                 return false;
             }
-            if (len > 1024 * 1024 * 100)                // can not be too big, 100 MB, max, ask lin or lucio what should be the max
-            {
+             // can not be too big, 100 MB, max, ask lin or lucio what should be the max
+            if (len > 1024 * 1024 * 100){
                 _errStatus = 413;
                 return false;
             }
@@ -155,30 +172,36 @@ bool    HttpParser::validateHeaders()
             return false;
         }
     }
-    if (!hasHost)       // it has to have ont and only one host
-    {
+    // it has to have ont and only one host
+    if (!hasHost){
         _errStatus = 400;
         return false;
     }
     return true;
 }
 
- // Post must have body, body must fullfill ContentLength, for GET / DELETE, it is not an error to have body
+/**
+ * @brief validates the body of a http request
+ *
+ * @param HttpParser _body within class HttpRequest nested in HttpParser
+ * @return true or false, on false, set the _errStatus the coresponding error code
+ *
+ * @note exxample of startline: username=John&password=1234
+ * @note Post must have body, body must fullfill ContentLength, for GET / DELETE, it is not an error to have body
+ */
 bool HttpParser::validateBody(){
     if (_req.getMethod() == "POST")
     {
-        // It has to have body string and in headers, it has to have ontent-Length"
+        // POST has to have body string and in headers, it has to have content-Length"
         if (_bodyLength == 0 && !_req.getHeaders().count("Content-Length")){
             _errStatus = 400;
             return false;
         }
         // body string length has to be as long as the sontent-Length says
-        // if (_req.getBody().size() < _bodyLength)
-        // {
-        //     _errStatus = 400;
-        //     std::cout << "-- 11 --" << std::endl; //here it is 
-        //     return false;
-        // }
+        if (_req.getBody().size() < _bodyLength){
+            _errStatus = 400;
+            return false;
+        }
         // body lenth can not be too long: in theory it should not happen
         if (_req.getBody().size() > _bodyLength){
             _errStatus = 400;
@@ -188,13 +211,18 @@ bool HttpParser::validateBody(){
     return true;
 }
 
-//below one is private, tool to be called in parseHttpRequest.
-// <start-line>\r\n: Method sp _path sp version crlf(Carriage Return and Line Feed)
-// Get /index.html HTTP/1.1\r\n
-void HttpParser::parseStartLine(const std::string& startline)
-{
-    std::istringstream ss(startline);   //ss : stringstream
+/**
+ * @brief parse the startline of an HTTP request
+ *
+ * @param str startline
+ * @return void
+ *
+ * @note iss : in stringstream
+ */
+void HttpParser::parseStartLine(const std::string& startline){
+    std::istringstream ss(startline);
     std::string method, path, version;
+
     ss >> method >> path >> version;
     _req.setMethod(method);
     _req.setPath(path);
@@ -202,17 +230,20 @@ void HttpParser::parseStartLine(const std::string& startline)
     _state = HEADERS;
 }
 
-//below one is private, it will be recalled for a few times.
+/**
+ * @brief parse one header of an HTTP request
+ *
+ * @param string headerline
+ * @return void
+ *
+ * @note first check if headers are done, if yes, the line is '\t\n', then change state to body or done
+ */
 void HttpParser::parseHeaderLine(const std::string& headerline){
-    // first check if headers are done, \r\n will be removed \r\n
     if (headerline.empty())
     {
-        // try to find content length in map to see it there is bodu
+        // try to find content length in map to see it there is body
         const std::map<std::string, std::string>& headers = _req.getHeaders();
         std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
-        // if the abouve find it, it returns the content length pair
-        // if not find, return map.end. end of one step past the last element
-        //so this is find it 
         if (it != headers.end()){
             _bodyLength = std::stoi(it->second);
             _state = BODY;
@@ -221,7 +252,6 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
             _state = DONE;
         return;
     }
-    //if not: still in the headers stage: find ":"
     size_t dd = headerline.find(":");
     if (dd == std::string::npos)
         return;
@@ -232,28 +262,43 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     _req.addHeader(key, value); 
 }
 
+/**
+ * @brief parse body of an HTTP request
+ *
+ * @param str headerline
+ * @return void
+ *
+ * @note iss : in stringstream
+ */
 void HttpParser::parseBody(size_t pos)
 {   
-    size_t available = _buffer.size() - pos;
-    const std::string& curBody = _req.getBody();
-    size_t toRead = std::min(available, _bodyLength - curBody.size());
-    std::string newBody = _req.getBody();     // copy (const ok)
-    newBody += _buffer.substr(pos, toRead);   // modify copy
+    size_t              available = _buffer.size() - pos;
+    const std::string&  curBody = _req.getBody();
+    size_t              toRead = std::min(available, _bodyLength - curBody.size());
+    std::string         newBody = _req.getBody();       // copy (const ok)
+
+    newBody += _buffer.substr(pos, toRead);             // modify copy
     _req.setBody(newBody);  
     pos += toRead;
     if (_req.getBody().size() >= _bodyLength)
         _state = DONE;
 }
 
-// this one is going to called mamy times, basically whenever recv() some new bytes, 
-// the data might be ramdom pieces, not neccessarily a full line
+/**
+ * @brief parse an HTTP request, including startline, headers and body
+ *
+ * @param str rawLine (the data rawLine might be ramdom pieces, not neccessarily a full line)
+ * @return an HttpRequest object
+ *
+ * @note this one is going to called mamy times, basically whenever recv() some new bytes, 
+ */
 HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
 {
     _buffer += rawLine;
     
     size_t pos = 0;
     // first startine and headers and body 
-    while (_state != DONE) // Lucio addition, maybe add || _state != ERROR
+    while (_state != DONE)
     {
         if (_state == START_LINE || _state == HEADERS)
         {
