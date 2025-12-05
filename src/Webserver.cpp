@@ -82,6 +82,7 @@ int Webserver::runWebserver(){
 			return utils::FAILURE;
 		}
 		if (nfds == 0){
+			checkIdleConnections();
 			continue;
 		}
 		for (int i = 0; i < nfds; i++){
@@ -191,6 +192,20 @@ void Webserver::closeAllClients(void){
 		close (fd);
 	}
 	_clientFdToServerIndex.clear();
+}
+
+void Webserver::checkIdleConnections(){
+	time_t now = time(NULL);
+	std::vector<int> toRemove;
+	for (const auto& [fd, lastTime] : _lastActivity){
+		if (now - lastTime > CONNECTION_TIMEOUT){
+			toRemove.push_back(fd);
+		}
+	}
+	for (int fd : toRemove){
+		std::cerr << "Idle connection timeout on fd: " << fd << std::endl;
+		removeClientFd(fd);
+	}
 }
 
 bool Webserver::hasError(const epoll_event& event) const{
