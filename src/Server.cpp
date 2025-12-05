@@ -4,7 +4,7 @@ using namespace config;
 
 Server::Server(const std::string& host, int port,
 	const std::vector<ServerConfig>& serverBlocks)
-	: _host(host), _listenFd(-1), _port(port), _virtualHosts(serverBlocks), _addr(){
+	: _host(host), _listenFd(NOT_VALID_FD), _port(port), _virtualHosts(serverBlocks), _addr(){
 		_addr.sin_family = AF_INET;
 		if (inet_pton(AF_INET, _host.c_str(), &_addr.sin_addr) <= 0){
 			throw std::runtime_error("Invalid Ip address: " + _host);
@@ -21,7 +21,7 @@ Server::Server(Server&& other) noexcept
 		 _virtualHosts(std::move(other._virtualHosts)), _addr(other._addr),
 		 	_requestCount(std::move(other._requestCount)), _parsers(std::move(other._parsers)),
 				 _httpHandler(std::move(other._httpHandler)){
-		other._listenFd = -1;
+		other._listenFd = NOT_VALID_FD;
 }
 
 Server::StartResult Server::start(){
@@ -51,10 +51,10 @@ Server::StartResult Server::start(){
 }
 
 void Server::shutdown(){
-	if (_listenFd != -1){
+	if (_listenFd != NOT_VALID_FD){
 		std::cout << "Stopping servers listening on port: " << _port << std::endl;
 		close (_listenFd);
-		_listenFd = -1;
+		_listenFd = NOT_VALID_FD;
 	}
 }
 
@@ -64,15 +64,15 @@ int  Server::acceptConnection(void){
 	int clientFd = accept(_listenFd, (struct sockaddr*)&clientAddr, &clientLen);
 	if (clientFd < 0){
 		if (errno == EAGAIN || errno == EWOULDBLOCK){
-			return -1;
+			return NOT_VALID_FD;
 		}
 		std::cerr << "Accept error: " << strerror(errno) << std::endl;
-		return -1;
+		return NOT_VALID_FD;
 	}
 	int flags = fcntl(clientFd, F_GETFL, 0);
 	if (flags < 0 || fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) < 0){
 		close (clientFd);
-		return -1;
+		return NOT_VALID_FD;
 	}
 	return clientFd;
 }
