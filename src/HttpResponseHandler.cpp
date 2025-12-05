@@ -257,7 +257,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    if (cgi.isCGI()) {
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-         return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI 执行失败</h1>", {}, false, false);
+         return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI execute failed</h1>", {}, false, false);
       return parseCGIOutput(cgi_output);
    }
 
@@ -315,7 +315,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    if (cgi.isCGI()) {
         std::string cgi_output = cgi.execute();
         if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-            return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI 执行失败</h1>", {}, false, false);
+            return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI exuc failed</h1>", {}, false, false);
         return parseCGIOutput(cgi_output);
    }
 
