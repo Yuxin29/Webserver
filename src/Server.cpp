@@ -2,7 +2,7 @@
 
 using namespace config;
 
-Server::Server(const std::string& host, int port, 
+Server::Server(const std::string& host, int port,
 	const std::vector<ServerConfig>& serverBlocks)
 	: _host(host), _listenFd(-1), _port(port), _virtualHosts(serverBlocks), _addr(){
 		_addr.sin_family = AF_INET;
@@ -21,7 +21,7 @@ Server::Server(Server&& other) noexcept
 		 _virtualHosts(std::move(other._virtualHosts)), _addr(other._addr),
 		 	_requestCount(std::move(other._requestCount)), _parsers(std::move(other._parsers)),
 				 _httpHandler(std::move(other._httpHandler)){
-		other._listenFd = -1;			
+		other._listenFd = -1;
 }
 
 Server::StartResult Server::start(){
@@ -130,7 +130,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-	bool keepAlive = response._keepConnectionAlive; //do i need to access it directly? 
+	bool keepAlive = response._keepConnectionAlive; //do i need to access it directly?
 	if (keepAlive){
 		_parsers[clientFd] = HttpParser();
 		return CLIENT_KEEP_ALIVE;

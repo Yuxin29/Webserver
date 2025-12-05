@@ -18,18 +18,22 @@ namespace config{
 		//validate .conf extension
 		if(std::filesystem::path(filename).extension() != ".conf")
 			throw std::runtime_error("Config file should end with '.conf'.");
-			
+
 		std::ifstream infile(filename);
 		if (!infile)
 			throw std::runtime_error("Failed to open config file " + filename);
 		std::stringstream buffer;
 		buffer << infile.rdbuf();//.rdbuf() gives access to its underlying stream buffer.
 		std::string content = buffer.str();
+		//if really empty(noting, no new line)
+		if (content.empty())
+			throw std::runtime_error("Empty conf file: " + filename);
 		Tokenizer tokenizer(content);
 		_tokens = tokenizer.tokenize();
+		//has new line or comment
 		if(_tokens.size() == 1 && _tokens[0].type == TK_EOF)
-			throw std::runtime_error("Empty conf file!");
-		//debug
+			throw std::runtime_error("Empty conf file : " + filename);
+		//debug, should delete later
 		for (auto &tk : _tokens)
 		{
 			std::cout << "[" << tk.value << "] "
@@ -79,7 +83,7 @@ namespace config{
 	{
 		get();
 		Token valuetoken = get();
-		if (valuetoken.type != TK_IDENTIFIER)
+		if (valuetoken.type != TK_IDENTIFIER && valuetoken.type != TK_STRING)
 			throw std::runtime_error("Expect value after " + str);
 		expect(TK_SEMICOLON, "Expected ';'");
 		return valuetoken.value;
@@ -96,7 +100,7 @@ namespace config{
 			Token tok = get();
 			if(isKeyword(tok.value))
 				throw std::runtime_error("Missing value after " + str);
-			if(tok.type != TK_IDENTIFIER)
+			if(tok.type != TK_IDENTIFIER && tok.type != TK_STRING)
 				throw std::runtime_error(makeError("Expect value", tok.line, tok.col));
 			results.push_back(tok.value);
 			Token next = peek();
