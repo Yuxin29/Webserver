@@ -110,28 +110,28 @@ Day 5 — 状态机（非阻塞需要）                                        
 ⭐ 第 2 周：HTTP Response + 各种方法
 目标：能正确生成 HTTP/1.1 响应
 
-Day 6 — Response Builder                                                      
+Day 6 — Response Builder                                                      ✅                                                     
 学习：status line, headers, Content-Length, Connection
 实现：HttpResponse::buildResponseString()
 测试：与 NGINX 对比：curl -v localhost:8080
 
-Day 7 — GET（静态文件）                                                    
+Day 7 — GET（静态文件）                                                                               ✅                                         
 学习：MIME types, 文件权限, index 文件（可选）
 实现：GET handler
 测试：curl -v localhost:8080/test.txt
 
-Day 8 — POST                                                     
+Day 8 — POST                                                                                 ⏳                                              
 学习：保存 body, safe path, parent directory traversal attacks（避免 ../）
 实现：POST handler → 写入文件
 测试：curl -X POST -d "x=y" localhost:8080
 
-Day 9 — DELETE                                                      
+Day 9 — DELETE                                                                               ⏳                                                
 学习：权限检查, 文件不存在返回 404, 如果是目录返回 403（和 NGINX 一样）
 实现：DELETE handler
 测试：curl -X DELETE localhost:8080/file.txt
 
-Day 10 — 错误处理
-学习：
+Day 10 — 错误处理    
+学习：                                                                              ✅
 400（Bad Request）
 404（Not Found）
 413（Payload Too Large）
@@ -144,25 +144,25 @@ buildErrorResponse()
 所有非法输入、超长 URL、大 body。
 
 ⭐ 第 3 周：HTTP 行为、浏览器兼容、压力测试（你的部分）
-Day 11 — Keep-Alive 行为
+Day 11 — Keep-Alive 行为                                                                                  ✅
 
 学习：Connection: keep-alive,  Connection: close,  HTTP/1.1 默认 keep-alivem HTTP/1.0 默认 close
 实现：shouldCloseConnection(), 根据请求头决定连接是否关闭
 测试：curl -v localhost:8080, Chrome 测试 Keep-Alive 是否生效。
 
-Day 12 — NGINX 行为对齐
+Day 12 — NGINX 行为对齐                                                                             ✅
 学习：多余空格如何处理, 重复 headers
 Host 缺失 → 400
 Accept: / 兼容性
 实现：parser 容错更新
 测试：和 nginx 对比输出：curl -v --raw localhost:8080
 
-Day 13 — Chunked Encoding（可选）
+Day 13 — Chunked Encoding（可选）                                                                   ✅
 可选内容。
 实现：解析 chunked 或 输出 chunked 响应
 测试：curl -H "Transfer-Encoding: chunked" -d "test" localhost:8080
 
-Day 14 — 压力测试（你只检查响应逻辑是否正确）
+Day 14 — 压力测试（你只检查响应逻辑是否正确）                                                                 
 Person A 会跑：
 ab -n 5000 -c 100 http://localhost:8080/
 wrk -t4 -c200 -d10s http://localhost:8080/
