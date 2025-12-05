@@ -40,7 +40,7 @@ static void validateCgiext(const std::string& ext)
 static void validateCgipass(const std::string& pass)
 {
 	if(pass.empty() || access(pass.c_str(), X_OK) != 0)
-		throw std::runtime_error("cgi_pass is not executable :"+ pass);
+		throw std::runtime_error("cgi_pass is not executable : "+ pass);
 }
 
 static void validateUploaddir(const std::string& upload)

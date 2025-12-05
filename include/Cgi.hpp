@@ -17,13 +17,10 @@ private:
 	std::string _method;      //GET/POST
 	std::string _query;       //QUERY_STRING
 	std::string _body;        //POST body
+	std::map<std::string, std::string> _header;
+	std::string _contentType;
+	std::string _serverName;
 
-	//for child process exec
-	// std::vector<std::string> _env;
-	// std::vector<char*> _envp; // execve 格式
-
-	// std::vector<std::string> _argv;
-	// std::vector<char*> _argvp;
 public:
 	CGI(const HttpRequest& req, const config::LocationConfig& lc);
 	bool isCGI()const;
