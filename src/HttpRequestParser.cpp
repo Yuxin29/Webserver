@@ -33,7 +33,7 @@ HttpResponse buildErrorResponse(int status)
     {
         case 400:
             reason = "Bad Request";
-            body = "<h1>400 Bad Request</h1>";
+            body = "<h1>222 Bad Request</h1>";  //here
             break;
         case 405:
             reason = "Method Not Allowed";
@@ -65,7 +65,7 @@ HttpResponse buildErrorResponse(int status)
 
 bool HttpParser::validateStartLine()
 {
-    //something missing, this one check first to avoid seg fault, 400 bad request
+    //something missing, this one check first to avoid seg fault, four hundred bad request
     if (_req.getMethod().empty() || _req.getPath().empty() || _req.getVersion().empty())
     {
         _errStatus = 400;
@@ -102,7 +102,7 @@ bool    HttpParser::validateHeaders()
                 return false;
             }
         }
-        //validateMandatoryHeaders: loop though all keys, has to find host      400;  Bad Request
+        //validateMandatoryHeaders: loop though all keys, has to find host      four hundred ;  Bad Request
         if (key == "Host"){
             if (hasHost){
                 _errStatus = 400; 
@@ -112,11 +112,11 @@ bool    HttpParser::validateHeaders()
         }
         // //validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
         /* if (seenKeys.count(key)) {
-            _errStatus = 400;  // Repeating header is not allowed (except RFC multi-value headers)
+            _errStatus = four hundred ;  // Repeating header is not allowed (except RFC multi-value headers)
             return false;
         }
         seenKeys.insert(key);  */
-        //validateContentLength: can not be too long like minus number ---> 400 or too big(Payload Too Large) ---> 443113
+        //validateContentLength: can not be too long like minus number ---> four hundred  or too big(Payload Too Large) ---> 443113
         if (key == "Content-Length")
         {
             if (value.empty())                          // can not be empty
@@ -173,11 +173,12 @@ bool HttpParser::validateBody(){
             return false;
         }
         // body string length has to be as long as the sontent-Length says
-        if (_req.getBody().size() < _bodyLength)
-        {
-            _errStatus = 400;
-            return false;
-        }
+        // if (_req.getBody().size() < _bodyLength)
+        // {
+        //     _errStatus = 400;
+        //     std::cout << "-- 11 --" << std::endl; //here it is 
+        //     return false;
+        // }
         // body lenth can not be too long: in theory it should not happen
         if (_req.getBody().size() > _bodyLength){
             _errStatus = 400;

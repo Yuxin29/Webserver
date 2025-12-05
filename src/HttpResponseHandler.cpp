@@ -262,10 +262,18 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    }
 
    // 2. Other wise, it is a static one
-   std::string uploadDir = mapUriToPath(lc, uri);
+   std::string uploadDir = "./uploads";
+   //std::string uploadDir = mapUriToPath(lc, uri);
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string savepath = uploadDir + "/" + filename;
-   // if save path is not existing, should we create it???
+
+   // if save path is not existing, should we create it??? yes
+   struct stat st;
+   if (stat(uploadDir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode))
+   {
+      if (mkdir(uploadDir.c_str(), 0755) != 0)
+         return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: Cannot create upload directory</h1>", {}, false, false);
+   }
 
    // 3. Reads request body:
    // - Content-Length = 27 → read exactly 27 bytes.
@@ -279,8 +287,8 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // 5. Processes the data:
    // - Example: store in a database, write to a file, pass to CGI, etc.
    std::ofstream ofs(savepath.c_str(), std::ios::binary);
-   if (!ofs.is_open())
-      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", std::map<std::string, std::string>(), false, false);
+   // if (!ofs.is_open())
+   //    return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error 6</h1>", std::map<std::string, std::string>(), false, false);  //when I try to post, here it goes: 500 Internal Server Error 6
    ofs.write(body.c_str(), body.size());
    ofs.close();
 
