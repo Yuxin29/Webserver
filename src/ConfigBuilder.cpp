@@ -15,6 +15,7 @@ static void validatePath(const std::string& path)
 	if(path.empty() || path[0] != '/')
 		throw std::runtime_error("Location path must start with '/' : "+path);
 }
+
 static void validateindex(const std::vector<std::string>& index)
 {
 	for(size_t i = 0; i < index.size(); i++){
@@ -22,25 +23,21 @@ static void validateindex(const std::vector<std::string>& index)
 			throw std::runtime_error("Invalidated index file : " + index[i]);
 	}
 }
-static void validateMethod(const std::vector<std::string>& methods)
-{
-	for(size_t i = 0; i < methods.size(); i++)
-	{
-		if (methods[i] != "GET" ||methods[i] != "POST"||methods[i] != "DELETE")
-			throw std::runtime_error("Invalidate method : "+methods[i]);
-	}
-}
 
 static void validateCgiext(const std::string& ext)
 {
-	if(ext.empty() || ext[0] != '.')
-		throw std::runtime_error("cgi_ext should start with '.'");
+	if(!ext.empty()){
+		if(ext[0] != '.')
+			throw std::runtime_error("cgi_ext should start with '.'");
+	}
 }
 
 static void validateCgipass(const std::string& pass)
 {
-	if(pass.empty() || access(pass.c_str(), X_OK) != 0)
-		throw std::runtime_error("cgi_pass is not executable : "+ pass);
+	if(!pass.empty()){
+		if(access(pass.c_str(), X_OK) != 0)
+			throw std::runtime_error("cgi_pass is not executable : "+ pass);
+		}
 }
 
 static void validateUploaddir(const std::string& upload)
@@ -125,11 +122,11 @@ namespace config{
 		validateCgipass(lc.cgiPass);
 		lc.cgiExt = node.cgiExt;
 		validateCgiext(lc.cgiExt);
-		lc.upload_dir = node.uploadDir;
+		lc.upload_dir = node.uploadDir.empty() ? "./sites/static/uploads":node.uploadDir;
 		validateUploaddir(lc.upload_dir);
 		lc.autoindex = node.autoindex;
 		lc.methods = node.methods.empty() ? defaultMethods() : node.methods;
-		validateMethod(lc.methods);
+		//validateMethod(lc.methods);
 		return lc;
 	}
 

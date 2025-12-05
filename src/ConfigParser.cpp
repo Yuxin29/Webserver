@@ -33,14 +33,14 @@ namespace config{
 		//has new line or comment
 		if(_tokens.size() == 1 && _tokens[0].type == TK_EOF)
 			throw std::runtime_error("Empty conf file : " + filename);
-		//debug, should delete later
-		for (auto &tk : _tokens)
-		{
-			std::cout << "[" << tk.value << "] "
-				<< tk.type
-				<< " line " << tk.line
-				<< " col " << tk.col << "\n";
-		} //for print the token list, debug
+		// //debug, should delete later
+		// for (auto &tk : _tokens)
+		// {
+		// 	std::cout << "[" << tk.value << "] "
+		// 		<< tk.type
+		// 		<< " line " << tk.line
+		// 		<< " col " << tk.col << "\n";
+		// } //for print the token list, debug
 	}
 
 	Token Parser::peek() const
