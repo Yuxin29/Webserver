@@ -12,7 +12,7 @@
 
 class Webserver {
 	private:
-	    static constexpr int CONNECTION_TIMEOUT = 30;
+	    static constexpr int CONNECTION_TIMEOUT = 10;
 
 		int 					_epollFd;
 		std::vector<Server> 	_servers;
@@ -24,6 +24,7 @@ class Webserver {
 		bool isListeningSocket(int fd) const;
 		void handleNewConnection(int listenFd);
 		void handleClientRequest(int clientFd);
+		void checkIdleConnections();
 		void addClientToPoll(int clientFd, size_t serverIndex);
 		void removeFdFromPoll(int fd);
 		void removeClientFd(int clientFd);
