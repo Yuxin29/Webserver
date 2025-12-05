@@ -28,13 +28,12 @@ HttpResponse::HttpResponse(const std::string& version, const int& status, const 
  * @note constructs the response string including status line, headers, and body
  */
 std::string HttpResponse::buildResponseString(){
-    std::ostringstream response;  //out string stream
+    std::ostringstream response;
 
     response << _version << " " << _status << " " << _reason << "\r\n";
     
-    // Headers
-    bool hasContentLength = false;  // check Content-Length exit
-    // iterates though the _responseHeaders map container
+    bool hasContentLength = false;
+    // iterates though the _responseHeaders map container and check if there is Content-Length
     for (const auto &header : _responseHeaders) {
         if (header.first == "Content-Length")
             hasContentLength = true;
@@ -49,6 +48,5 @@ std::string HttpResponse::buildResponseString(){
     }
     response << "\r\n";
     response << _body;
-
     return response.str();
 }

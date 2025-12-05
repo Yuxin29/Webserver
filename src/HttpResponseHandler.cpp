@@ -1,7 +1,14 @@
 #include "HttpResponseHandler.hpp"
 #include "Server.hpp"
 
-// a helper to trim empty space
+/**
+ * @brief Trims the empty space \t at the beginning and the end of a string
+ *
+ * @param str a string with possible '\t' at the beginning and end
+ * @return a string without any '\t' at the beginning or end
+ *
+ * @note Currently supports 400, 405, 413, 431. Default is 400.
+ */
 static std::string trim_space(std::string str)
 {
     size_t start = str.find_first_not_of(" \t");
@@ -11,55 +18,62 @@ static std::string trim_space(std::string str)
 
 namespace fs = std::filesystem; // Alias for filesystem
 
-// Function: map file extension to MIME type
+/**
+ * @brief  Gets the MIME type based on the file extension
+ *
+ * @param string path the file path
+ * @return string the corresponding MIME type
+ *
+ * @note MIME type: Multipurpose Internet Mail Extension type: format: type / subtype: example text/html
+ */
 static std::string getMimeType(const std::string& path) {
-    static const std::map<std::string, std::string> mimeMap = 
-    {
-        {".html","text/html"},
-        {".htm","text/html"},
-        {".css","text/css"},
-        {".js","application/javascript"},
-        {".json","application/json"},
-        {".png","image/png"},
-        {".jpg","image/jpeg"},
-        {".jpeg","image/jpeg"},
-        {".gif","image/gif"},
-        {".txt","text/plain"}
-    };
-    auto ext = fs::path(path).extension().string();  // get file extension
-    auto it = mimeMap.find(ext);                     // lookup in map
-    return it != mimeMap.end() ? it->second : "application/octet-stream"; // default MIME
+   static const std::map<std::string, std::string> mimeMap = 
+   {
+      {".html","text/html"},
+      {".htm","text/html"},
+      {".css","text/css"},
+      {".js","application/javascript"},
+      {".json","application/json"},
+      {".png","image/png"},
+      {".jpg","image/jpeg"},
+      {".jpeg","image/jpeg"},
+      {".gif","image/gif"},
+      {".txt","text/plain"}
+   };
+   auto ext = fs::path(path).extension().string();  // get file extension
+   auto it = mimeMap.find(ext);                     // lookup in map
+   return it != mimeMap.end() ? it->second : "application/octet-stream"; // default MIME
 }
 
-// Format time as GMT string for Last-Modified header (not used yet but might be needed later)
-// static std::string formatTime(std::time_t t) {
-//     std::ostringstream ss;
-//     ss << std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT"); // gmtime -> UTC, put_time 格式化
-//     return ss.str();
-// }
-
-// this is the public over-all call for LUCIO server to use
-HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::ServerConfig* vh)
-{
-   if (!vh)
-      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "", {}, false, false);
-   if (req.getMethod() == "GET")
-     return handleGET(req, vh);
-   else if (req.getMethod() == "POST")
-      return handlePOST(req, vh);
-   else if (req.getMethod() == "DELETE")
-      return handleDELETE(req, vh);
-   return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false, false);
+/**
+ * @brief  Formats a time_t value into a GMT string
+ * @param  t time_t value
+ * @return string formatted GMT time
+ *
+ * @note Example format: "Wed, 21 Oct 2015 07:28:00 GMT", used for Last-Modified header
+ */
+static std::string formatTime(std::time_t t) {
+    std::ostringstream ss;
+    ss << std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT");
+    return ss.str();
 }
 
-// the out here comes from lin CGIExecute, it is a string
-// it can be like this: need to comfirm with lin
-// Content-Type: text/html
-// Status: 200 OK                   headers
-//                                    empty lines
-// <html> ... </html>               body
+/**
+ * @brief parse the output from CGI execution into an HttpResponse object
+ *
+ * @param out raw output string from CGI execution of lin
+ * @return HttpResponse object representing the CGI response
+ *
+ * @note used when CGI script is executed and its output needs to be converted into an HTTP response
+ * @example
+ * Status: 200 OK\r\n
+ * Content-Type: text/html\r\n
+ * \r\n
+ * <html>...</html>
+ */
 HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out){
-   size_t pos = out.find("\r\n\r\n");   //it is after ok and then the empty line
+   //it is after last header valuse and then the empty line
+   size_t pos = out.find("\r\n\r\n");
    if (pos == std::string::npos)
       return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>Invalid CGI Output</h1>", {}, false, false);
    
@@ -76,9 +90,8 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out){
 
    while (std::getline(ss, line))
    {
-      if (!line.empty() && line.back() == '\r')
-         line.pop_back(); //getline removes \n but not \related
-
+      if (!line.empty() && line.back() == '\r') //getline removes \n but not \related
+         line.pop_back();
       size_t dd = line.find(":");
       std::string key = line.substr(0, dd);
       std::string val = line.substr(dd + 1);
@@ -87,8 +100,7 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out){
 
       // check if it is special status code in headerlines
       // eg: Status: 404 Not Found
-      if (key == "Status") 
-      {
+      if (key == "Status") {
          size_t space = val.find(" ");
          statusCode = val.substr(0, space);
          statusMsg  = val.substr(space + 1);
@@ -101,7 +113,15 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out){
       return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, true, true);
 }
 
-// longest match
+/**
+ * @brief Finds the best/longest matching LocationConfig for a given URI
+ *
+ * @param vh pointer to the ServerConfig (virtual host)
+ * @param uri_raw the request URI
+ * @return  const pointer to the best matching LocationConfig, or NULL if none found
+ *
+ * @note  used to map request URIs to server location blocks based on longest prefix match
+ */
 const config::LocationConfig* HttpResponseHandler::findLocationConfig (const config::ServerConfig* vh, const std::string& uri_raw)
 {
    std::string uri = uri_raw;
@@ -125,6 +145,15 @@ const config::LocationConfig* HttpResponseHandler::findLocationConfig (const con
    return best;
 }
 
+/**
+ * @brief   Maps a request URI to a filesystem path based on the LocationConfig
+ *
+ * @param   loc pointer to the LocationConfig
+ * @param   uri_raw the request URI
+ * @return  string the corresponding filesystem path
+ *
+ * @note    used to translate request URIs into actual file paths on the server
+ */
 std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
 {
    if (!loc)
@@ -134,10 +163,8 @@ std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc,
    size_t qpos = uri.find('?');
    if (qpos != std::string::npos)
       uri = uri.substr(0, qpos); 
-
    // remove prefix from URI
    std::string relative = uri.substr(loc->path.length());
-
    // Case 1: request points to a directory
    if (relative.empty() || relative == "/")
    {
@@ -148,37 +175,41 @@ std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc,
       // no index defined → return directory itself
       return loc->root;
    }
-
    // Case 2: regular file
    return loc->root + relative;
 }
 
-/*
------------------------------- Http request example of GET ------------------------------
-GET /hello HTTP/1.1
-Host: example.com
-User-Agent: curl/7.81.0
-Accept: text/plain
-
-Http request example of GET
-HTTP/1.1 200 OK
-Date: Thu, 21 Nov 2025 10:05:00 GMT
-Server: ExampleServer/1.0
-Content-Type: text/plain
-Content-Length: 13
-
-Hello, world!
-*/
-//lin configuration/webserv.conf -> root, location, index,, error_page, cgi_path, upload_path and so on.
-// need to check CGI first, it has priority over static files
+/**
+ * @brief   Handles an HTTP GET request and generates the appropriate HttpResponse
+ *
+ * @param   req the HttpRequest object representing the client's GET request
+ * @param   vh pointer to the ServerConfig (virtual host)   
+ * @return  HttpResponse object representing the server's response to the GET request
+ *
+ * @note    need to check CGI first, it has priority over static files
+ * @note    follows steps: map URI to path, check file existence and permissions, determine MIME type, read file content, build response
+ *
+ * @example request:
+ * GET /hello HTTP/1.1
+ * Host: example.com
+ * User-Agent: curl/7.81.0             
+ * Accept: text/plain 
+ * @example response:
+ * HTTP/1.1 200 OK
+ * Date: Thu, 21 Nov 2025 10:05:00 GMT
+ * Server: ExampleServer/1.0
+ * Content-Type: text/plain
+ * Content-Length: 13
+ *
+ * Hello, world!
+ */
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh){
-   // 0. Server received GET /hello. /hello is supposed to be file
-   std::string uri = req.getPath(); // URI: uniform Resource Identifier, _path in the request
-
-   // 0. First check if it is cgi
+   // get the request URI: uniform Resource Identifier, _path in the request
+   std::string uri = req.getPath();
+   // First check if it is cgi
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc)
-      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40411 Not Found</h1>", std::map<std::string, std::string>(), false, false);
+      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>(), false, false);
    CGI cgi(req, *lc);
    if (cgi.isCGI()){
       std::string cgi_output = cgi.execute();
@@ -186,12 +217,9 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
          return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40412 Not Found</h1>", std::map<std::string, std::string>(), false, false);
       return parseCGIOutput(cgi_output);   
    }
-
-   // 2. Mapped /hello → filesystem path (e.g., /var/www/html/hello).
+   // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
    std::string fullpath = mapUriToPath(lc, uri);
-   //std::cout << "fullpath = " << fullpath << std::endl;
-
-   // 3. Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
+   // Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0)
       return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40413 Not Found</h1>", std::map<std::string, std::string>(), false, false);
@@ -199,56 +227,56 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>40331 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
       return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>40332 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
-
-   // 4. Determined MIME type (text/plain for .txt or plain text).
+   // Determined MIME type (text/plain for .txt or plain text).
    std::string mine_type = getMimeType(fullpath);
    if (mine_type.empty())
       mine_type = "text/html";
-
-   // 5. Got file size (13) → set Content-Length.
-
-   // 6. Read file content → sent as response body.
-   //std::ifstream ifs(fullpath.c_str(), std::ios::binary);
+   // Read file content → sent as response body. using: std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    if (!ifs.is_open())
       return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Cannot open file</h1>", {}, false, false);
    ifs.seekg(0, std::ios::end);
    std::streamsize size = ifs.tellg();
    ifs.seekg(0, std::ios::beg);
-
    std::string body(size, '\0');
    ifs.read(&body[0], size);
    ifs.close();
-   //std::cout << "[DEBUG] file size = " << size << ", body size = " << body.size() << std::endl;
-
-   // 7. Filled headers like Date and Server.
+   // Filled headers like Date and Server. maybe more headers
    std::map<std::string, std::string> headers;
    headers["Content-Type"] = mine_type;
    headers["Content-Length"] = std::to_string(body.size());
    headers["Server"] = "MiniWebserv/1.0";
-
+   headers["Last-Modified"] = formatTime(st.st_mtime);
+   // Build HttpResponse object with status 200 OK and the file content as body
    return HttpResponse("HTTP/1.1", 200, "OK", body, headers, true, true);
 }
 
-/*
------------------------------- Http request example of POST ------------------------------
-POST /submit-data HTTP/1.1
-Host: example.com
-Content-Type: application/json
-Content-Length: 27
-
-HTTP/1.1 201 Created
-Content-Type: application/json
-Content-Length: 23
-
-{"status":"success"}
-*/
+/**
+ * @brief   Handles an HTTP POST request and generates the appropriate HttpResponse
+ *
+ * @param   req the HttpRequest object representing the client's GET request
+ * @param   vh pointer to the ServerConfig (virtual host)   
+ * @return  HttpResponse object representing the server's response to the POST request
+ *
+ * @note    need to check CGI first, it has priority over static files
+ * @note    follows steps:  determine target resource, read request body, validate, process data, generate response
+ *
+ * @example request:
+   * POST /submit-data HTTP/1.1
+   * Host: example.com
+   * Content-Type: application/json
+   * Content-Length: 27
+ * @example response:
+   * HTTP/1.1 201 Created
+   * Content-Type: application/json
+   * Content-Length: 23
+   *
+   * {"status":"success"}
+ */
 HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::ServerConfig* vh){
-   // 0. Server receives POST /submit-data.
+   // 0Server receives POST /submit-data.
    std::string uri = req.getPath();
-
-   // Determines the target resource:
-   // 1.Typically a CGI script, an upload handler, or a location block.
+   // Determines the target resource:Typically a CGI script, an upload handler, or a location block.
    // - Example: /var/www/html/submit-data (or routed to CGI)
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc) 
@@ -260,21 +288,18 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
          return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI execute failed</h1>", {}, false, false);
       return parseCGIOutput(cgi_output);
    }
-
-   // 2. Other wise, it is a static one
+   //  If not CGI, assume static file upload handler:
    std::string uploadDir = "./uploads";
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string savepath = uploadDir + "/" + filename;
-
-   // if save path is not existing, should we create it??? yes
+   //  Ensures upload directory exists:
    struct stat st;
    if (stat(uploadDir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode))
    {
       if (mkdir(uploadDir.c_str(), 0755) != 0)
          return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: Cannot create upload directory</h1>", {}, false, false);
    }
-
-   // 3. Reads request body:
+   // Reads request body:
    // - Content-Length = 27 → read exactly 27 bytes.
    // - Body = {"name":"Alice","age":30}
    std::string body = req.getBody();
@@ -355,12 +380,24 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    return HttpResponse("HTTP/1.1", 204, "No content", "", std::map<std::string, std::string>(), true, true);
 }
 
-// lin's cgi 
-// class CGI
-// {
-// public:
-// 	CGI(const HttpRequest& req, const config::LocationConfig& lc);
-// 	bool isCGI()const;
-// 	std::string execute();
-// };
 
+/**
+ * @brief  Handles the HTTP request and generates the appropriate response
+ *
+ * @param  req HttpRequest object representing the client's request
+ * @param  vh pointer to the ServerConfig for the virtual host
+ * @return HttpResponse object representing the server's response
+ 
+ * @note for the server to handle the request based on method type
+ */
+HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::ServerConfig* vh){
+   if (!vh)
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "", {}, false, false);
+   if (req.getMethod() == "GET")
+     return handleGET(req, vh);
+   else if (req.getMethod() == "POST")
+      return handlePOST(req, vh);
+   else if (req.getMethod() == "DELETE")
+      return handleDELETE(req, vh);
+   return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false, false); // not supposed to reach here, already filtered in parser validation
+}
