@@ -32,7 +32,7 @@ HttpResponse buildErrorResponse(int status)
     {
         case 400:
             reason = "Bad Request";
-            body = "<h1>400 Bad Request</h1>";
+            body = "<h1>400 Bad Request aa</h1>";
             break;
         case 405:
             reason = "Method Not Allowed";
@@ -74,16 +74,19 @@ bool HttpParser::validateStartLine()
     //something missing, this one check first to avoid seg fault
     if (_req.getMethod().empty() || _req.getPath().empty() || _req.getVersion().empty()){
         _errStatus = 400;
+        std::cout << "Invalid start line: missing method, path, or version." << std::endl;
         return false;
     }
     //  GET, POST, DELETE  ---> 405: mathod not allowed
     if (_req.getMethod() != "GET" && _req.getMethod() != "POST" && _req.getMethod() != "DELETE"){
         _errStatus = 405;
+        std::cout << "Method not allowed: " << _req.getMethod() << std::endl;
         return false;
     }
     //  Only accept HTTP/1.1
     if (_req.getVersion() != "HTTP/1.1"){
         _errStatus = 400;
+        std::cout << "Invalid HTTP version: " << _req.getVersion() << std::endl;
         return false;
     }
     //path cannot have empty space or path cannot be too long check, i think it is not necessary
@@ -117,6 +120,7 @@ bool    HttpParser::validateHeaders()
         for (size_t i = 0; i < key.size(); ++i) {
             if (!isgraph(key[i]) || key[i] == ':') {
                 _errStatus = 400;
+                std::cout << "Invalid header key: " << key << std::endl;
                 return false;
             }
         }
@@ -124,6 +128,7 @@ bool    HttpParser::validateHeaders()
         if (key == "Host"){
             if (hasHost){
                 _errStatus = 400; 
+                std::cout << "Multiple Host headers found." << std::endl;
                 return false;
             }
             hasHost = true;
@@ -131,6 +136,7 @@ bool    HttpParser::validateHeaders()
         // validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
         if (seenKeys.count(key)) {
             _errStatus = 400;
+            std::cout << "Duplicate header key found: " << key << std::endl;
             return false;
         }
         seenKeys.insert(key);
@@ -139,17 +145,20 @@ bool    HttpParser::validateHeaders()
             // can not be empty
             if (value.empty()){
                 _errStatus = 400;
+                std::cout << "Empty Content-Length value." << std::endl;
                 return false;
             }
             // can not start with zero
             if (value.size() > 1 && value[0] == '0'){
                 _errStatus = 400;
+                std::cout << "Content-Length cannot start with zero." << std::endl;
                 return false;
             }
             // can not have non digits
             for (size_t i = 0; i < value.length(); ++i){
                 if (!isdigit(value[i])){
                     _errStatus = 400;
+                    std::cout << "Non-digit character in Content-Length value." << std::endl;
                     return false;
                 }
             }
@@ -157,11 +166,13 @@ bool    HttpParser::validateHeaders()
             long long len = atoll(value.c_str()); 
             if (len < 0){
                 _errStatus = 400;
+                std::cout << "Negative Content-Length value." << std::endl;
                 return false;
             }
              // can not be too big, 100 MB, max, ask lin or lucio what should be the max
             if (len > 1024 * 1024 * 100){
                 _errStatus = 413;
+                std::cout << "Content-Length too large." << std::endl;
                 return false;
             }
             _bodyLength = static_cast<size_t>(len);
@@ -169,12 +180,14 @@ bool    HttpParser::validateHeaders()
         // header can not be too long:   431, Request Header Fields Too Large
         if (key.size() > 1024 || value.size() > 4096){
             _errStatus = 431; 
+            std::cout << "Header field too large: " << key << std::endl;
             return false;
         }
     }
     // it has to have ont and only one host
     if (!hasHost){
         _errStatus = 400;
+        std::cout << "Missing Host header." << std::endl;
         return false;
     }
     return true;
@@ -195,16 +208,19 @@ bool HttpParser::validateBody(){
         // POST has to have body string and in headers, it has to have content-Length"
         if (_bodyLength == 0 && !_req.getHeaders().count("Content-Length")){
             _errStatus = 400;
+            std::cout << "POST request missing Content-Length header." << std::endl; //here
             return false;
         }
         // body string length has to be as long as the sontent-Length says
-        if (_req.getBody().size() < _bodyLength){
-            _errStatus = 400;
-            return false;
-        }
+        // if (_req.getBody().size() < _bodyLength){
+        //     _errStatus = 400;
+        //     std::cout << "POST request body length mismatch." << std::endl; //here
+        //     return false;
+        // }
         // body lenth can not be too long: in theory it should not happen
         if (_req.getBody().size() > _bodyLength){
             _errStatus = 400;
+            std::cout << "POST request body length exceeds Content-Length." << std::endl; //here
             return false;
         }
     }
@@ -256,7 +272,11 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     if (dd == std::string::npos)
         return;
     std::string key = headerline.substr(0, dd);
-    std::string value = headerline.substr(dd + 1);
+    std::string value = headerline.substr(dd + 1);        // if (_req.getBody().size() < _bodyLength){
+        //     _errStatus = 400;
+        //     std::cout << "POST request body length mismatch." << std::endl; //here
+        //     return false;
+        // }
     key = trim_space(key);
     value = trim_space(value);
     _req.addHeader(key, value); 
