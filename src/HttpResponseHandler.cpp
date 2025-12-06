@@ -274,12 +274,11 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    * {"status":"success"}
  */
 HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::ServerConfig* vh){
-   // 0Server receives POST /submit-data.
+   // Server receives POST /submit-data.
    std::string uri = req.getPath();
-   // Determines the target resource:Typically a CGI script, an upload handler, or a location block.
-   // - Example: /var/www/html/submit-data (or routed to CGI)
+   // Determines the target resource:Typically a CGI script, an upload handler, or a location block. Example: /var/www/html/submit-data (or routed to CGI)
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
-   if (!lc) 
+   if (!lc)
       return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: No Location Match</h1>", {}, false, false);
    CGI cgi(req, *lc); 
    if (cgi.isCGI()) {
@@ -292,10 +291,9 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    std::string uploadDir = "./uploads";
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string savepath = uploadDir + "/" + filename;
-   //  Ensures upload directory exists:
+   //  Ensures upload directory exists
    struct stat st;
-   if (stat(uploadDir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode))
-   {
+   if (stat(uploadDir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)){
       if (mkdir(uploadDir.c_str(), 0755) != 0)
          return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: Cannot create upload directory</h1>", {}, false, false);
    }
@@ -303,43 +301,50 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // - Content-Length = 27 → read exactly 27 bytes.
    // - Body = {"name":"Alice","age":30}
    std::string body = req.getBody();
-
-   // 4. Validates:
+   // Validates:
    // - Validate Content-Type
    // - Optional: Check if JSON is valid
 
-   // 5. Processes the data:
+   // Processes the data:
    // - Example: store in a database, write to a file, pass to CGI, etc.
    std::ofstream ofs(savepath.c_str(), std::ios::binary);
-   // if (!ofs.is_open())
-   //    return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error 6</h1>", std::map<std::string, std::string>(), false, false);  //when I try to post, here it goes: 500 Internal Server Error 6
+   if (!ofs.is_open())
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error 6</h1>", std::map<std::string, std::string>(), false, false);
    ofs.write(body.c_str(), body.size());
    ofs.close();
-
-   // 6. Generates response:
-   // - Set status code (201 Created, 200 OK, 400 Bad Request…)
-   // - Set headers (Content-Type, Content-Length, Date, Server)
+   // Generates response: Set headers (Content-Type, Content-Length, Date, Server)
    std::map<std::string, std::string> headers;
    headers["Content-Length"] = std::to_string(body.size());
-
-   return HttpResponse("HTTP/1.1", 222, "Created", "{\"status\":\"success\"}", std::map<std::string, std::string>(), true, true);
+   // - Set status code (201 Created, 200 OK, 400 Bad Request…)
+   return HttpResponse("HTTP/1.1", 200, "Created", "{\"status\":\"success\"}", std::map<std::string, std::string>(), true, true);
 }
 
-/*
------------------------------- Http request example of DELETE ------------------------------
-DELETE /files/file1.txt HTTP/1.1
-Host: example.com
-User-Agent: curl/7.81.0
-
-HTTP/1.1 204 No Content
-Date: Thu, 21 Nov 2025 11:00:00 GMT
-Server: ExampleServer/1.0
-*/
+/**
+ * @brief   Handles an HTTP DELETE request and generates the appropriate HttpResponse
+ *
+ * @param   req the HttpRequest object representing the client's GET request
+ * @param   vh pointer to the ServerConfig (virtual host)   
+ * @return  HttpResponse object representing the server's response to the DELETE request
+ *
+ * @note    need to check CGI first, it has priority over static files
+ * @note    follows steps:  determine target resource, read request body, validate, process data, generate response
+ *
+ * @example request:
+   * DELETE /files/file1.txt HTTP/1.1
+   * Host: example.com
+   * User-Agent: curl/7.81.0
+ * @example response:
+   * HTTP/1.1 204 No Content
+   * Date: Thu, 21 Nov 2025 11:00:00 GMT
+   * Server: ExampleServer/1.0
+   *
+   * {"status":"success"}
+ */
 HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::ServerConfig* vh){
-   // 0. Server receives DELETE /files/file1.txt.
+   // Server receives DELETE /files/file1.txt.
    std::string uri = req.getPath();
    
-   // 1. first check CGI, below are fake code
+   // first check CGI, below are fake code
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc) 
       return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: No Location Match</h1>", {}, false, false);
@@ -350,14 +355,9 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
             return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI exuc failed</h1>", {}, false, false);
         return parseCGIOutput(cgi_output);
    }
-
-   // 2. otherwie, it is a static delete. Maps path:
-   // - /files/file1.txt → /var/www/html/files/file1.txt
+   // 2. otherwie, it is a static delete. Maps path: /files/file1.txt → /var/www/html/files/file1.txt
    std::string fullpath = mapUriToPath(lc, uri);
-   //std::cout << "fullpath = " << fullpath << std::endl;
-
-   // 3. Validates:
-   // - Does file exist? Is it allowed to delete this path? (check directory permissions)? Is DELETE method allowed in this location?
+   // Validates: Does file exist? Is it allowed to delete this path? (check directory permissions)? Is DELETE method allowed in this location?
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0)
       return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>(), false, false);
@@ -365,18 +365,13 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
       return HttpResponse("HTTP/1.1", 40333, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
    if (!S_ISREG(st.st_mode))
       return HttpResponse("HTTP/1.1", 40333, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
-
-   // 5. Attempts deletion:
-   // - unlink("/var/www/html/files/file1.txt")
+   // Attempts deletion: - unlink("/var/www/html/files/file1.txt")
    if (unlink(fullpath.c_str()) < 0)   //sth worng: (io err, permission)
       return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", std::map<std::string, std::string>(), false, false);
-
-   // 6. Generates response:
-   // - If success → 204 No Content (most common)
-   // - Or 200 OK with optional message
+   // Generates response:
    std::map<std::string, std::string> headers;
    headers["Content-Length"] = "0";  // No response body
-
+   // - If success → 204 No Content (most common) - Or 200 OK with optional message
    return HttpResponse("HTTP/1.1", 204, "No content", "", std::map<std::string, std::string>(), true, true);
 }
 
@@ -399,5 +394,15 @@ HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::
       return handlePOST(req, vh);
    else if (req.getMethod() == "DELETE")
       return handleDELETE(req, vh);
-   return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false, false); // not supposed to reach here, already filtered in parser validation
+   // not supposed to reach here, already filtered in parser validation
+   return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false, false);
 }
+
+//int stat(const char *pathname, struct stat *statbuf); Retrieve information about a file (size, type, permissions, timestamps, etc.) without opening it.
+// return 0 → success, statbuf filled.
+// -1 → error (errno set), e.g., file does not exist.
+// struct stat {
+//     st_mode; //file type & permissions.
+//     st_size; //file size.
+//     st_mmine;  //ast modification time, etc.
+// }

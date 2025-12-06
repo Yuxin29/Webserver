@@ -77,6 +77,16 @@ int  Server::acceptConnection(void){
 	return clientFd;
 }
 
+/**
+ * @brief handles a client request on the given client file descriptor
+ *
+ * @param clientFd the file descriptor of the client socket
+ * @return Server::ClientStatus indicating the status of the client connection after handling the request
+ *
+ * @note This method reads data from the client socket, parses the HTTP request,
+ *       matches the appropriate virtual host, generates an HTTP response, and sends it back to the client.
+ *       It also manages connection persistence based on the response's keep-alive status.		
+ */
 Server::ClientStatus Server::handleClient(int clientFd){
 	// listening
 	char buffer[8192];
@@ -97,6 +107,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		return CLIENT_COMPLETE;
 	}
 	_requestCount[clientFd]++;
+
 	// parsing request and validating
 	HttpParser& parser = _parsers[clientFd];
 	std::string chunk(buffer, nBytes);
@@ -110,6 +121,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	}
 	if (parser.getState() != DONE)
 		return CLIENT_INCOMPLETE;
+
 	// if good req, finder server
 	std::map<std::string, std::string> headers = request.getHeaders();
 	auto it = headers.find("Host");
@@ -123,6 +135,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
+
 	// build response
 	HttpResponse response = _httpHandler.handleRequest(request, virtualHost);
 	std::string responseString = response.buildResponseString();
@@ -131,7 +144,9 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-	bool keepAlive = response._keepConnectionAlive; //do i need to access it directly?
+
+	// manage connection persistence
+	bool keepAlive = response.isKeepAlive(); // use gettesr
 	if (keepAlive){
 		_parsers[clientFd] = HttpParser();
 		return CLIENT_KEEP_ALIVE;
