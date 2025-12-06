@@ -272,7 +272,7 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
     // first startine and headers and body 
     while (_state != DONE)
     {
-        if (_state == START_LINE || _state == HEADERS)
+        if (_state < BODY)
         {
             size_t end = _buffer.find("\r\n", pos);
             if (end == std::string::npos)
@@ -283,11 +283,8 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
                 line.pop_back();    //remove the last char \r
             if (_state == START_LINE)
                 parseStartLine(line);
-            if (_state == HEADERS){
+            if (_state == HEADERS)
                 parseHeaderLine(line);
-                if (_state > HEADERS)
-                    break;
-            }
         }
         if (_state == BODY){
             parseBody(pos);

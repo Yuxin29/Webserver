@@ -33,18 +33,19 @@ public:
     // --------------------
     //        Getters
     // --------------------
-    const std::string&                         getMethod() const;
-    const std::string&                         getPath() const;
-    const std::string&                         getVersion() const;
-    const std::map<std::string, std::string>&  getHeaders() const;
-    const std::string&                         getBody() const;
+    const std::string&                         getMethod() const    { return _method;}
+    const std::string&                         getPath() const      { return _requestPath;}
+    const std::string&                         getVersion() const   { return _version;}
+    const std::map<std::string, std::string>&  getHeaders() const   { return _requestHeaders;}
+    const std::string&                         getBody() const      { return _body;}
 
     // --------------------
     //        Setters
     // --------------------
-    void setMethod(const std::string &m);
-    void setPath(const std::string &m);
-    void setVersion(const std::string &m);
-    void addHeader(const std::string& k, const std::string& v);
-    void setBody(const std::string &m);
+    void setMethod(const std::string &m)                        { _method = m; }
+    void setPath(const std::string &m)                          { _requestPath = m; }
+    void setVersion(const std::string &m)                       { _version = m; }
+    void addHeader(const std::string& k, const std::string& v)  { _requestHeaders[k] = v; }
+    void setBody(const std::string &m)                          { _body = m; }
 };
+
