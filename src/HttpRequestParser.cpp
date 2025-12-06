@@ -22,8 +22,9 @@ static std::string trim_space(std::string str)
  * @return HttpResponse object representing the error page
  *
  * @note Currently supports 400, 405, 413, 414(addable, not mandatory), 431. Default is 400.
+    @note Example error page format:
  */
-HttpResponse buildErrorResponse(int status)
+HttpResponse reqParsingErrorResponse(int status)
 {
     std::string reason;
     std::string body;

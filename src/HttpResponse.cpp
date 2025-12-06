@@ -118,3 +118,30 @@ std::string HttpResponse::buildResponseString(){
     response << _body;
     return response.str();
 }
+
+// --------------------
+//   Serialization
+// --------------------
+/**
+ * @brief builds the HTTP response string
+ *
+ * @param void
+ * @return a string representing the full HTTP response
+ *
+ * @note constructs the response string including status line, headers, and body
+ */
+HttpResponse resHandlerErrorResponse(int code){
+    switch (code) {
+        case 400:
+            return HttpResponse("HTTP/1.1", 400, "Bad Request", "<h1>400 Bad Request</h1>", {}, false, false);
+        case 403:
+            return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>403 Forbidden</h1>", {}, false, false);
+        case 404:
+            return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", {}, false, false);
+        case 405:
+            return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "<h1>405 Method Not Allowed</h1>", {}, false, false);
+        case 500:
+        default:
+            return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", {}, false, false);
+    }
+}

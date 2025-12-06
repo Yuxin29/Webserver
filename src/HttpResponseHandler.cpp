@@ -24,7 +24,8 @@ namespace fs = std::filesystem; // Alias for filesystem
  * @param string path the file path
  * @return string the corresponding MIME type
  *
- * @note MIME type: Multipurpose Internet Mail Extension type: format: type / subtype: example text/html
+ * @note MIME type: Multipurpose Internet Mail Extension type:
+         format: type / subtype: example text/html
  */
 static std::string getMimeType(const std::string& path) {
    static const std::map<std::string, std::string> mimeMap = 
@@ -59,6 +60,25 @@ static std::string formatTime(std::time_t t) {
 }
 
 /**
+ * @brief Checks if the HTTP method is allowed in the given LocationConfig
+ *
+ * @param  loc pointer to the LocationConfig
+ * @param  method the HTTP method to check (e.g., "GET", "POST")
+ * @return bool true if the method is allowed, false otherwise
+ *
+ * @note used to validate if a request method is permitted for a specific location
+ */
+static bool isMethodAllowed(const config::LocationConfig* loc, const std::string& method){
+    if (!loc)
+        return false;
+    for (std::vector<std::string>::const_iterator it = loc->methods.begin(); it != loc->methods.end(); ++it){
+        if (*it == method)
+            return true;
+    }
+    return false;
+}
+
+/**
  * @brief parse the output from CGI execution into an HttpResponse object
  *
  * @param out raw output string from CGI execution of lin
@@ -75,7 +95,7 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out){
    //it is after last header valuse and then the empty line
    size_t pos = out.find("\r\n\r\n");
    if (pos == std::string::npos)
-      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>Invalid CGI Output</h1>", {}, false, false);
+      return resHandlerErrorResponse(500);
    
    std::string headersString = out.substr(0, pos);
    std::string bodyString = out.substr(pos + 4);
@@ -187,7 +207,6 @@ std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc,
  * @return  HttpResponse object representing the server's response to the GET request
  *
  * @note    need to check CGI first, it has priority over static files
- * @note    follows steps: map URI to path, check file existence and permissions, determine MIME type, read file content, build response
  *
  * @example request:
  * GET /hello HTTP/1.1
@@ -206,47 +225,67 @@ std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc,
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh){
    // get the request URI: uniform Resource Identifier, _path in the request
    std::string uri = req.getPath();
+
    // First check if it is cgi
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc)
-      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>(), false, false);
+      return resHandlerErrorResponse(404);
+   if (!isMethodAllowed(lc, "GET"))
+      return resHandlerErrorResponse(405);
    CGI cgi(req, *lc);
    if (cgi.isCGI()){
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-         return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40412 Not Found</h1>", std::map<std::string, std::string>(), false, false);
+         return resHandlerErrorResponse(500);
       return parseCGIOutput(cgi_output);   
    }
+
    // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
    std::string fullpath = mapUriToPath(lc, uri);
+
    // Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0)
-      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>40413 Not Found</h1>", std::map<std::string, std::string>(), false, false);
+      return resHandlerErrorResponse(404);
    if (access(fullpath.c_str(), R_OK) < 0)
-      return HttpResponse("HTTP/1.1", 403, "Forbidden", "<h1>40331 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
+      return resHandlerErrorResponse(403);
    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
-      return HttpResponse("HTTP/1.1", 404, "Forbidden", "<h1>40332 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
+      return resHandlerErrorResponse(403);
+   // need to add
+   // if (S_ISDIR(st.st_mode))
+   // {
+   //    if (lc->isAutoIndexEnabled()) 
+   //       return generateAutoIndex(fullpath);
+   //    else if (hasIndexFile(fullpath, lc)) 
+   //       fullpath = getIndexPath(fullpath, lc);
+   //    else 
+   //       return resHandlerErrorResponse(403);
+   // }
+
    // Determined MIME type (text/plain for .txt or plain text).
-   std::string mine_type = getMimeType(fullpath);
-   if (mine_type.empty())
-      mine_type = "text/html";
-   // Read file content → sent as response body. using: std::ifstream ifs(fullpath.c_str(), std::ios::binary);
+   std::string mime_type = getMimeType(fullpath);
+   if (mime_type.empty())
+      mime_type = "text/html";
+
+   // Read file content → sent as response body. 
+   // using: std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    if (!ifs.is_open())
-      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Cannot open file</h1>", {}, false, false);
+      return resHandlerErrorResponse(500);
    ifs.seekg(0, std::ios::end);
    std::streamsize size = ifs.tellg();
    ifs.seekg(0, std::ios::beg);
    std::string body(size, '\0');
    ifs.read(&body[0], size);
    ifs.close();
+
    // Filled headers like Date and Server. maybe more headers
    std::map<std::string, std::string> headers;
-   headers["Content-Type"] = mine_type;
+   headers["Content-Type"] = mime_type;
    headers["Content-Length"] = std::to_string(body.size());
    headers["Server"] = "MiniWebserv/1.0";
    headers["Last-Modified"] = formatTime(st.st_mtime);
+
    // Build HttpResponse object with status 200 OK and the file content as body
    return HttpResponse("HTTP/1.1", 200, "OK", body, headers, true, true);
 }
@@ -259,7 +298,6 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
  * @return  HttpResponse object representing the server's response to the POST request
  *
  * @note    need to check CGI first, it has priority over static files
- * @note    follows steps:  determine target resource, read request body, validate, process data, generate response
  *
  * @example request:
    * POST /submit-data HTTP/1.1
@@ -276,47 +314,58 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::ServerConfig* vh){
    // Server receives POST /submit-data.
    std::string uri = req.getPath();
-   // Determines the target resource:Typically a CGI script, an upload handler, or a location block. Example: /var/www/html/submit-data (or routed to CGI)
+
+   // Determines the target resource:Typically a CGI script, an upload handler, or a location block. 
+   // Example: /var/www/html/submit-data (or routed to CGI)
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc)
-      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: No Location Match</h1>", {}, false, false);
+      return resHandlerErrorResponse(404);
+   if (!isMethodAllowed(lc, "POST"))
+      return resHandlerErrorResponse(405);
    CGI cgi(req, *lc); 
    if (cgi.isCGI()) {
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-         return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI execute failed</h1>", {}, false, false);
+         return resHandlerErrorResponse(500);
       return parseCGIOutput(cgi_output);
    }
+
    //  If not CGI, assume static file upload handler:
-   std::string uploadDir = "./uploads";
+   std::string uploadDir = "./uploads"; // need to change, it should be from config instead of hardcoded
+   // std::string uploadDir = lc->getUploadDirectory();
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string savepath = uploadDir + "/" + filename;
+
    //  Ensures upload directory exists
    struct stat st;
    if (stat(uploadDir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)){
       if (mkdir(uploadDir.c_str(), 0755) != 0)
-         return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: Cannot create upload directory</h1>", {}, false, false);
+         return resHandlerErrorResponse(500);
    }
+
    // Reads request body:
    // - Content-Length = 27 → read exactly 27 bytes.
    // - Body = {"name":"Alice","age":30}
    std::string body = req.getBody();
+
    // Validates:
-   // - Validate Content-Type
-   // - Optional: Check if JSON is valid
+   // - Validate Content-Type if necessary.
 
    // Processes the data:
    // - Example: store in a database, write to a file, pass to CGI, etc.
    std::ofstream ofs(savepath.c_str(), std::ios::binary);
    if (!ofs.is_open())
-      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error 6</h1>", std::map<std::string, std::string>(), false, false);
+      return resHandlerErrorResponse(500);
    ofs.write(body.c_str(), body.size());
    ofs.close();
+
    // Generates response: Set headers (Content-Type, Content-Length, Date, Server)
    std::map<std::string, std::string> headers;
-   headers["Content-Length"] = std::to_string(body.size());
+   std::string responseBody = "{\"status\":\"success\"}";
+   headers["Content-Length"] = std::to_string(responseBody.size());
+
    // - Set status code (201 Created, 200 OK, 400 Bad Request…)
-   return HttpResponse("HTTP/1.1", 200, "Created", "{\"status\":\"success\"}", std::map<std::string, std::string>(), true, true);
+   return HttpResponse("HTTP/1.1", 200, "Created", responseBody, std::map<std::string, std::string>(), true, true);
 }
 
 /**
@@ -327,7 +376,6 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
  * @return  HttpResponse object representing the server's response to the DELETE request
  *
  * @note    need to check CGI first, it has priority over static files
- * @note    follows steps:  determine target resource, read request body, validate, process data, generate response
  *
  * @example request:
    * DELETE /files/file1.txt HTTP/1.1
@@ -347,34 +395,43 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    // first check CGI, below are fake code
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc) 
-      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error: No Location Match</h1>", {}, false, false);
+      return resHandlerErrorResponse(500);
+   if (!isMethodAllowed(lc, "DELETE"))
+      return resHandlerErrorResponse(405);
    CGI cgi(req, *lc); 
    if (cgi.isCGI()) {
-        std::string cgi_output = cgi.execute();
-        if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-            return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 CGI exuc failed</h1>", {}, false, false);
-        return parseCGIOutput(cgi_output);
+         std::string cgi_output = cgi.execute();
+         if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+            return resHandlerErrorResponse(500);
+         return parseCGIOutput(cgi_output);
    }
-   // 2. otherwie, it is a static delete. Maps path: /files/file1.txt → /var/www/html/files/file1.txt
+
+   // otherwie, it is a static delete. Maps path: /files/file1.txt → /var/www/html/files/file1.txt
    std::string fullpath = mapUriToPath(lc, uri);
-   // Validates: Does file exist? Is it allowed to delete this path? (check directory permissions)? Is DELETE method allowed in this location?
+
+   // Validates: 
+   // Does file exist? 
+   // Is it allowed to delete this path? (check directory permissions)?
+   //  Is DELETE method allowed in this location?
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0)
-      return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", std::map<std::string, std::string>(), false, false);
-   if (access(fullpath.c_str(), W_OK) < 0) //to delete it, we need to have the writing right
-      return HttpResponse("HTTP/1.1", 40333, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
+      return resHandlerErrorResponse(404);
    if (!S_ISREG(st.st_mode))
-      return HttpResponse("HTTP/1.1", 40333, "Forbidden", "<h1>403 Forbidden</h1>", std::map<std::string, std::string>(), false, false);
-   // Attempts deletion: - unlink("/var/www/html/files/file1.txt")
-   if (unlink(fullpath.c_str()) < 0)   //sth worng: (io err, permission)
-      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", std::map<std::string, std::string>(), false, false);
+      return resHandlerErrorResponse(403);
+   if (access(fullpath.c_str(), W_OK) < 0)
+      return resHandlerErrorResponse(403);
+
+   // Attempts deletion: - unlink("/var/www/html/files/file1.txt") //sth worng: (io err, permission)
+   if (unlink(fullpath.c_str()) < 0)
+      return resHandlerErrorResponse(500);
+
    // Generates response:
    std::map<std::string, std::string> headers;
    headers["Content-Length"] = "0";  // No response body
+
    // - If success → 204 No Content (most common) - Or 200 OK with optional message
    return HttpResponse("HTTP/1.1", 204, "No content", "", std::map<std::string, std::string>(), true, true);
 }
-
 
 /**
  * @brief  Handles the HTTP request and generates the appropriate response
@@ -398,7 +455,8 @@ HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::
    return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false, false);
 }
 
-//int stat(const char *pathname, struct stat *statbuf); Retrieve information about a file (size, type, permissions, timestamps, etc.) without opening it.
+//  Retrieve information about a file (size, type, permissions, timestamps, etc.) without opening it.
+// int stat(const char *pathname, struct stat *statbuf);
 // return 0 → success, statbuf filled.
 // -1 → error (errno set), e.g., file does not exist.
 // struct stat {

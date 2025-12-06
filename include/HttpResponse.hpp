@@ -75,8 +75,14 @@ public:
     // --------------------
     HttpResponse() {};
     HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders, bool alive, bool complete);
+    
     // --------------------
     //   Serialization
     // --------------------
     std::string buildResponseString();
 };
+
+// --------------------
+//   Default Error Responses
+// --------------------
+HttpResponse resHandlerErrorResponse(int code);

@@ -113,7 +113,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
 	if (parser.getState() == ERROR) {
-		HttpResponse error_res = buildErrorResponse(parser.getErrStatus());
+		HttpResponse error_res = reqParsingErrorResponse(parser.getErrStatus());
 		std::string error_res_string = error_res.buildResponseString();
 		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
 		cleanMaps(clientFd);

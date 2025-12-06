@@ -115,12 +115,12 @@ Day 6 — Response Builder                                                      
 实现：HttpResponse::buildResponseString()
 测试：与 NGINX 对比：curl -v localhost:8080
 
-Day 7 — GET（静态文件）                                                                               ✅                                         
+Day 7 — GET（静态文件）                                                          ✅                                         
 学习：MIME types, 文件权限, index 文件（可选）
 实现：GET handler
 测试：curl -v localhost:8080/test.txt
 
-Day 8 — POST                                                                                 ⏳                                              
+Day 8 — POST                                                                   ⏳                                              
 学习：保存 body, safe path, parent directory traversal attacks（避免 ../）
 实现：POST handler → 写入文件
 测试：curl -X POST -d "x=y" localhost:8080
@@ -138,7 +138,7 @@ Day 10 — 错误处理
 414（URI Too Long）
 500（Internal Server Error）
 实现：
-buildErrorResponse()
+reqParsingErrorResponse()
 
 测试：
 所有非法输入、超长 URL、大 body。

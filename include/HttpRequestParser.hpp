@@ -81,4 +81,4 @@ public:
     int             getErrStatus();
 };
 
-HttpResponse buildErrorResponse(int status);
+HttpResponse reqParsingErrorResponse(int status);
