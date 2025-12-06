@@ -8,7 +8,6 @@
 #include <filesystem>  
 
 #include "HttpResponse.hpp"
-#include "HttpRequest.hpp"
 #include "ConfigBuilder.hpp"
 #include "Cgi.hpp"
 

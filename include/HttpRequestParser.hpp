@@ -5,7 +5,6 @@
 #include <set>
 
 #include "HttpRequest.hpp"  // map, string here
-#include "HttpResponse.hpp"
 
 /**
  * @enum State
@@ -30,13 +29,8 @@ enum State{
  * @class HttpParser
  * @brief Incrementally parses raw HTTP request data using a state machine.
  *
- * This parser accepts raw bytes (often from non-blocking socket reads) and processes them according to HTTP request grammar. 
- * It reconstructs:
- * - the request line (method, URI, version)
- * - headers
- * - optional message body
- *
- * The parser maintains an internal state machine: check state -> get input -> do a thing -> change to next state
+ * @note This parser accepts raw bytes (often from non-blocking socket reads) and processes them according to HTTP request grammar. 
+ * @note The parser maintains an internal state machine: check state -> get input -> do a thing -> change to next state
  *
  * Usage example:
  * @code
@@ -77,8 +71,6 @@ public:
     // --------------------
     //      Getters
     // --------------------
-    int             getState();
-    int             getErrStatus();
+    int             getState() {return _state;}
+    int             getErrStatus() {return _errStatus; }
 };
-
-HttpResponse reqParsingErrorResponse(int status);

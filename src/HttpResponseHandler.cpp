@@ -1,5 +1,4 @@
 #include "HttpResponseHandler.hpp"
-#include "Server.hpp"
 
 /**
  * @brief Trims the empty space \t at the beginning and the end of a string

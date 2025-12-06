@@ -16,53 +16,6 @@ static std::string trim_space(std::string str)
 }
 
 /**
- * @brief Builds an HTTP error response for a given status code.
- *
- * @param status HTTP status code (e.g., 400, 405, 413, 431)
- * @return HttpResponse object representing the error page
- *
- * @note Currently supports 400, 405, 413, 414(addable, not mandatory), 431. Default is 400.
-    @note Example error page format:
- */
-HttpResponse reqParsingErrorResponse(int status)
-{
-    std::string reason;
-    std::string body;
-
-    switch (status)
-    {
-        case 400:
-            reason = "Bad Request";
-            body = "<h1>400 Bad Request aa</h1>";
-            break;
-        case 405:
-            reason = "Method Not Allowed";
-            body = "<h1>405 Method Not Allowed</h1>";
-            break;
-        case 413:
-            reason = "Payload Too Large";
-            body = "<h1>413 Payload Too Large</h1>";
-            break;
-        case 414:
-            reason = "URI Too Long";
-            body = "<h1>414 URI Too Long</h1>";
-            break;
-        case 431:
-            reason = "Request Header Fields Too Large";
-            body = "<h1>431 Request Header Fields Too Large</h1>";
-            break;
-        default:
-            reason = "Bad Request";
-            body = "<h1>400 Bad Request</h1>";
-            break;
-    }
-    std::map<std::string, std::string> headers;
-    headers["Content-Type"] = "text/html";
-    headers["Content-Length"] = std::to_string(body.size());
-    return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
-}
-
-/**
  * @brief validates the startline of a http request
  *
  * @param HttpParser _method within class HttpRequest nested in HttpParser
@@ -185,7 +138,8 @@ bool    HttpParser::validateHeaders()
             return false;
         }
     }
-    // it has to have ont and only one host
+    // it has to have ont and only one host    // headers["Content-Type"] = "text/html";
+    // headers["Content-Length"] = std::to_string(body.size());
     if (!hasHost){
         _errStatus = 400;
         std::cout << "Missing Host header." << std::endl;
@@ -213,9 +167,10 @@ bool HttpParser::validateBody(){
             return false;
         }
         // body string length has to be as long as the sontent-Length says
+         //here, i can not have this check because the body might be not fully received yet
         // if (_req.getBody().size() < _bodyLength){
         //     _errStatus = 400;
-        //     std::cout << "POST request body length mismatch." << std::endl; //here
+        //     std::cout << "POST request body length mismatch." << std::endl;
         //     return false;
         // }
         // body lenth can not be too long: in theory it should not happen
@@ -273,11 +228,7 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     if (dd == std::string::npos)
         return;
     std::string key = headerline.substr(0, dd);
-    std::string value = headerline.substr(dd + 1);        // if (_req.getBody().size() < _bodyLength){
-        //     _errStatus = 400;
-        //     std::cout << "POST request body length mismatch." << std::endl; //here
-        //     return false;
-        // }
+    std::string value = headerline.substr(dd + 1);        
     key = trim_space(key);
     value = trim_space(value);
     _req.addHeader(key, value); 
@@ -353,12 +304,4 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
     if (_state != DONE || _state == ERROR)
         return HttpRequest();
     return _req;
-}
-
-int HttpParser::getState(){
-    return _state;
-}
-
-int HttpParser::getErrStatus(){
-    return _errStatus;
 }

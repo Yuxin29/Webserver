@@ -4,8 +4,8 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include "ConfigBuilder.hpp"
 
+#include "ConfigBuilder.hpp"
 #include "HttpRequestParser.hpp"
 #include "HttpResponseHandler.hpp"
 

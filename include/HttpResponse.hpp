@@ -83,6 +83,11 @@ public:
 };
 
 // --------------------
-//   Default Error Responses
+// error response helper during requesting parsing
+// --------------------
+HttpResponse reqParsingErrorResponse(int status);
+
+// --------------------
+//  error response helper during requesting handling
 // --------------------
 HttpResponse resHandlerErrorResponse(int code);
