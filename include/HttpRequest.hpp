@@ -24,11 +24,11 @@
  */
 class HttpRequest{
 private:
-    std::string                         _method;            ///< HTTP method (GET, POST, DELETE)
-    std::string                         _requestPath;       ///< URI path extracted from the request line
-    std::string                         _version;           ///< HTTP version string (e.g., "HTTP/1.1")
-    std::map<std::string, std::string>  _requestHeaders;    ///< Key-value map of request headers
-    std::string                         _body;              ///< Optional message body (POST, some PUT, etc.)
+    std::string                             _method;                ///< HTTP method (GET, POST, DELETE)
+    std::string                             _requestPath;           ///< URI path extracted from the request line
+    std::string                             _version;               ///< HTTP version string (e.g., "HTTP/1.1")
+    std::map<std::string, std::string>      _requestHeaders;        ///< Key-value map of request headers
+    std::string                              _body;                  ///< Optional message body (POST, some PUT, etc.)
 public:
     // --------------------
     //        Getters
@@ -42,10 +42,10 @@ public:
     // --------------------
     //        Setters
     // --------------------
-    void setMethod(const std::string &m)                        { _method = m; }
-    void setPath(const std::string &m)                          { _requestPath = m; }
-    void setVersion(const std::string &m)                       { _version = m; }
-    void addHeader(const std::string& k, const std::string& v)  { _requestHeaders[k] = v; }
-    void setBody(const std::string &m)                          { _body = m; }
+    void    setMethod(const std::string &m)                         { _method = m; }
+    void    setPath(const std::string &m)                           { _requestPath = m; }
+    void    setVersion(const std::string &m)                        { _version = m; }
+    void    addHeader(const std::string& k, const std::string& v)   { _requestHeaders[k] = v; }
+    void    setBody(const std::string &m)                           { _body = m; }
 };
 

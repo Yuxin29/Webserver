@@ -39,14 +39,14 @@
  */
 class HttpResponse{
 private:
-    std::string                         _version;                       ///< HTTP version string (e.g., "HTTP/1.1")
-    int                                 _status;                        ///< HTTP status code (e.g., 200, 404, 500)
-    std::string                         _reason;                        ///< Reason phrase corresponding to the status code (e.g., "OK", "Not Found")
-    std::string                         _body;                          ///< Message body of the response
-    std::map<std::string, std::string>  _responseHeaders;               ///< Key-value map of response headers
+    std::string                             _version;                       ///< HTTP version string (e.g., "HTTP/1.1")
+    int                                     _status;                        ///< HTTP status code (e.g., 200, 404, 500)
+    std::string                             _reason;                        ///< Reason phrase corresponding to the status code (e.g., "OK", "Not Found")
+    std::string                             _body;                          ///< Message body of the response
+    std::map<std::string, std::string>      _responseHeaders;               ///< Key-value map of response headers
 
-    bool                                _keepConnectionAlive = true;    ///< Whether to keep the connection alive (HTTP/1.1 default, HTTP1.1 keeps connection alive unless there is an error OR client requests comes with a Connection:close)
-    bool                                _requestComplete;               ///< Whether the request has been completely processed
+    bool                                    _keepConnectionAlive = true;    ///< Whether to keep the connection alive (HTTP/1.1 default, HTTP1.1 keeps connection alive unless there is an error OR client requests comes with a Connection:close)
+    bool                                    _requestComplete;               ///< Whether the request has been completely processed
 public:
     // --------------------
     //        Getters

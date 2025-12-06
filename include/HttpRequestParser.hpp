@@ -43,34 +43,34 @@ enum State{
  */
 class HttpParser{
 private:
-    HttpRequest                         _req;                   ///< The HttpRequest object being constructed   
-    int                                 _errStatus = 0;         ///< HTTP error status code if parsing fails
-    State                               _state = START_LINE;    ///< Current state of the parser
+    HttpRequest             _req;                   ///< The HttpRequest object being constructed   
+    int                     _errStatus = 0;         ///< HTTP error status code if parsing fails
+    State                   _state = START_LINE;    ///< Current state of the parser
 
-    std::string                         _buffer;                ///< The resulting parsed HttpRequest object
-    size_t                              _bodyLength;            ///< Expected length of the message body (from Content-Length header)
+    std::string             _buffer;                ///< The resulting parsed HttpRequest object
+    size_t                  _bodyLength;            ///< Expected length of the message body (from Content-Length header)
 
     // --------------------
     //  Internal Validation Methods
     // --------------------
-    bool validateStartLine();
-    bool validateHeaders();
-    bool validateBody();
+    bool                     validateStartLine();
+    bool                     validateHeaders();
+    bool                     validateBody();
     // --------------------
     //  Internal Parsing Methods
     // --------------------
-    void parseStartLine(const std::string& startline);
-    void parseHeaderLine(const std::string& headerline);
-    void parseBody(size_t pos);
+    void                    parseStartLine(const std::string& startline);
+    void                    parseHeaderLine(const std::string& headerline);
+    void                    parseBody(size_t pos);
 
 public:
     // --------------------
     // Public Parsing Methods
     // --------------------
-    HttpRequest     parseHttpRequest(const std::string& rawLine);
+    HttpRequest             parseHttpRequest(const std::string& rawLine);
     // --------------------
     //      Getters
     // --------------------
-    int             getState() {return _state;}
-    int             getErrStatus() {return _errStatus; }
+    int                     getState() {return _state;}
+    int                     getErrStatus() {return _errStatus; }
 };
