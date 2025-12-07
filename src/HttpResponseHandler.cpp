@@ -1,4 +1,5 @@
 #include "HttpResponseHandler.hpp"
+#include <iostream>  //debug
 
 /**
  * @brief Trims the empty space \t at the beginning and the end of a string
@@ -174,28 +175,19 @@ const config::LocationConfig* HttpResponseHandler::findLocationConfig (const con
  * @note    used to translate request URIs into actual file paths on the server
  */
 std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
-{
-   if (!loc)
-     return "";
+{    
+   std::string root = loc->root;     // e.g. "./sites/static"
 
-   std::string uri = uri_raw;
-   size_t qpos = uri.find('?');
-   if (qpos != std::string::npos)
-      uri = uri.substr(0, qpos); 
-   // remove prefix from URI
-   std::string relative = uri.substr(loc->path.length());
-   // Case 1: request points to a directory
-   if (relative.empty() || relative == "/")
-   {
-      // index list is not empty → use first index
-      if (!loc->index.empty())
-         return loc->root + "/" + loc->index[0];
+    // Ensure root ends with "/"
+    if (!root.empty() && root[root.size() - 1] != '/')
+        root += "/";
 
-      // no index defined → return directory itself
-      return loc->root;
-   }
-   // Case 2: regular file
-   return loc->root + relative;
+    // Ensure uri does NOT start with "/" (avoid double slash)
+    std::string cleanUri = uri_raw;
+    if (!cleanUri.empty() && cleanUri[0] == '/')
+        cleanUri = cleanUri.substr(1);
+
+    return root + cleanUri;
 }
 
 /**
@@ -227,8 +219,10 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
    // First check if it is cgi
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
-   if (!lc)
+   if (!lc){
+      //std::cout << "debug 1" << uri << std::endl;
       return resHandlerErrorResponse(404);
+   }
    if (!isMethodAllowed(lc, "GET"))
       return resHandlerErrorResponse(405);
    CGI cgi(req, *lc);
@@ -245,7 +239,10 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    // Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0)
+   {
+      //std::cout << "debug 2" << uri << std::endl;
       return resHandlerErrorResponse(404);
+   }
    if (access(fullpath.c_str(), R_OK) < 0)
       return resHandlerErrorResponse(403);
    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
@@ -260,6 +257,12 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    //    else 
    //       return resHandlerErrorResponse(403);
    // }
+   // this is a temp one, yuxin need to write the above one later
+   if (S_ISDIR(st.st_mode)) {
+      std::cout << "Directory detected: " << fullpath << std::endl;
+      std::cout << "here it goes wrong" << std::endl;
+      return resHandlerErrorResponse(403);
+   }
 
    // Determined MIME type (text/plain for .txt or plain text).
    std::string mime_type = getMimeType(fullpath);
@@ -320,7 +323,10 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // Example: /var/www/html/submit-data (or routed to CGI)
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc)
+   {
+      //std::cout << "debug 3" << uri << std::endl;
       return resHandlerErrorResponse(404);
+   }
    if (!isMethodAllowed(lc, "POST"))
       return resHandlerErrorResponse(405);
    CGI cgi(req, *lc); 
@@ -397,8 +403,10 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    
    // first check CGI, below are fake code
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
-   if (!lc) 
+   if (!lc) {
+      //std::cout << "debug 4" << uri << std::endl;
       return resHandlerErrorResponse(404);
+   }
    if (!isMethodAllowed(lc, "DELETE"))
       return resHandlerErrorResponse(405);
    CGI cgi(req, *lc); 
@@ -417,8 +425,10 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    // Is it allowed to delete this path? (check directory permissions)?
    //  Is DELETE method allowed in this location?
    struct stat st;
-   if (stat(fullpath.c_str(), &st) < 0)
+   if (stat(fullpath.c_str(), &st) < 0){
+      //std::cout << "debug 5" << uri << std::endl;
       return resHandlerErrorResponse(404);
+   }
    if (!S_ISREG(st.st_mode))
       return resHandlerErrorResponse(403);
    if (access(fullpath.c_str(), W_OK) < 0)
