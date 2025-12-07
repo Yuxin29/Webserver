@@ -40,9 +40,9 @@ static std::string getMimeType(const std::string& path) {
       {".gif","image/gif"},
       {".txt","text/plain"}
    };
-   auto ext = fs::path(path).extension().string();  // get file extension
-   auto it = mimeMap.find(ext);                     // lookup in map
-   return it != mimeMap.end() ? it->second : "application/octet-stream"; // default MIME
+   auto ext = fs::path(path).extension().string();                         // get file extension
+   auto it = mimeMap.find(ext);                                            // lookup in map
+   return it != mimeMap.end() ? it->second : "application/octet-stream";   // default MIME
 }
 
 /**
@@ -153,8 +153,8 @@ const config::LocationConfig* HttpResponseHandler::findLocationConfig (const con
 
    for (size_t i = 0; i < vh->locations.size(); i++) {
       const config::LocationConfig& loc = vh->locations[i];
-      if (uri.rfind(loc.path, 0) == 0)  // rfind == 0 → prefix match
-      {
+      // rfind == 0 → prefix match
+      if (uri.rfind(loc.path, 0) == 0){
          if (loc.path.length() > bestLen) {
             best = &loc;
             bestLen = loc.path.length();
@@ -250,13 +250,13 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       return resHandlerErrorResponse(403);
    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
       return resHandlerErrorResponse(403);
-   // need to add
+   // yuxin need to add check for directory and AutoIndex
    // if (S_ISDIR(st.st_mode))
    // {
-   //    if (lc->isAutoIndexEnabled()) 
-   //       return generateAutoIndex(fullpath);
+   //    if (lc.autoindex is on ) 
+   //       ...
    //    else if (hasIndexFile(fullpath, lc)) 
-   //       fullpath = getIndexPath(fullpath, lc);
+   //       ...
    //    else 
    //       return resHandlerErrorResponse(403);
    // }
@@ -273,6 +273,8 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       return resHandlerErrorResponse(500);
    ifs.seekg(0, std::ios::end);
    std::streamsize size = ifs.tellg();
+   if (size < 0)
+      return resHandlerErrorResponse(500);
    ifs.seekg(0, std::ios::beg);
    std::string body(size, '\0');
    ifs.read(&body[0], size);
@@ -284,8 +286,8 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    headers["Content-Length"] = std::to_string(body.size());
    headers["Server"] = "MiniWebserv/1.0";
    headers["Last-Modified"] = formatTime(st.st_mtime);
+   headers["Date"] = formatTime(time(NULL));
 
-   // Build HttpResponse object with status 200 OK and the file content as body
    return HttpResponse("HTTP/1.1", 200, "OK", body, headers, true, true);
 }
 
@@ -330,8 +332,10 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    }
 
    //  If not CGI, assume static file upload handler:
-   std::string uploadDir = "./uploads"; // need to change, it should be from config instead of hardcoded
-   // std::string uploadDir = lc->getUploadDirectory();
+   // yuxin need to check, should the upload_dir be in root?
+   std::string uploadDir = lc->root;
+   if (uploadDir.empty())
+       return resHandlerErrorResponse(500); 
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string savepath = uploadDir + "/" + filename;
 
@@ -362,9 +366,9 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    std::map<std::string, std::string> headers;
    std::string responseBody = "{\"status\":\"success\"}";
    headers["Content-Length"] = std::to_string(responseBody.size());
+   headers["Content-Type"] = "application/json";
 
-   // - Set status code (201 Created, 200 OK, 400 Bad Request…)
-   return HttpResponse("HTTP/1.1", 200, "Created", responseBody, std::map<std::string, std::string>(), true, true);
+   return HttpResponse("HTTP/1.1", 201, "Created", responseBody, std::map<std::string, std::string>(), true, true);
 }
 
 /**
@@ -394,7 +398,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    // first check CGI, below are fake code
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc) 
-      return resHandlerErrorResponse(500);
+      return resHandlerErrorResponse(404);
    if (!isMethodAllowed(lc, "DELETE"))
       return resHandlerErrorResponse(405);
    CGI cgi(req, *lc); 
@@ -429,7 +433,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    headers["Content-Length"] = "0";  // No response body
 
    // - If success → 204 No Content (most common) - Or 200 OK with optional message
-   return HttpResponse("HTTP/1.1", 204, "No content", "", std::map<std::string, std::string>(), true, true);
+   return HttpResponse("HTTP/1.1", 204, "No Content", "", std::map<std::string, std::string>(), true, true);
 }
 
 /**
