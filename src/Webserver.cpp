@@ -1,4 +1,6 @@
 #include "Webserver.hpp"
+#include <fstream>
+#include <sstream>
 
 using namespace config;
 using namespace utils;
@@ -217,11 +219,23 @@ bool Webserver::hasError(const epoll_event& event) const{
 }
 
 void Webserver::sendTimeoutResponse(int clientFd){
-	const char* timeoutResponse = 
-		"HTTP/1.1 408 Request Timeout \r\n"
-		"Content-Length: 29\r\n"
-		"Connection: close\r\n"
-		"\r\n"
-		"<h1>408 Request Timeout</h1>";
-	send(clientFd, timeoutResponse, strlen(timeoutResponse), 0);
+	std::string body;
+	std::ifstream file("sites/static/errors/408.html");
+	
+	if (file.is_open()){
+		std::stringstream buffer;
+		buffer << file.rdbuf();
+		body = buffer.str();
+		file.close();
+	} else {
+		body = "<h1>408 Request Timeout</h1>";
+	}
+	std::string response = "HTTP/1.1 408 Request Timeout\r\n";
+	response += "Content-Length: " + std::to_string(body.size()) + "\r\n";
+	response += "Content-Type: text/html\r\n";
+	response += "Connection: close\r\n";
+	response += "\r\n";
+	response += body;
+	
+	send(clientFd, response.c_str(), response.size(), 0);
 }

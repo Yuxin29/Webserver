@@ -1,0 +1,18 @@
+{
+  "server": {
+    "name": "42 Webserver",
+    "version": "1.0.0",
+    "protocol": "HTTP/1.1",
+    "features": [
+      "Keep-alive connections",
+      "Virtual hosts",
+      "CGI support",
+      "File uploads",
+      "Custom error pages",
+      "Directory listing"
+    ]
+  },
+  "status": "running",
+  "ports": [8080, 8081],
+  "uptime": "5 days, 3 hours, 42 minutes"
+}
