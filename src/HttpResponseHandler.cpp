@@ -212,7 +212,7 @@ std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc,
  * Content-Length: 13
  *
  * Hello, world!
- */
+ */w
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh){
    // get the request URI: uniform Resource Identifier, _path in the request
    std::string uri = req.getPath();
