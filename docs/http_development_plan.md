@@ -72,6 +72,7 @@ Below is the full ASCII architecture diagram of how the server handles a request
 Doxygen note:  
 ASCII diagrams must be placed inside triple backticks to render properly.
 
+```
              ┌────────────────────┐
              │     Client         │
              └─────────┬──────────┘
@@ -115,206 +116,149 @@ ASCII diagrams must be placed inside triple backticks to render properly.
          ┌────────────────────────────────────┐
          │    A: Sends response to client     │
          └────────────────────────────────────┘
+```
 
-
-======================================================
- If I want to finish my HTTP project in 3 weeks
+# If I want to finish my HTTP project in 3 weeks
     Legend: ✅ = done, ❌ = missing, ⏳ = in progress, ⚠️ = caution
-======================================================
 
-# Week 1 — HTTP Parser + Request Handling
+## Week 1 — HTTP Parser + Request Handling
 **Goal:** Parse a complete HTTP request (start-line, headers, body)  
 
-## Day 1 — Architecture Setup + HTTP Basics  ✅
+### Day 1 — Architecture Setup + HTTP Basics  ✅
 Learning:
 - HTTP/1.1 structure
 - Request-Line, Headers, CRLF rules
 - Body handling (Content-Length)
-
 Implement:
 - `HttpRequest` and `HttpParser` class skeletons
 
----
-
-## Day 2 — `parseRequestLine()`  ✅
+### Day 2 — `parseRequestLine()`  ✅
 Learning:
 - Methods: GET, POST, DELETE  
 - URL format  
 - HTTP version validation  
-
 Implement:
 - `parseRequestLine()`
-
 Note: Person A will forward raw received data to you.
 
----
-
-## Day 3 — `parseHeaders()`  ✅
+### Day 3 — `parseHeaders()`  ✅
 Learning:
 - `key: value` rules  
 - Case-insensitive header names  
 - Header merging  
 - `Host` header required (HTTP/1.1)
-
 Implement:
 - `parseHeaders()`
-
 Test:
 - Duplicate headers  
 - Missing CRLF cases
 
----
-
-## Day 4 — `parseBody()` (Content-Length)  ✅
+### Day 4 — `parseBody()` (Content-Length)  ✅
 Learning:
 - Content-Length processing  
 - Body size limits (prevent 413 Payload Too Large)
-
 Implement:
 - `parseBody()`
 
----
-
-## Day 5 — State Machine (required for non-blocking I/O)  ✅
+### Day 5 — State Machine (required for non-blocking I/O)  ✅
 Learning:
 - Parser states: `START_LINE`, `HEADERS`, `BODY`, `DONE`
-
 Implement:
 - `HttpParser::consume(buffer)`  
   → must support partial input (slowloris defense)
-
 Test:
 - Fragmented TCP packets  
 - Byte-by-byte input simulating slow attacks
 
----
-
-# Week 2 — HTTP Response + Method Handling
+## Week 2 — HTTP Response + Method Handling
 **Goal:** Generate proper HTTP/1.1 responses
 
----
-
-## Day 6 — Response Builder  ✅
+### Day 6 — Response Builder  ✅
 Learning:
 - Status line  
 - Headers  
 - Content-Length  
 - Connection header
-
 Implement:
 - `HttpResponse::buildResponseString()`
-
 Test:
 - Compare output with NGINX:
 
----
-
-## Day 7 — GET (Static File)  ✅
+### Day 7 — GET (Static File)  ✅
 Learning:
 - MIME types  
 - File permissions  
 - Optional: index file support
-
 Implement:
 - GET handler
 
-Test:
-
----
-
-## Day 8 — POST  ⏳
+### Day 8 — POST  ⏳
 Learning:
 - Saving request body  
 - Safe path handling  
 - Prevent directory traversal (`../`)
-
 Implement:
 - POST handler → write body to file
 
-Test:
-
----
-
-## Day 9 — DELETE  ⏳
+### Day 9 — DELETE  ⏳
 Learning:
 - Permission checks  
 - Non-existent file → 404  
 - Directory → 403 (match NGINX behavior)
-
 Implement:
 - DELETE handler
 
----
-
-## Day 10 — Error Handling  ✅
+### Day 10 — Error Handling  ✅
 Learning:
 - 400 Bad Request  
 - 404 Not Found  
 - 413 Payload Too Large  
 - 414 URI Too Long  
 - 500 Internal Server Error  
-
 Implement:
 - `reqParsingErrorResponse()`
-
 Test:
 - All invalid inputs  
 - Oversized URL  
 - Large body input
 
----
+## Week 3 — HTTP Behavior, Browser Compatibility, Stress Tests
 
-# Week 3 — HTTP Behavior, Browser Compatibility, Stress Tests
-
----
-
-## Day 11 — Keep-Alive Behavior  ✅
+### Day 11 — Keep-Alive Behavior  ✅
 Learning:
 - `Connection: keep-alive`  
 - `Connection: close`  
 - HTTP/1.1 default: keep-alive  
 - HTTP/1.0 default: close  
-
 Implement:
 - `shouldCloseConnection()` (decide connection persistence)
-
 Test:
 - `curl -v localhost:8080`
 - Chrome keep-alive validation
 
----
-
-## Day 12 — Matching NGINX Behavior  ✅
+### Day 12 — Matching NGINX Behavior  ✅
 Learning:
 - Handling extra spaces  
 - Duplicate headers  
 - Missing Host → 400  
 - Accept: */* compatibility  
-
 Implement:
 - Parser tolerance improvements
 
----
-
-## Day 13 — Chunked Encoding (Optional)  ✅
+### Day 13 — Chunked Encoding (Optional)  ✅
 Implement:
 - Chunked request parsing OR chunked responses
 
----
-
-## Day 14 — Stress Testing
+### Day 14 — Stress Testing
 
 Test:
 - No memory leaks (parser)  
 - No double free  
 - No keep-alive infinite loops  
 
----
-
-## Day 15 — Final Cleanup
+### Day 15 — Final Cleanup
 - Code cleanup  
 - Documentation  
 - Remove debug prints  
 - RFC validation  
 - Real browser testing  
-*/
