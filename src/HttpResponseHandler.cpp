@@ -1,6 +1,94 @@
 #include "HttpResponseHandler.hpp"
 #include <iostream>  //debug
 
+// --------------------
+// static utility functions
+// --------------------
+namespace {
+namespace fs = std::filesystem; // Alias for filesystem
+
+/**
+ * @brief Checks if the HTTP method is allowed in the given LocationConfig
+ *
+ * @param  loc pointer to the LocationConfig
+ * @param  method the HTTP method to check (e.g., "GET", "POST")
+ * @return bool true if the method is allowed, false otherwise
+ *
+ * @note used to validate if a request method is permitted for a specific location
+ */
+bool isMethodAllowed(const config::LocationConfig* loc, const std::string& method){
+    if (!loc)
+        return false;
+    for (std::vector<std::string>::const_iterator it = loc->methods.begin(); it != loc->methods.end(); ++it){
+        if (*it == method)
+            return true;
+    }
+    return false;
+}
+
+/**
+ * @brief Determines if connection should be kept alive based on request headers and HTTP version
+ *
+ * @param req the HttpRequest object
+ * @return bool true if connection should stay alive, false if it should close
+ *
+ * @note HTTP/1.1 defaults to keep-alive unless client sends "Connection: close"
+ *       HTTP/1.0 defaults to close unless client sends "Connection: keep-alive"
+ */
+bool shouldKeepAlive(const HttpRequest& req){
+    std::string version = req.getVersion();
+    const std::map<std::string, std::string>& headers = req.getHeaders();
+    
+    // Check if Connection header exists
+    auto it = headers.find("Connection");
+    if (it != headers.end()) {
+        std::string connValue = it->second;
+        // Convert to lowercase for case-insensitive comparison
+        std::transform(connValue.begin(), connValue.end(), connValue.begin(), ::tolower);
+        
+        if (connValue.find("close") != std::string::npos)
+            return false;
+        if (connValue.find("keep-alive") != std::string::npos)
+            return true;
+    }
+    
+    // Default behavior based on HTTP version
+    // HTTP/1.1 defaults to keep-alive, HTTP/1.0 defaults to close
+    return (version == "HTTP/1.1");
+}
+
+/**
+ * @brief Finds the best/longest matching LocationConfig for a given URI
+ *
+ * @param vh pointer to the ServerConfig (virtual host)
+ * @param uri_raw the request URI
+ * @return  const pointer to the best matching LocationConfig, or NULL if none found
+ *
+ * @note  used to map request URIs to server location blocks based on longest prefix match
+ */
+const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh, const std::string& uri_raw)
+{
+   std::string uri = uri_raw;
+   size_t qpos = uri.find('?');
+   if (qpos != std::string::npos)
+      uri = uri.substr(0, qpos);
+   
+   const config::LocationConfig* best = nullptr;
+   size_t bestLen = 0;
+
+   for (size_t i = 0; i < vh->locations.size(); i++) {
+      const config::LocationConfig& loc = vh->locations[i];
+      // rfind == 0 → prefix match
+      if (uri.rfind(loc.path, 0) == 0){
+         if (loc.path.length() > bestLen) {
+            best = &loc;
+            bestLen = loc.path.length();
+         }
+      }
+   }
+   return best;
+}
+
 /**
  * @brief Trims the empty space \t at the beginning and the end of a string
  *
@@ -9,14 +97,12 @@
  *
  * @note Currently supports 400, 405, 413, 431. Default is 400.
  */
-static std::string trim_space(std::string str)
+std::string trim_space(std::string str)
 {
     size_t start = str.find_first_not_of(" \t");
     size_t end = str.find_last_not_of(" \t");
     return str.substr(start, end - start + 1);
 }
-
-namespace fs = std::filesystem; // Alias for filesystem
 
 /**
  * @brief  Gets the MIME type based on the file extension
@@ -27,7 +113,7 @@ namespace fs = std::filesystem; // Alias for filesystem
  * @note MIME type: Multipurpose Internet Mail Extension type:
          format: type / subtype: example text/html
  */
-static std::string getMimeType(const std::string& path) {
+std::string getMimeType(const std::string& path) {
    static const std::map<std::string, std::string> mimeMap = 
    {
       {".html","text/html"},
@@ -53,62 +139,62 @@ static std::string getMimeType(const std::string& path) {
  *
  * @note Example format: "Wed, 21 Oct 2015 07:28:00 GMT", used for Last-Modified header
  */
-static std::string formatTime(std::time_t t) {
+std::string formatTime(std::time_t t) {
     std::ostringstream ss;
     ss << std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT");
     return ss.str();
 }
 
 /**
- * @brief Checks if the HTTP method is allowed in the given LocationConfig
+ * @brief   Maps a request URI to a filesystem path based on the LocationConfig
  *
- * @param  loc pointer to the LocationConfig
- * @param  method the HTTP method to check (e.g., "GET", "POST")
- * @return bool true if the method is allowed, false otherwise
+ * @param   loc pointer to the LocationConfig
+ * @param   uri_raw the request URI
+ * @return  string the corresponding filesystem path
  *
- * @note used to validate if a request method is permitted for a specific location
+ * @note    used to translate request URIs into actual file paths on the server
  */
-static bool isMethodAllowed(const config::LocationConfig* loc, const std::string& method){
-    if (!loc)
-        return false;
-    for (std::vector<std::string>::const_iterator it = loc->methods.begin(); it != loc->methods.end(); ++it){
-        if (*it == method)
-            return true;
-    }
-    return false;
+std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
+{    
+   std::string root = loc->root;     // e.g. "./sites/static"
+
+    // Ensure root ends with "/"
+    if (!root.empty() && root[root.size() - 1] != '/')
+        root += "/";
+
+    // Ensure uri does NOT start with "/" (avoid double slash)
+    std::string cleanUri = uri_raw;
+    if (!cleanUri.empty() && cleanUri[0] == '/')
+        cleanUri = cleanUri.substr(1);
+
+    return root + cleanUri;
 }
 
 /**
- * @brief Determines if connection should be kept alive based on request headers and HTTP version
+ * @brief   Gets the first existing index file from the directory based on LocationConfig
  *
- * @param req the HttpRequest object
- * @return bool true if connection should stay alive, false if it should close
+ * @param   dirPath the directory path
+ * @param   lc pointer to the LocationConfig
+ * @return  string the first found index file name, or empty string if none found
  *
- * @note HTTP/1.1 defaults to keep-alive unless client sends "Connection: close"
- *       HTTP/1.0 defaults to close unless client sends "Connection: keep-alive"
+ * @note    used to implement index file lookup when serving directories
  */
-static bool shouldKeepAlive(const HttpRequest& req){
-    std::string version = req.getVersion();
-    const std::map<std::string, std::string>& headers = req.getHeaders();
-    
-    // Check if Connection header exists
-    auto it = headers.find("Connection");
-    if (it != headers.end()) {
-        std::string connValue = it->second;
-        // Convert to lowercase for case-insensitive comparison
-        std::transform(connValue.begin(), connValue.end(), connValue.begin(), ::tolower);
-        
-        if (connValue.find("close") != std::string::npos)
-            return false;
-        if (connValue.find("keep-alive") != std::string::npos)
-            return true;
+std::string getIndexFile(const std::string& dirPath, const config::LocationConfig* lc)
+{
+    struct stat st;
+    for (size_t i = 0; i < lc->index.size(); ++i)
+    {
+        std::string candidate = dirPath + "/" + lc->index[i];
+        if (stat(candidate.c_str(), &st) == 0 && S_ISREG(st.st_mode))
+            return lc->index[i]; // return filename only
     }
-    
-    // Default behavior based on HTTP version
-    // HTTP/1.1 defaults to keep-alive, HTTP/1.0 defaults to close
-    return (version == "HTTP/1.1");
+    return ""; // no index file found
+}
 }
 
+// --------------------
+// Internal Utility Methods
+// --------------------
 /**
  * @brief parse the output from CGI execution into an HttpResponse object
  *
@@ -117,6 +203,9 @@ static bool shouldKeepAlive(const HttpRequest& req){
  * @return HttpResponse object representing the CGI response
  *
  * @note used when CGI script is executed and its output needs to be converted into an HTTP response
+ * @note CGI :common gateway Interface
+ * @note CGI path is the filesystem path to the cgi executable program:
+ *
  * @example
  * Status: 200 OK\r\n
  * Content-Type: text/html\r\n
@@ -165,64 +254,48 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
       return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, shouldKeepAlive(req), true);
 }
 
+
 /**
- * @brief Finds the best/longest matching LocationConfig for a given URI
+ * @brief   Generates an HTML directory listing for autoindex
  *
- * @param vh pointer to the ServerConfig (virtual host)
- * @param uri_raw the request URI
- * @return  const pointer to the best matching LocationConfig, or NULL if none found
+ * @param   dirPath the directory path
+ * @param   req the HttpRequest object (used for path in links)
+ * @return  HttpResponse object containing the autoindex HTML page
  *
- * @note  used to map request URIs to server location blocks based on longest prefix match
+ * @note    used to provide directory listings when autoindex is enabled
  */
-const config::LocationConfig* HttpResponseHandler::findLocationConfig (const config::ServerConfig* vh, const std::string& uri_raw)
+HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, HttpRequest& req)
 {
-   std::string uri = uri_raw;
-   size_t qpos = uri.find('?');
-   if (qpos != std::string::npos)
-      uri = uri.substr(0, qpos);
-   
-   const config::LocationConfig* best = NULL;
-   size_t bestLen = 0;
+    namespace fs = std::filesystem;
+    std::string body = "<html><head><title>Index of " + req.getPath() + "</title></head><body>";
+    body += "<h1>Index of " + req.getPath() + "</h1><ul>";
 
-   for (size_t i = 0; i < vh->locations.size(); i++) {
-      const config::LocationConfig& loc = vh->locations[i];
-      // rfind == 0 → prefix match
-      if (uri.rfind(loc.path, 0) == 0){
-         if (loc.path.length() > bestLen) {
-            best = &loc;
-            bestLen = loc.path.length();
-         }
-      }
-   }
-   return best;
+    for (const auto& entry : fs::directory_iterator(dirPath))
+    {
+        std::string name = entry.path().filename().string();
+        body += "<li><a href=\"" + req.getPath();
+        if (req.getPath().back() != '/')
+            body += "/";
+        body += name + "\">" + name + "</a></li>";
+    }
+
+    body += "</ul></body></html>";
+
+    std::map<std::string, std::string> headers;
+    headers["Content-Type"] = "text/html";
+    headers["Content-Length"] = std::to_string(body.size());
+    headers["Server"] = "MiniWebserv/1.0";
+    headers["Date"] = formatTime(time(NULL));
+
+    return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
 }
 
+// --------------------
+//  InternalHandlers for different HTTP methods
+// --------------------
 /**
- * @brief   Maps a request URI to a filesystem path based on the LocationConfig
- *
- * @param   loc pointer to the LocationConfig
- * @param   uri_raw the request URI
- * @return  string the corresponding filesystem path
- *
- * @note    used to translate request URIs into actual file paths on the server
- */
-std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
-{    
-   std::string root = loc->root;     // e.g. "./sites/static"
+ * @brief parse the output from CGI execution into an HttpResponse object
 
-    // Ensure root ends with "/"
-    if (!root.empty() && root[root.size() - 1] != '/')
-        root += "/";
-
-    // Ensure uri does NOT start with "/" (avoid double slash)
-    std::string cleanUri = uri_raw;
-    if (!cleanUri.empty() && cleanUri[0] == '/')
-        cleanUri = cleanUri.substr(1);
-
-    return root + cleanUri;
-}
-
-/**
  * @brief   Handles an HTTP GET request and generates the appropriate HttpResponse
  *
  * @param   req the HttpRequest object representing the client's GET request
@@ -244,7 +317,7 @@ std::string HttpResponseHandler::mapUriToPath(const config::LocationConfig* loc,
  * Content-Length: 13
  *
  * Hello, world!
- */w
+ */
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh){
    // get the request URI: uniform Resource Identifier, _path in the request
    std::string uri = req.getPath();
@@ -279,21 +352,23 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       return resHandlerErrorResponse(403);
    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
       return resHandlerErrorResponse(403);
-   // yuxin need to add check for directory and AutoIndex
-   // if (S_ISDIR(st.st_mode))
-   // {
-   //    if (lc.autoindex is on ) 
-   //       ...
-   //    else if (hasIndexFile(fullpath, lc)) 
-   //       ...
-   //    else 
-   //       return resHandlerErrorResponse(403);
-   // }
-   // this is a temp one, yuxin need to write the above one later
    if (S_ISDIR(st.st_mode)) {
-      std::cout << "Directory detected: " << fullpath << std::endl;
-      std::cout << "here it goes wrong" << std::endl;
-      return resHandlerErrorResponse(403);
+      // autoindex enabled → return HTML directory listing
+      if (lc->autoindex) {
+         return generateAutoIndex(fullpath, req);
+      }
+      // try index files
+      std::string index_file = getIndexFile(fullpath, lc);
+      if (!index_file.empty()) {
+         fullpath += "/" + index_file;
+         if (stat(fullpath.c_str(), &st) < 0 || !S_ISREG(st.st_mode))
+            return resHandlerErrorResponse(404);
+      }
+      else
+      {
+         std::cout << "is it here?" << std::endl;
+         return resHandlerErrorResponse(403);
+      }
    }
 
    // Determined MIME type (text/plain for .txt or plain text).
@@ -478,6 +553,9 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    return HttpResponse("HTTP/1.1", 204, "No Content", "", std::map<std::string, std::string>(), shouldKeepAlive(req), true);
 }
 
+// --------------------
+//   Public Handler Methods
+// --------------------
 /**
  * @brief  Handles the HTTP request and generates the appropriate response
  *
@@ -499,43 +577,3 @@ HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::
    // not supposed to reach here, already filtered in parser validation
    return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false, false);
 }
-
-// ====================================================== HTTP/1.1 Keep-Alive ======================================================
-// 1. HTTP/1.1 Keep-Alive
-
-// By default, HTTP/1.1 connections are persistent (keep-alive), unless the server sends Connection: close in its response. 
-// This means the TCP connection can be reused for multiple requests.
-
-
-// ====================================================== CGI path ======================================================
-// CGI path is the filesystem path to the cgi executable program:
-// CGI: common gateway Interface
-
-// ====================================================== Edge case for Http request ======================================================
-// GET  HTTP/1.1
-// Host: localhost:8080
-// User-Agent: curl/8.3.0
-// Accept: */*
-
-// here the request path is empty:
-// - Nginx and Apache tolerate this: they treat an empty request-target as / (the root).
-// - Some stricter HTTP parsers will return 400 Bad Request because the request-target is required by the spec (RFC 9110).  ⚠️ YUXIN WANTS TO FOLLOW THIS
-
-
-// // how to check the content of a full HTTP request and respongs
-// // eg: curl -v http://localhost:8080/test.txt
-// /*
-// > GET /test.txt HTTP/1.1
-// > Host: localhost:8080
-// > User-Agent: curl/7.68.0
-// > Accept: *
-// < HTTP/1.1 200 OK
-// < Content-Length: 12
-// < Content-Type: text/plain
-// < Connection: keep-alive
-// < Hello World
-// */
-
-// // > Request  
-// // < Reponse 
-// Stopping servers listening on port: 8081

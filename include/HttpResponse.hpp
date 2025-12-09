@@ -36,6 +36,9 @@
  * @note Body:
  * - Contains file content (GET) or POST data.
  * - Its size **must match Content-Length** exactly.
+  * @note _keepConnectionAlive:
+ * - By default, HTTP/1.1 connections are persistent (keep-alive), unless the server sends Connection: close in its response. 
+ * - This means the TCP connection can be reused for multiple requests.
  */
 class HttpResponse{
 private:
@@ -51,30 +54,44 @@ public:
     // --------------------
     //        Getters
     // --------------------
-    const std::string&                         getVersion() const;
-    int                                        getStatus() const;
-    const std::string&                         getReason() const;
-    const std::string&                         getBody() const;
-    const std::map<std::string, std::string>&  getHeaders() const;
-    bool                                       isKeepAlive() const;
-    bool                                       isRequestComplete() const;
+    const std::string&                         getVersion() const           { return _version; }
+    int                                        getStatus() const            { return _status; }
+    const std::string&                         getReason() const            { return _reason; }
+    const std::string&                         getBody() const              { return _body; }
+    const std::map<std::string, std::string>&  getHeaders() const           { return _responseHeaders; }
+    bool                                       isKeepAlive() const          { return _keepConnectionAlive; }
+    bool                                       isRequestComplete() const    { return _requestComplete; }
 
     // --------------------
     //        Setters
     // --------------------
-    void    setVersion(const std::string &v);
-    void    setStatus(const int &s);
-    void    setReason(const std::string &r);
-    void    setBody(const std::string &b);
-    void    addHeader(const std::string& k, const std::string& v);
-    void    setKeepAlive(const bool &alive);
-    void    setRequestComplete(const bool &complete);
+    void        setVersion(const std::string &v)                            { _version = v; }   
+    void        setStatus(const int &s)                                     { _status = s; }
+    void        setReason(const std::string &r)                             { _reason = r; }
+    void        setBody(const std::string &b)                               { _body = b; }
+    void        addHeader(const std::string& k, const std::string& v)       { _responseHeaders[k] = v; }
+    void        setKeepAlive(const bool &alive)                             { _keepConnectionAlive = alive; }
+    void        setRequestComplete(const bool &complete)                    { _requestComplete = complete; }
 
     // --------------------
     //    Constructors
     // --------------------
     HttpResponse() {};
-    HttpResponse(const std::string& version, const int& status, const std::string& reason, const std::string& body, const std::map<std::string, std::string>& responseHeaders, bool alive, bool complete);
+    HttpResponse(const std::string& version, 
+                    const int& status, 
+                    const std::string& reason, 
+                    const std::string& body, 
+                    const std::map<std::string, std::string>& responseHeaders, 
+                    bool alive, 
+                    bool complete)
+    {
+    _version = version;
+    _status = status;
+    _reason = reason;
+    _body = body;
+    _responseHeaders = responseHeaders;
+    _keepConnectionAlive = alive;
+    _requestComplete = complete;}
     
     // --------------------
     //   Serialization

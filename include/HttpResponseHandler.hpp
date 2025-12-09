@@ -31,10 +31,8 @@ private:
     // --------------------
     // Internal Utility Methods
     // --------------------
-    const config::LocationConfig*   findLocationConfig (const config::ServerConfig* vh, const std::string& uri_raw);
     HttpResponse                    parseCGIOutput(const std::string& out, const HttpRequest& req);
-    std::string                     mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw);
-    
+    HttpResponse                    generateAutoIndex(const std::string& dirPath, HttpRequest& req);
     // --------------------
     //  InternalHandlers for different HTTP methods
     // --------------------

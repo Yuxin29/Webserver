@@ -21,6 +21,18 @@
  * \r\n
  * <body>
  * @endcode
+ *
+ * Edge case for Http request
+ * @code
+ * GET  HTTP/1.1
+ * Host: localhost:8080
+ * User-Agent: curl/8.3.0
+ * Accept: stars/stars
+ * \r\n
+ * @endcode
+ * here the request path is empty:
+ * - Nginx and Apache tolerate this: they treat an empty request-target as / (the root).
+ * - Some stricter HTTP parsers will return 400 Bad Request because the request-target is required by the spec (RFC 9110).  YUXIN WANTS TO FOLLOW THIS
  */
 class HttpRequest{
 private:
@@ -48,4 +60,3 @@ public:
     void    addHeader(const std::string& k, const std::string& v)   { _requestHeaders[k] = v; }
     void    setBody(const std::string &m)                           { _body = m; }
 };
-

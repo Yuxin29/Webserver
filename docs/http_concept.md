@@ -104,3 +104,24 @@ and which headers are required for proper parsing.
 
 ##  Usage
     Content-Type: text/html
+
+
+# 6. how to check the content of a full HTTP request and responSE
+    > Request  
+    < Reponse 
+
+## HOW
+    curl -v http://localhost:8080/test.txt
+
+## Examples REQ
+    - > GET /test.txt HTTP/1.1
+    - > Host: localhost:8080
+    - > User-Agent: curl/7.68.0
+    - > Accept: *
+
+## Examples RESPONSE
+    - < HTTP/1.1 200 OK
+    - < Content-Length: 12
+    - < Content-Type: text/plain
+    - < Connection: keep-alive
+    - < Hello World

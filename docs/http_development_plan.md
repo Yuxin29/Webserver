@@ -250,7 +250,6 @@ Implement:
 - Chunked request parsing OR chunked responses
 
 ### Day 14 — Stress Testing
-
 Test:
 - No memory leaks (parser)  
 - No double free  
