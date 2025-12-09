@@ -500,12 +500,42 @@ HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::
    return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false, false);
 }
 
-//  Retrieve information about a file (size, type, permissions, timestamps, etc.) without opening it.
-// int stat(const char *pathname, struct stat *statbuf);
-// return 0 → success, statbuf filled.
-// -1 → error (errno set), e.g., file does not exist.
-// struct stat {
-//     st_mode; //file type & permissions.
-//     st_size; //file size.
-//     st_mmine;  //ast modification time, etc.
-// }
+// ====================================================== HTTP/1.1 Keep-Alive ======================================================
+// 1. HTTP/1.1 Keep-Alive
+
+// By default, HTTP/1.1 connections are persistent (keep-alive), unless the server sends Connection: close in its response. 
+// This means the TCP connection can be reused for multiple requests.
+
+
+// ====================================================== CGI path ======================================================
+// CGI path is the filesystem path to the cgi executable program:
+// CGI: common gateway Interface
+
+// ====================================================== Edge case for Http request ======================================================
+// GET  HTTP/1.1
+// Host: localhost:8080
+// User-Agent: curl/8.3.0
+// Accept: */*
+
+// here the request path is empty:
+// - Nginx and Apache tolerate this: they treat an empty request-target as / (the root).
+// - Some stricter HTTP parsers will return 400 Bad Request because the request-target is required by the spec (RFC 9110).  ⚠️ YUXIN WANTS TO FOLLOW THIS
+
+
+// // how to check the content of a full HTTP request and respongs
+// // eg: curl -v http://localhost:8080/test.txt
+// /*
+// > GET /test.txt HTTP/1.1
+// > Host: localhost:8080
+// > User-Agent: curl/7.68.0
+// > Accept: *
+// < HTTP/1.1 200 OK
+// < Content-Length: 12
+// < Content-Type: text/plain
+// < Connection: keep-alive
+// < Hello World
+// */
+
+// // > Request  
+// // < Reponse 
+// Stopping servers listening on port: 8081

@@ -4,24 +4,14 @@
  *
  * This document includes:
  * - std::map usage
- * - Finite State Machines for parsing
  * - std::istringstream
- * - HTTP rules for GET/POST/DELETE
- * - Buffer handling (section will expand)
- * - MIME types (section will expand)
- * - Sockets (section will expand)
- * - Nginx overview
+ * - iterator it
+ * - `stat`
  *
  * @details
  * This file uses Doxygen HTML-style block comments
  * Created by Yuxin for practicing documentation
  */
-
-# HTTP Server Concepts
-
-This file collects several foundational concepts required when implementing an HTTP server from scratch.
-
----
 
 # 1. `std::map` — Ordered Key–Value Storage
 
@@ -35,6 +25,7 @@ This file collects several foundational concepts required when implementing an H
 - Implemented using a **Red–Black tree**
 
 ## Example
+    MAP container that stores key–value pairs
 
 ```cpp
 #include <map>
@@ -47,27 +38,19 @@ headers["User-Agent"] = "curl/7.68.0";
 headers["Accept"] = "*/*";
 headers["Content-Length"] = "12";
 
+---
 
+# 2. `std::istringstream` — maybe a bit like a automatic getnext line
 
-====================================================== MAP container that stores key–value pairs ======================================================
+`std::map` is a class that string flows as a stream (eg. reading from a file or socket)
+
+## Example
+    MAP container that stores key–value pairs
+
+```cpp
 #include <map>
---> std::map
-- ordered assoiative container
-- automateically keeps the keys sorted
-- each key must be unique
-- Lookup, insertion and deletion are all O(log n)
-For example
-std::map<std::string, std::string> headers; 
-headers["Host"] = "localhost:8080";
-headers["User-Agent"] = "curl/7.68.0";
-headers["Accept"] = "*/*";
-headers["Content-Length"] = "12";
+#include <string>
 
-
-====================================================== std::istringstream ======================================================
-std::isstringstream is a class that string flows as a stream (eg. reading from a file or socket)
-(maybe a bit like a automatic getnext line)
--->>Example use
 std::istringstream ss("hello world 42");
 std::string a, b;
 int num;
@@ -76,9 +59,41 @@ ss >> a >> b >> num;
 // b = "world"
 // num = 42
 
-====================================================== iterator ======================================================
+---
+
+# 3. Iterators — Accessing Elements in  `std::map`
+    a `std::map` stores key–value pairs internally as something similar to: `pair<const Key, Value>` 
+
+## Example
+    Declaring and Using a Map Iterator
+
+```cpp
+std::map<std::string, std::string> headers;
 std::map<std::string, std::string>::iterator it;
-iterator iterates,
-it points to the any pair in the container map
-it->firs    //key
-it->second  //value
+
+for (it = headers.begin(); it != headers.end(); ++it)
+{
+    std::cout << "Key: "   << it->first
+              << " | Value: " << it->second << std::endl;
+}
+
+# 4. Retrieve File Information (`stat`)
+
+## Function Prototype
+
+```c
+#include <sys/stat.h>
+int stat(const char *pathname, struct stat *statbuf);
+
+## Return Values
+0 → Success; statbuf is filled with file information
+-1 → Error; errno is set (e.g., file does not exist)
+
+## Struct 
+
+```c
+struct stat {
+    st_mode; //file type & permissions.
+    st_size; //file size.
+    st_mmine;  //ast modification time, etc.
+}
