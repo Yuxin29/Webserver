@@ -139,6 +139,7 @@ void Webserver::handleClientRequest(int clientFd){
 	case Server::CLIENT_INCOMPLETE:
 		if (now - _lastActivity[clientFd] > CONNECTION_TIMEOUT){ 
 			std::cerr << "Connection timedout on Fd: " << clientFd << std::endl;
+			sendTimeoutResponse(clientFd);
 			removeClientFd(clientFd);
 			return;
 		}
@@ -204,6 +205,7 @@ void Webserver::checkIdleConnections(){
 	}
 	for (int fd : toRemove){
 		std::cerr << "Idle connection timeout on fd: " << fd << std::endl;
+		sendTimeoutResponse(fd);
 		removeClientFd(fd);
 	}
 }
@@ -212,4 +214,14 @@ bool Webserver::hasError(const epoll_event& event) const{
 	return (event.events & EPOLLHUP) ||
 		   (event.events & EPOLLERR) ||
 		   (event.events & EPOLLRDHUP);
+}
+
+void Webserver::sendTimeoutResponse(int clientFd){
+	const char* timeoutResponse = 
+		"HTTP/1.1 408 Request Timeout \r\n"
+		"Content-Length: 29\r\n"
+		"Connection: close\r\n"
+		"\r\n"
+		"<h1>408 Request Timeout</h1>";
+	send(clientFd, timeoutResponse, strlen(timeoutResponse), 0);
 }

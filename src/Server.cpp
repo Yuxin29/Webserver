@@ -106,7 +106,6 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_COMPLETE;
 	}
-	_requestCount[clientFd]++;
 	HttpParser& parser = _parsers[clientFd];
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
@@ -119,6 +118,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	}
 	if (parser.getState() != DONE)
 		return CLIENT_INCOMPLETE;
+	_requestCount[clientFd]++;	
 	std::map<std::string, std::string> headers = request.getHeaders();
 	auto it = headers.find("Host");
 	if (it == headers.end()){

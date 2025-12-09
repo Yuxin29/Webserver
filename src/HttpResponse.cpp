@@ -173,8 +173,6 @@ HttpResponse resHandlerErrorResponse(int code){
             return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", {}, false, false);
         case 405:
             return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "<h1>405 Method Not Allowed</h1>", {}, false, false);
-        case 408:
-            return HttpResponse("HTTP/1.1", 408, "Connection Time-out", "<h1>408 Request Time-out</h1>", {}, false, false);
         case 500:
         default:
             return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", {}, false, false);
