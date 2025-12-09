@@ -22,11 +22,11 @@ _serverName("")
 	std::string raw = req.getPath();
 	size_t pos = raw.find('?');
 	if(pos != std::string::npos){
-		_scriptPath = lc.root + raw.substr(0, pos);
+		_scriptPath = "./sites/cgi" + raw.substr(0, pos);
 		_query = raw.substr(pos + 1);
 	}
 	else{
-		_scriptPath = lc.root + raw;
+		_scriptPath = "./sites/cgi" + raw;
 		_query = "";
 	}
 	//count() and at() come from std::map
@@ -43,8 +43,8 @@ bool CGI::isCGI()const
 	if (_method != "GET" && _method != "POST")
 		return false;
 	//like: _scriptPath = "./sites/cgi/test.py"; _cgiExt = ".py";
-	// if (!_scriptPath.ends_with(_cgiExt))
-	// 	return false;
+	if (!_scriptPath.ends_with(_cgiExt))
+		return false;
 	//exist and readable?
 	if(access(_scriptPath.c_str(), R_OK) != 0)
 		return false;

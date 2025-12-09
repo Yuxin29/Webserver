@@ -29,7 +29,7 @@ print("    </style>")
 print("</head>")
 print("<body>")
 print("    <div class='container'>")
-print("        <h1>🎉 CGI Script Working!</h1>")
+print("        <h1> CGI Script Working!</h1>")
 
 # Display request method
 print(f"        <div class='info'>")

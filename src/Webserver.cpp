@@ -1,4 +1,6 @@
 #include "Webserver.hpp"
+#include <fstream>
+#include <sstream>
 
 using namespace config;
 using namespace utils;
@@ -139,6 +141,7 @@ void Webserver::handleClientRequest(int clientFd){
 	case Server::CLIENT_INCOMPLETE:
 		if (now - _lastActivity[clientFd] > CONNECTION_TIMEOUT){ 
 			std::cerr << "Connection timedout on Fd: " << clientFd << std::endl;
+			sendTimeoutResponse(clientFd);
 			removeClientFd(clientFd);
 			return;
 		}
@@ -204,6 +207,7 @@ void Webserver::checkIdleConnections(){
 	}
 	for (int fd : toRemove){
 		std::cerr << "Idle connection timeout on fd: " << fd << std::endl;
+		sendTimeoutResponse(fd);
 		removeClientFd(fd);
 	}
 }
@@ -212,4 +216,26 @@ bool Webserver::hasError(const epoll_event& event) const{
 	return (event.events & EPOLLHUP) ||
 		   (event.events & EPOLLERR) ||
 		   (event.events & EPOLLRDHUP);
+}
+
+void Webserver::sendTimeoutResponse(int clientFd){
+	std::string body;
+	std::ifstream file("sites/static/errors/408.html");
+	
+	if (file.is_open()){
+		std::stringstream buffer;
+		buffer << file.rdbuf();
+		body = buffer.str();
+		file.close();
+	} else {
+		body = "<h1>408 Request Timeout</h1>";
+	}
+	std::string response = "HTTP/1.1 408 Request Timeout\r\n";
+	response += "Content-Length: " + std::to_string(body.size()) + "\r\n";
+	response += "Content-Type: text/html\r\n";
+	response += "Connection: close\r\n";
+	response += "\r\n";
+	response += body;
+	
+	send(clientFd, response.c_str(), response.size(), 0);
 }

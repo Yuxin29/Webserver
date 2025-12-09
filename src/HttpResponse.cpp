@@ -110,9 +110,12 @@ std::string HttpResponse::buildResponseString(){
     if (!hasContentLength) {
         response << "Content-Length: " << _body.size() << "\r\n";
     }
-    // if not set be the user, by default, the connection is closed
+    // Add Connection header based on _keepConnectionAlive flag
     if (_responseHeaders.find("Connection") == _responseHeaders.end()) {
-        response << "Connection: close\r\n";
+        if (_keepConnectionAlive)
+            response << "Connection: keep-alive\r\n";
+        else
+            response << "Connection: close\r\n";
     }
     response << "\r\n";
     response << _body;

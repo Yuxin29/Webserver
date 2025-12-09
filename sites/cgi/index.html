@@ -154,11 +154,29 @@
         </p>
 
         <h2>🎯 CGI Examples</h2>
+        
+        <h3 style="color: #333; margin-top: 20px;">🐍 Python CGI Scripts</h3>
         <div class="link-box">
             <ul>
-                <li><a href="/cgi-bin/hello.py">Basic CGI Script</a> - Simple Python CGI</li>
+                <li><a href="/cgi-bin/hello.py">Basic Python CGI</a> - Simple Python script</li>
                 <li><a href="/cgi-bin/hello.py?name=Alice">With GET Parameter</a> - Pass data via URL</li>
                 <li><a href="/cgi-bin/hello.py?name=Bob&age=25&city=Paris">Multiple Parameters</a> - Complex query</li>
+            </ul>
+        </div>
+
+        <h3 style="color: #333; margin-top: 20px;">🐘 PHP Scripts</h3>
+        <div class="link-box">
+            <ul>
+                <li><a href="/php/info.php">PHP Info Demo</a> - Server info and environment</li>
+                <li><a href="/php/info.php?test=value">PHP with Parameters</a> - Query string demo</li>
+            </ul>
+        </div>
+
+        <h3 style="color: #333; margin-top: 20px;">🐚 Shell Scripts</h3>
+        <div class="link-box">
+            <ul>
+                <li><a href="/scripts/system.sh">System Information</a> - Bash script with system stats</li>
+                <li><a href="/scripts/system.sh?user=admin">Shell with Parameters</a> - Pass arguments to bash</li>
             </ul>
         </div>
 
@@ -172,8 +190,16 @@
                 <label for="message">Message:</label>
                 <textarea id="message" name="message" rows="4" placeholder="Enter a message"></textarea>
                 
-                <button type="submit">Send to CGI Script</button>
+                <button type="submit">Send to Python CGI</button>
             </form>
+        </div>
+
+        <h2>📋 Advanced Form Demo</h2>
+        <div class="link-box">
+            <p>Try our comprehensive form processing demo:</p>
+            <ul>
+                <li><a href="/forms/demo.html">Interactive Form Demo</a> - Full form with validation</li>
+            </ul>
         </div>
 
         <h2>🔧 Available CGI Locations</h2>

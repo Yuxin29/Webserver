@@ -1,0 +1,8 @@
+This is a sample text file in the files directory.
+
+You can download this file by clicking on it in the directory listing.
+
+The webserver will serve it with the appropriate Content-Type header
+based on the file extension.
+
+Try uploading your own files to this directory using a POST request!

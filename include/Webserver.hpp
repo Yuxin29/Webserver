@@ -1,7 +1,6 @@
 #pragma once
 #include "Server.hpp"
 #include "ConfigBuilder.hpp"
-
 #include "utils.hpp"
 #include <sys/epoll.h>
 #include <csignal>
@@ -28,6 +27,7 @@ class Webserver {
 		void removeClientFd(int clientFd);
 		void closeAllClients(void);
 		bool hasError(const epoll_event& event) const;
+		void sendTimeoutResponse(int clientFd);
 
 	public:
 		explicit Webserver();

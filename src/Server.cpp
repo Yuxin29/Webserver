@@ -106,9 +106,6 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_COMPLETE;
 	}
-	_requestCount[clientFd]++;
-
-	// parsing request and validating
 	HttpParser& parser = _parsers[clientFd];
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
@@ -121,8 +118,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	}
 	if (parser.getState() != DONE)
 		return CLIENT_INCOMPLETE;
-
-	// if good req, finder server
+	_requestCount[clientFd]++;	
 	std::map<std::string, std::string> headers = request.getHeaders();
 	auto it = headers.find("Host");
 	if (it == headers.end()){
@@ -135,8 +131,6 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-
-	// build response
 	HttpResponse response = _httpHandler.handleRequest(request, virtualHost);
 	std::string responseString = response.buildResponseString();
 	ssize_t sent = send(clientFd, responseString.c_str(), responseString.size(), 0);
@@ -144,9 +138,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
-
-	// manage connection persistence
-	bool keepAlive = response.isKeepAlive(); // use gettesr
+	bool keepAlive = response.isKeepAlive();
 	if (keepAlive){
 		_parsers[clientFd] = HttpParser();
 		return CLIENT_KEEP_ALIVE;
@@ -155,14 +147,6 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_COMPLETE;
 	}
-}
-
-int Server::getListenFd() const {
-	return _listenFd;
-}
-
-int Server::getPort() const {
-	return _port;
 }
 
 const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
@@ -182,6 +166,14 @@ const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
 void  Server::cleanMaps(int clientFd){
 	_parsers.erase(clientFd);
 	_requestCount.erase(clientFd);
+}
+
+int Server::getListenFd() const {
+	return _listenFd;
+}
+
+int Server::getPort() const {
+	return _port;
 }
 
 // const LocationConfig* Server::findLocation(const ServerConfig& server, const std::string& path) const {
