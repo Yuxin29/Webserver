@@ -110,9 +110,12 @@ std::string HttpResponse::buildResponseString(){
     if (!hasContentLength) {
         response << "Content-Length: " << _body.size() << "\r\n";
     }
-    // if not set be the user, by default, the connection is closed
+    // Add Connection header based on _keepConnectionAlive flag
     if (_responseHeaders.find("Connection") == _responseHeaders.end()) {
-        response << "Connection: close\r\n";
+        if (_keepConnectionAlive)
+            response << "Connection: keep-alive\r\n";
+        else
+            response << "Connection: close\r\n";
     }
     response << "\r\n";
     response << _body;
@@ -170,6 +173,8 @@ HttpResponse resHandlerErrorResponse(int code){
             return HttpResponse("HTTP/1.1", 404, "Not Found", "<h1>404 Not Found</h1>", {}, false, false);
         case 405:
             return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "<h1>405 Method Not Allowed</h1>", {}, false, false);
+        case 408:
+            return HttpResponse("HTTP/1.1", 408, "Connection Time-out", "<h1>408 Request Time-out</h1>", {}, false, false);
         case 500:
         default:
             return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "<h1>500 Internal Server Error</h1>", {}, false, false);

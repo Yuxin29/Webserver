@@ -78,9 +78,41 @@ static bool isMethodAllowed(const config::LocationConfig* loc, const std::string
 }
 
 /**
+ * @brief Determines if connection should be kept alive based on request headers and HTTP version
+ *
+ * @param req the HttpRequest object
+ * @return bool true if connection should stay alive, false if it should close
+ *
+ * @note HTTP/1.1 defaults to keep-alive unless client sends "Connection: close"
+ *       HTTP/1.0 defaults to close unless client sends "Connection: keep-alive"
+ */
+static bool shouldKeepAlive(const HttpRequest& req){
+    std::string version = req.getVersion();
+    const std::map<std::string, std::string>& headers = req.getHeaders();
+    
+    // Check if Connection header exists
+    auto it = headers.find("Connection");
+    if (it != headers.end()) {
+        std::string connValue = it->second;
+        // Convert to lowercase for case-insensitive comparison
+        std::transform(connValue.begin(), connValue.end(), connValue.begin(), ::tolower);
+        
+        if (connValue.find("close") != std::string::npos)
+            return false;
+        if (connValue.find("keep-alive") != std::string::npos)
+            return true;
+    }
+    
+    // Default behavior based on HTTP version
+    // HTTP/1.1 defaults to keep-alive, HTTP/1.0 defaults to close
+    return (version == "HTTP/1.1");
+}
+
+/**
  * @brief parse the output from CGI execution into an HttpResponse object
  *
  * @param out raw output string from CGI execution of lin
+ * @param req the HttpRequest object (used to determine keep-alive)
  * @return HttpResponse object representing the CGI response
  *
  * @note used when CGI script is executed and its output needs to be converted into an HTTP response
@@ -90,7 +122,7 @@ static bool isMethodAllowed(const config::LocationConfig* loc, const std::string
  * \r\n
  * <html>...</html>
  */
-HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out){
+HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const HttpRequest& req){
    //it is after last header valuse and then the empty line
    size_t pos = out.find("\r\n\r\n");
    if (pos == std::string::npos)
@@ -129,7 +161,7 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out){
    }
    // manually setup this one
    headersMap["Content-Length"] = std::to_string(bodyString.size());
-      return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, true, true);
+      return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, shouldKeepAlive(req), true);
 }
 
 /**
@@ -236,7 +268,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
          return resHandlerErrorResponse(500);
-      return parseCGIOutput(cgi_output);   
+      return parseCGIOutput(cgi_output, req);   
    }
 
    // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
@@ -288,7 +320,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    headers["Last-Modified"] = formatTime(st.st_mtime);
    headers["Date"] = formatTime(time(NULL));
 
-   return HttpResponse("HTTP/1.1", 200, "OK", body, headers, true, true);
+   return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
 }
 
 /**
@@ -328,7 +360,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
          return resHandlerErrorResponse(500);
-      return parseCGIOutput(cgi_output);
+      return parseCGIOutput(cgi_output, req);
    }
 
    //  If not CGI, assume static file upload handler:
@@ -368,7 +400,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    headers["Content-Length"] = std::to_string(responseBody.size());
    headers["Content-Type"] = "application/json";
 
-   return HttpResponse("HTTP/1.1", 201, "Created", responseBody, std::map<std::string, std::string>(), true, true);
+   return HttpResponse("HTTP/1.1", 201, "Created", responseBody, std::map<std::string, std::string>(), shouldKeepAlive(req), true);
 }
 
 /**
@@ -406,7 +438,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
          std::string cgi_output = cgi.execute();
          if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
             return resHandlerErrorResponse(500);
-         return parseCGIOutput(cgi_output);
+         return parseCGIOutput(cgi_output, req);
    }
 
    // otherwie, it is a static delete. Maps path: /files/file1.txt → /var/www/html/files/file1.txt
@@ -433,7 +465,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    headers["Content-Length"] = "0";  // No response body
 
    // - If success → 204 No Content (most common) - Or 200 OK with optional message
-   return HttpResponse("HTTP/1.1", 204, "No Content", "", std::map<std::string, std::string>(), true, true);
+   return HttpResponse("HTTP/1.1", 204, "No Content", "", std::map<std::string, std::string>(), shouldKeepAlive(req), true);
 }
 
 /**
