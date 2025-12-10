@@ -216,7 +216,7 @@ Learning:
 - 414 URI Too Long  
 - 500 Internal Server Error  
 Implement:
-- `reqParsingErrorResponse()`
+- `makeErrorResponse()`
 Test:
 - All invalid inputs  
 - Oversized URL  
@@ -263,7 +263,7 @@ Test:
 - Real browser testing  
 
 
-% ./tester http://localhost:8080
 1. Autoindex
-2. err page
+2. err page 
 3. content length 0
+% ./tester http://localhost:8080

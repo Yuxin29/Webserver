@@ -203,7 +203,7 @@ bool HttpParser::validateBody(){
     if (_req.getMethod() == "POST")
     {
         // POST has to have body string and in headers, it has to have content-Length"
-        //THIS CAN BE 0
+        // THIS CAN BE 0
         if (_bodyLength == 0 && !_req.getHeaders().count("Content-Length")){
             _errStatus = 400;
             std::cout << "POST request missing Content-Length header." << std::endl; //here
@@ -341,14 +341,12 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
     //move post
     if (pos > 0)
         _buffer.erase(0, pos);
-    // first check imcomplete
-    if (_state != DONE )
-        return HttpRequest();
-    // then validate 
-    if (!validateStartLine() || !validateHeaders() || !validateBody())
-        _state = ERROR;
-    // if error
-    if (_state == ERROR)
-        return HttpRequest();
-    return _req;
+    if (_state == DONE) {
+        if (!validateStartLine() || !validateHeaders() || !validateBody()) {
+            _state = ERROR;
+            return HttpRequest();
+        }
+        return _req;
+    }
+    return HttpRequest();
 }

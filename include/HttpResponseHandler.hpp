@@ -46,3 +46,9 @@ public:
     // --------------------
     HttpResponse                    handleRequest(HttpRequest& req, const config::ServerConfig* vh);
 };
+
+// --------------------
+//   Utility Functions
+// --------------------
+std::string loadFile(const std::string& path);
+HttpResponse makeErrorResponse(int status);
