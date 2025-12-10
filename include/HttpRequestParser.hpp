@@ -10,19 +10,14 @@
  * @enum State
  * @brief Represents the internal parsing state of the HTTP request parser.
  *
- * The parser transitions through these states as raw data is fed into it:
- * - START_LINE : Parsing the initial request line ("GET / HTTP/1.1").
- * - HEADERS    : Reading header lines.
- * - BODY       : Parsing the message body (POST, PUT, etc.).
- * - DONE       : Successfully finished parsing the request.
- * - ERROR      : Encountered malformed syntax or invalid structure.
+ * @note The parser transitions through these states as raw data is fed into it:
  */
 enum State{
-    START_LINE,
-    HEADERS,
-    BODY,
-    DONE,
-    ERROR
+    START_LINE,     ///< Parsing the initial request line ("GET / HTTP/1.1").
+    HEADERS,        ///< Reading header lines.  
+    BODY,           ///< Parsing the message body (POST, PUT, etc.).
+    DONE,           ///< Successfully finished parsing the request.
+    ERROR           ///< Encountered malformed syntax or invalid structure.
 };
 
 /**
