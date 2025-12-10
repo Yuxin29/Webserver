@@ -214,11 +214,15 @@ std::string getIndexFile(const std::string& dirPath, const config::LocationConfi
  */
 HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const HttpRequest& req){
    //it is after last header valuse and then the empty line
-   size_t pos = out.find("\r\n\r\n"); //NOTE FROM LIN date:10/12 check like this: size_t pos = out.find("\r\n\r\n") ?  out.find("\n\n"):  std::string::npos; 
-
-   if (pos == std::string::npos)
-      return resHandlerErrorResponse(500);
-   
+   //Note from lucio, should check both "\r\n\r\n"(for python) and "\n\n" (for php and bash)
+   size_t pos = out.find("\r\n\r\n");
+   if (pos == std::string::npos){
+      pos = out.find("\n\n");
+      if (pos == std::string::npos){
+         return resHandlerErrorResponse(500);
+      }
+   }
+      
    std::string headersString = out.substr(0, pos);
    std::string bodyString = out.substr(pos + 4);
 
@@ -447,7 +451,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 
    //  If not CGI, assume static file upload handler:
    // yuxin need to check, should the upload_dir be in root?
-   std::string uploadDir = lc->root; // NOTE FROM LIN date:10/12 change this to lc->upload_dir
+   std::string uploadDir = lc->upload_dir; // NOTE FROM LIN date:10/12 change this to lc->upload_dir
    if (uploadDir.empty())
        return resHandlerErrorResponse(500); 
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
