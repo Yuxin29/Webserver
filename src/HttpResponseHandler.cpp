@@ -214,7 +214,8 @@ std::string getIndexFile(const std::string& dirPath, const config::LocationConfi
  */
 HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const HttpRequest& req){
    //it is after last header valuse and then the empty line
-   size_t pos = out.find("\r\n\r\n");
+   size_t pos = out.find("\r\n\r\n"); //NOTE FROM LIN date:10/12 check like this: size_t pos = out.find("\r\n\r\n") ?  out.find("\n\n"):  std::string::npos; 
+
    if (pos == std::string::npos)
       return resHandlerErrorResponse(500);
    
