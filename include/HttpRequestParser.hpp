@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <set>
+#include <vector>
 
 #include "HttpRequest.hpp"  // map, string here
 
