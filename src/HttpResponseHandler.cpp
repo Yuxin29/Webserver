@@ -69,7 +69,7 @@ bool shouldKeepAlive(const HttpRequest& req){
 const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh, const std::string& uri_raw)
 {
    std::string uri = uri_raw;
-   size_t qpos = uri.find('?');
+   size_t qpos = uri.find('?');  // yuxin need to reconsider
    if (qpos != std::string::npos)
       uri = uri.substr(0, qpos);
    
@@ -364,6 +364,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       }
       // try index files
       std::string index_file = getIndexFile(fullpath, lc);
+      std::cout << "---------------------" << index_file << std::endl;
       if (!index_file.empty()) {
          fullpath += "/" + index_file;
          if (stat(fullpath.c_str(), &st) < 0 || !S_ISREG(st.st_mode))

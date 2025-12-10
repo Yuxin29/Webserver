@@ -261,3 +261,9 @@ Test:
 - Remove debug prints  
 - RFC validation  
 - Real browser testing  
+
+
+% ./tester http://localhost:8080
+1. Autoindex
+2. err page
+3. content length 0

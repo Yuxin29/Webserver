@@ -33,6 +33,7 @@
  * here the request path is empty:
  * - Nginx and Apache tolerate this: they treat an empty request-target as / (the root).
  * - Some stricter HTTP parsers will return 400 Bad Request because the request-target is required by the spec (RFC 9110).  YUXIN WANTS TO FOLLOW THIS
+    // yuxin need to reconsider
  */
 class HttpRequest{
 private:

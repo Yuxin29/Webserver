@@ -161,6 +161,7 @@ bool HttpParser::validateBody(){
     if (_req.getMethod() == "POST")
     {
         // POST has to have body string and in headers, it has to have content-Length"
+        //THIS CAN BE 0
         if (_bodyLength == 0 && !_req.getHeaders().count("Content-Length")){
             _errStatus = 400;
             std::cout << "POST request missing Content-Length header." << std::endl; //here

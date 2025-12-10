@@ -108,7 +108,7 @@ namespace config{
 	LocationConfig ConfigBuilder::buildLocationConfig(const LocationNode& node, const ServerConfig& parent)
 	{
 		LocationConfig lc;
-		lc.path = node.path;
+		lc.path = node.path.empty() ? "/" : node.path;
 		validatePath(lc.path);
 		lc.root = node.root.empty() ? parent.root : node.root;
 		validateRoot(lc.root);
