@@ -21,16 +21,10 @@ static std::string trim_space(std::string str)
  * @param HttpParser _method within class HttpRequest nested in HttpParser
  * @return true or false, on false, set the _errStatus the coresponding error code
  *
- * @note exxample of startline: GET /index.html HTTP/1.1
+ * @note example of startline: GET /index.html HTTP/1.1
  */
 bool HttpParser::validateStartLine()
 {
-    //something missing, this one check first to avoid seg fault
-    if (_req.getMethod().empty() || _req.getPath().empty() || _req.getVersion().empty()){
-        _errStatus = 400;
-        std::cout << "Invalid start line: missing method, path, or version." << std::endl;
-        return false;
-    }
     //  GET, POST, DELETE  ---> 405: mathod not allowed
     if (_req.getMethod() != "GET" && _req.getMethod() != "POST" && _req.getMethod() != "DELETE"){
         _errStatus = 405;
@@ -43,7 +37,27 @@ bool HttpParser::validateStartLine()
         std::cout << "Invalid HTTP version: " << _req.getVersion() << std::endl;
         return false;
     }
-    //path cannot have empty space or path cannot be too long check, i think it is not necessary
+    // Enhancement: path must start with "/"
+    if (_req.getPath()[0] != '/'){
+        _errStatus = 400;
+        std::cout << "Path must not start with '/': " << _req.getPath() << std::endl;
+        return false;
+    }
+    // Enhancement: path cannot be too long check
+    if (_req.getPath().size() > 2048){
+        _errStatus = 400;        
+        std::cout << "Request_URI too long" << _req.getPath() << std::endl;
+        return false;
+    }
+    // Enhancement: path cannot have empty space or controling chars
+    for (size_t i = 0; i < _req.getPath().size(); ++i){
+        char c = _req.getPath()[i];
+        if (c < 31 || c == ' '){
+            _errStatus = 400;        
+            std::cout << "Path must not have empty space or controling chars: " << _req.getPath() << std::endl;
+            return false;
+        }
+    }
     return true;
 }
 
@@ -63,13 +77,27 @@ bool HttpParser::validateStartLine()
 bool    HttpParser::validateHeaders()
 {
     bool hasHost = false;
+    std::set<std::string> seenKeys;
+    size_t totalSize = 0;
 
     for (std::map<std::string, std::string>::const_iterator it = _req.getHeaders().begin(); it != _req.getHeaders().end(); ++it)
     {
         const std::string& key = it->first;
         const std::string& value = it->second;
-        std::set<std::string> seenKeys;
+        totalSize += key.size() + value.size();
 
+        // Enhancement: the headers can not be too big, like todal length 8192 8KB
+        if (totalSize > 8192){
+            _errStatus = 431; 
+            std::cout << "Total header size to big" << std::endl;
+            return false;
+        }
+        // a single header can not be too long: 431, Request Header Fields Too Large
+        if (key.size() > 1024 || value.size() > 4096){
+            _errStatus = 431; 
+            std::cout << "Header field too large: " << key << std::endl;
+            return false;
+        }
         // validator key: key cannot has space in it
         for (size_t i = 0; i < key.size(); ++i) {
             if (!isgraph(key[i]) || key[i] == ':') {
@@ -94,6 +122,16 @@ bool    HttpParser::validateHeaders()
             return false;
         }
         seenKeys.insert(key);
+        // Enhancement: value cannot have empty space or controling chars, 
+        // can not have it: Header value must not include empty space or controling chars: gzip, deflate, br, zstd
+        // for (size_t i = 0; i < value.size(); ++i){
+        //     char c = value[i];
+        //     if (c < 31 || c == ' '){
+        //         _errStatus = 400;        
+        //         std::cout << "Header value must not include empty space or controling chars: " << value << std::endl;
+        //         return false;
+        //     }
+        // }
         //validateContentLength: can not be too long like minus number ---> four hundred  or too big(Payload Too Large) ---> 43113
         if (key == "Content-Length"){
             // can not be empty
@@ -131,12 +169,6 @@ bool    HttpParser::validateHeaders()
             }
             _bodyLength = static_cast<size_t>(len);
         }
-        // header can not be too long:   431, Request Header Fields Too Large
-        if (key.size() > 1024 || value.size() > 4096){
-            _errStatus = 431; 
-            std::cout << "Header field too large: " << key << std::endl;
-            return false;
-        }
     }
     // it has to have ont and only one host    // headers["Content-Type"] = "text/html";
     // headers["Content-Length"] = std::to_string(body.size());
@@ -154,26 +186,29 @@ bool    HttpParser::validateHeaders()
  * @param HttpParser _body within class HttpRequest nested in HttpParser
  * @return true or false, on false, set the _errStatus the coresponding error code
  *
- * @note exxample of startline: username=John&password=1234
+ * @example example of body: username=John&password=1234
  * @note Post must have body, body must fullfill ContentLength, for GET / DELETE, it is not an error to have body
+ * @note
+ * - body string length has to be as long as the sontent-Length says
+ * - here, i can not have this check because the body might be not fully received yet
+ * - incomplete body is not an error during streaming)
  */
 bool HttpParser::validateBody(){
+    // Enhancement body cannot contain null byte
+    if (_req.getBody().find('\0') != std::string::npos) {
+        _errStatus = 400;
+        std::cout << "Body contains null byte." << std::endl;
+        return false;
+    }
     if (_req.getMethod() == "POST")
     {
         // POST has to have body string and in headers, it has to have content-Length"
-        //THIS CAN BE 0
+        // THIS CAN BE 0
         if (_bodyLength == 0 && !_req.getHeaders().count("Content-Length")){
             _errStatus = 400;
             std::cout << "POST request missing Content-Length header." << std::endl; //here
             return false;
         }
-        // body string length has to be as long as the sontent-Length says
-         //here, i can not have this check because the body might be not fully received yet
-        // if (_req.getBody().size() < _bodyLength){
-        //     _errStatus = 400;
-        //     std::cout << "POST request body length mismatch." << std::endl;
-        //     return false;
-        // }
         // body lenth can not be too long: in theory it should not happen
         if (_req.getBody().size() > _bodyLength){
             _errStatus = 400;
@@ -194,12 +229,20 @@ bool HttpParser::validateBody(){
  */
 void HttpParser::parseStartLine(const std::string& startline){
     std::istringstream ss(startline);
-    std::string method, path, version;
+    std::vector<std::string> fields;
+    std::string tmp;
 
-    ss >> method >> path >> version;
-    _req.setMethod(method);
-    _req.setPath(path);
-    _req.setVersion(version);
+    while (ss >> tmp)
+        fields.push_back(tmp);
+    //there is actullally some pre_validatingg here
+    if (fields.size() != 3){
+        _errStatus = 400;
+        _state = ERROR;
+        return ;
+    }
+    _req.setMethod(fields[0]);
+    _req.setPath(fields[1]);
+    _req.setVersion(fields[2]);
     _state = HEADERS;
 }
 
@@ -282,8 +325,11 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
             pos = end + 2;
             if (!line.empty() && line.back() == '\r')  // check is the last one is \r
                 line.pop_back();    //remove the last char \r
-            if (_state == START_LINE)
+            if (_state == START_LINE){
                 parseStartLine(line);
+                if (_state == ERROR)
+                    return HttpRequest();
+            }
             if (_state == HEADERS)
                 parseHeaderLine(line);
         }
@@ -295,11 +341,12 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
     //move post
     if (pos > 0)
         _buffer.erase(0, pos);
-    //at the end, validate 
-    if (!validateStartLine() || !validateHeaders() || !validateBody())
-        _state = ERROR;
-    // not finished or error
-    if (_state != DONE || _state == ERROR)
-        return HttpRequest();
-    return _req;
+    if (_state == DONE) {
+        if (!validateStartLine() || !validateHeaders() || !validateBody()) {
+            _state = ERROR;
+            return HttpRequest();
+        }
+        return _req;
+    }
+    return HttpRequest();
 }
