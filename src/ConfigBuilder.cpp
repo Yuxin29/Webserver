@@ -131,7 +131,6 @@ namespace config{
 		validateUploaddir(lc.upload_dir);
 		lc.autoindex = node.autoindex;
 		lc.methods = node.methods.empty() ? defaultMethods() : node.methods;
-		//validateMethod(lc.methods);
 		return lc;
 	}
 
