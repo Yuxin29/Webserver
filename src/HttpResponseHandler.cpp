@@ -118,59 +118,6 @@ std::string formatTime(std::time_t t) {
 }
 
 /**
- * @brief   Gets the first existing index file from the directory based on LocationConfig
- *
- * @param   dirPath the directory path
- * @param   lc pointer to the LocationConfig
- * @return  string the first found index file name, or empty string if none found
- *
- * @note    used to implement index file lookup when serving directories
- */
-std::string getIndexFile(const std::string& dirPath, const config::LocationConfig* lc)
-{
-    struct stat st;
-    for (size_t i = 0; i < lc->index.size(); ++i)
-    {
-        std::string candidate = dirPath + "/" + lc->index[i];
-        if (stat(candidate.c_str(), &st) == 0 && S_ISREG(st.st_mode))
-            return lc->index[i]; // return filename only
-    }
-    return ""; // no index file found
-}
-
-/**
- * @brief Finds the best/longest matching LocationConfig for a given URI
- *
- * @param vh pointer to the ServerConfig (virtual host)
- * @param uri_raw the request URI
- * @return  const pointer to the best matching LocationConfig, or NULL if none found
- *
- * @note  used to map request URIs to server location blocks based on longest prefix match
- */
-const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh, const std::string& uri_raw)
-{
-   std::string uri = uri_raw;
-   size_t qpos = uri.find('?');  // yuxin need to reconsider
-   if (qpos != std::string::npos)
-      uri = uri.substr(0, qpos);
-   
-   const config::LocationConfig* best = nullptr;
-   size_t bestLen = 0;
-
-   for (size_t i = 0; i < vh->locations.size(); i++) {
-      const config::LocationConfig& loc = vh->locations[i];
-      // rfind == 0 → prefix match
-      if (uri.rfind(loc.path, 0) == 0){
-         if (loc.path.length() > bestLen) {
-            best = &loc;
-            bestLen = loc.path.length();
-         }
-      }
-   }
-   return best;
-}
-
-/**
  * @brief   Maps a request URI to a filesystem path based on the LocationConfig
  *
  * @param   loc pointer to the LocationConfig
@@ -207,6 +154,59 @@ std::string mapUriToPath(const config::LocationConfig* loc, const std::string& u
       return "";
 
    return canonicalPath.string();
+}
+
+/**
+ * @brief   Gets the first existing index file from the directory based on LocationConfig
+ *
+ * @param   dirPath the directory path
+ * @param   lc pointer to the LocationConfig
+ * @return  string the first found index file name, or empty string if none found
+ *
+ * @note    used to implement index file lookup when serving directories
+ */
+std::string getIndexFile(const std::string& dirPath, const config::LocationConfig* lc)
+{
+   struct stat st;
+   for (size_t i = 0; i < lc->index.size(); ++i)
+   {
+      std::string candidate = dirPath + "/" + lc->index[i];
+      if (stat(candidate.c_str(), &st) == 0 && S_ISREG(st.st_mode))
+         return lc->index[i]; // return filename only
+    }
+    return ""; // no index file found
+}
+
+/**
+ * @brief Finds the best/longest matching LocationConfig for a given URI
+ *
+ * @param vh pointer to the ServerConfig (virtual host)
+ * @param uri_raw the request URI
+ * @return  const pointer to the best matching LocationConfig, or NULL if none found
+ *
+ * @note  used to map request URIs to server location blocks based on longest prefix match
+ */
+const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh, const std::string& uri_raw)
+{
+   std::string uri = uri_raw;
+   size_t qpos = uri.find('?');  // yuxin need to reconsider
+   if (qpos != std::string::npos)
+      uri = uri.substr(0, qpos);
+   
+   const config::LocationConfig* best = nullptr;
+   size_t bestLen = 0;
+
+   for (size_t i = 0; i < vh->locations.size(); i++) {
+      const config::LocationConfig& loc = vh->locations[i];
+      // rfind == 0 → prefix match
+      if (uri.rfind(loc.path, 0) == 0){
+         if (loc.path.length() > bestLen) {
+            best = &loc;
+            bestLen = loc.path.length();
+         }
+      }
+   }
+   return best;
 }
 }
 
@@ -606,26 +606,26 @@ HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::
 }
 
 static const std::map<int, std::string> STATUS_REASON = {
-    {400, "Bad Request"},
-    {403, "Forbidden"},
-    {404, "Not Found"},
-    {405, "Method Not Allowed"},
-    {408, "Request Timeout"},
-    {413, "Payload Too Large"},
-    {414, "URI Too Long"},
-    {431, "Request Header Fields Too Large"},
-    {500, "Internal Server Error"},
+   {400, "Bad Request"},
+   {403, "Forbidden"},
+   {404, "Not Found"},
+   {405, "Method Not Allowed"},
+   {408, "Request Timeout"},
+   {413, "Payload Too Large"},
+   {414, "URI Too Long"},
+   {431, "Request Header Fields Too Large"},
+   {500, "Internal Server Error"},
 };
 
 std::string loadFile(const std::string& path)
 {
-    std::ifstream file(path.c_str());
-    if (!file.is_open())
-        return ""; // return empty so makeErrorResponse() can fallback
+   std::ifstream file(path.c_str());
+   if (!file.is_open())
+      return ""; // return empty so makeErrorResponse() can fallback
 
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
+   std::stringstream buffer;
+   buffer << file.rdbuf();
+   return buffer.str();
 }
 
 /**
