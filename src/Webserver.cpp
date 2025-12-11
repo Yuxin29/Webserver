@@ -34,10 +34,12 @@ int Webserver::createServers(const std::vector<ServerConfig>& config){
 	std::map<std::string, std::vector<config::ServerConfig>> bindGroups;
 	for (size_t i = 0; i < config.size(); i++){
 		const auto& block = config[i];
-
 		std::string host = block.host;
 		if (host.empty() || host == "*"){
 			host = "0.0.0.0";
+		}
+		if (host == "255.255.255.255"){
+			std::cout << "Binding to special 255.255.255.255, No connection expected" << std::endl;
 		}
 		std::string bindKey = host + ":" + std::to_string(block.port);
 		bindGroups[bindKey].push_back(block);
