@@ -21,7 +21,7 @@ static std::string trim_space(std::string str)
  * @param HttpParser _method within class HttpRequest nested in HttpParser
  * @return true or false, on false, set the _errStatus the coresponding error code
  *
- * @note exxample of startline: GET /index.html HTTP/1.1
+ * @note example of startline: GET /index.html HTTP/1.1
  */
 bool HttpParser::validateStartLine()
 {

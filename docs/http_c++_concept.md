@@ -56,20 +56,32 @@ ss >> a >> b >> num;
 // num = 42
 ```
 
-# 3. Iterators — Accessing Elements in  `std::map`
+# 3. Iterators — Accessing Elements in  `std::map` or vector
     a `std::map` stores key–value pairs internally as something similar to: `pair<const Key, Value>` 
 
-## Example
+## Example 1
     Declaring and Using a Map Iterator
 
 ```cpp
 std::map<std::string, std::string> headers;
 std::map<std::string, std::string>::iterator it;
 
-for (it = headers.begin(); it != headers.end(); ++it)
-{
-    std::cout << "Key: "   << it->first
-              << " | Value: " << it->second << std::endl;
+for (it = headers.begin(); it != headers.end(); ++it){
+    std::cout << "Key: "   << it->first << " | Value: " << it->second << std::endl;
+}
+```
+
+## Example 2
+    Declaring and Using a Vector Iterator
+
+```cpp
+std::map<std::string, std::string> headers;
+std::map<std::string, std::string>::iterator it;
+
+for (it = headers.begin(); it != headers.end(); ++it) {
+    std::cout << "Key: "   << it->first 
+              << " | Value: " << it->second 
+              << std::endl;
 }
 ```
 
