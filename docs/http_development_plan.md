@@ -262,15 +262,22 @@ Test:
 - RFC validation  
 - Real browser testing  
 
+Fixed:
+1. err page       
 
+
+To be fixed:
 1. Autoindex
-2. err page           in process.
-3. content length 0
+when it is off,  http://localhost:8080/files it should not show the file list/
+
+2. content length 0
 % ./tester http://localhost:8080
-4. std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
+
+3. std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
 {    
    std::string root = loc->root;     // e.g. "./sites/static"
 
+  check routs/
     // Ensure root ends with "/"
     if (!root.empty() && root[root.size() - 1] != '/')
         root += "/";
@@ -282,3 +289,6 @@ Test:
 
     return root + cleanUri;
 }
+std::filesystem::canonical
+echo -e "GET /../../lin_note HTTP/1.1\r\nHost: localhost\r\n\r\n" | nc localhost 8080
+start with /../../ should not be allowed
