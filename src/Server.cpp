@@ -92,11 +92,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	char buffer[8192];
 	ssize_t nBytes = recv(clientFd, buffer, sizeof(buffer), 0);
 	if (nBytes < 0){
-		if (errno == EAGAIN || errno == EWOULDBLOCK){
-			return CLIENT_INCOMPLETE;
-		}
-		cleanMaps(clientFd);
-		return CLIENT_ERROR;
+		return CLIENT_INCOMPLETE;
 	}
 	if (nBytes == 0){
 		cleanMaps(clientFd);
