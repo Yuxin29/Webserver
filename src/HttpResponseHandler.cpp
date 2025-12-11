@@ -178,21 +178,35 @@ const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh,
  * @return  string the corresponding filesystem path
  *
  * @note    used to translate request URIs into actual file paths on the server
+ * @note    path traversal should not be allowed
+ * @note    use std::filesystem::canonical to get the real path and check if it is under root
  */
 std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
 {    
    std::string root = loc->root;     // e.g. "./sites/static"
 
-   // Ensure root ends with "/"
-   if (!root.empty() && root[root.size() - 1] != '/')
-        root += "/";
+   // get a absolute root rootPath
+   fs::path rootPath = fs::absolute(root);
 
    // Ensure uri does NOT start with "/" (avoid double slash)
    std::string cleanUri = uri_raw;
    if (!cleanUri.empty() && cleanUri[0] == '/')
       cleanUri = cleanUri.substr(1);
 
-    return root + cleanUri;
+   //collage the roor and uri
+   fs::path fullPath = rootPath / cleanUri;
+
+   // get the real path
+   std::error_code ec;
+   fs::path canonicalPath = fs::canonical(fullPath, ec);
+   if (ec)
+      return "";
+
+   // check of the real path canonicalPath is under is rootPath
+   if (canonicalPath.string().find(rootPath.string()) != 0) 
+      return "";
+
+   return canonicalPath.string();
 }
 }
 
@@ -274,28 +288,28 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
  */
 HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, HttpRequest& req)
 {
-    namespace fs = std::filesystem;
-    std::string body = "<html><head><title>Index of " + req.getPath() + "</title></head><body>";
-    body += "<h1>Index of " + req.getPath() + "</h1><ul>";
+   namespace fs = std::filesystem;
+   std::string body = "<html><head><title>Index of " + req.getPath() + "</title></head><body>";
+   body += "<h1>Index of " + req.getPath() + "</h1><ul>";
 
-    for (const auto& entry : fs::directory_iterator(dirPath))
-    {
-        std::string name = entry.path().filename().string();
-        body += "<li><a href=\"" + req.getPath();
-        if (req.getPath().back() != '/')
-            body += "/";
-        body += name + "\">" + name + "</a></li>";
-    }
+   for (const auto& entry : fs::directory_iterator(dirPath))
+   {
+      std::string name = entry.path().filename().string();
+      body += "<li><a href=\"" + req.getPath();
+      if (req.getPath().back() != '/')
+         body += "/";
+      body += name + "\">" + name + "</a></li>";
+   }
 
-    body += "</ul></body></html>";
+   body += "</ul></body></html>";
 
-    std::map<std::string, std::string> headers;
-    headers["Content-Type"] = "text/html";
-    headers["Content-Length"] = std::to_string(body.size());
-    headers["Server"] = "MiniWebserv/1.0";
-    headers["Date"] = formatTime(time(NULL));
+   std::map<std::string, std::string> headers;
+   headers["Content-Type"] = "text/html";
+   headers["Content-Length"] = std::to_string(body.size());
+   headers["Server"] = "MiniWebserv/1.0";
+   headers["Date"] = formatTime(time(NULL));
 
-    return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
+   return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
 }
 
 // --------------------
@@ -348,6 +362,8 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
    // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
    std::string fullpath = mapUriToPath(lc, uri);
+   if (fullpath.empty())
+      return makeErrorResponse(403, vh);
 
    // Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
@@ -535,6 +551,8 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
 
    // otherwie, it is a static delete. Maps path: /files/file1.txt → /var/www/html/files/file1.txt
    std::string fullpath = mapUriToPath(lc, uri);
+   if (fullpath.empty())
+      return makeErrorResponse(403, vh);
 
    // Validates: 
    // Does file exist? 
