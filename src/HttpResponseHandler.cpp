@@ -643,10 +643,6 @@ HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
    std::string body;
    if (vh && vh->errorPages.count(status)){
       std::string path = vh->errorPages.at(status);
-      std::cout << path << std::endl;
-      if (path[0] == '/') 
-         path = "." + path; // make it relative to current working dir
-      std::cout << path << std::endl;
       body = loadFile(vh->errorPages.at(status));
    }
 
