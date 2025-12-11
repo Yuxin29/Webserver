@@ -89,6 +89,11 @@ namespace config{
 		pages[400] = "/errors/400.html";
 		pages[403] = "/errors/403.html";
 		pages[404] = "/errors/404.html";
+		pages[405] = "/errors/405.html";
+		pages[408] = "/errors/408.html";
+		pages[413] = "/errors/413.html";
+		pages[414] = "/errors/414.html";
+		pages[431] = "/errors/431.html";
 		pages[500] = "/errors/500.html";
 		pages[502] = "/errors/502.html";
 		pages[503] = "/errors/503.html";
