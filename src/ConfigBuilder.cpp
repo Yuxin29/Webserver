@@ -10,11 +10,11 @@ static void validateRoot(const std::string& root)
 		throw std::runtime_error("Invalid root: '" + root + "' must be an existing directory");
 }
 
-static void validatePath(const std::string& path)
-{
-	if(path.empty() || path[0] != '/')
-		throw std::runtime_error("Location path must start with '/' : "+path);
-}
+// static void validatePath(const std::string& path)
+// {
+// 	if(path.empty() || path[0] != '/')
+// 		throw std::runtime_error("Location path must start with '/' : "+path);
+// }
 
 static void validateindex(const std::vector<std::string>& index)
 {
@@ -127,7 +127,7 @@ namespace config{
 	{
 		LocationConfig lc;
 		lc.path = node.path.empty() ? "/" : node.path;
-		validatePath(lc.path);
+		//validatePath(lc.path);
 		lc.root = node.root.empty() ? parent.root : node.root;
 		validateRoot(lc.root);
 		lc.index = node.index.empty() ? parent.index : node.index;
