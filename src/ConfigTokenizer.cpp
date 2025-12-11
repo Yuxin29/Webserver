@@ -57,7 +57,7 @@ namespace config{
 		if (eof())
 			return Token{TK_EOF, "", start_line, start_col};
 		char c = peek(); //aviding go over the boundary
-		if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-' || c == ':') //identifier or path
+		if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-' || c == ':' || c == '*') //identifier or path
 			return tokenizeIdentifier();
 		if (c == '{' || c == '}' || c == ';')
 			return tokenizeSymbol();
@@ -75,7 +75,7 @@ namespace config{
 		while (!eof())
 		{
 			char c = peek();
-			if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-'|| c == ':')
+			if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-'|| c == ':' || c == '*')
 				get();
 			else
 				break;

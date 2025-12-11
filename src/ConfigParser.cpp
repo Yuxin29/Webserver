@@ -168,6 +168,9 @@ namespace config{
 				}
 				else{
 					host = listenValue.substr(0, colon);
+					if(host == "*")
+						host = "0.0.0.0";
+					std::cout << host << std::endl;
 					port = std::stoi(listenValue.substr(colon+1));
 				}
 				server.listen = std::make_pair(host, port);

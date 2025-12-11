@@ -34,7 +34,7 @@ bool isMethodAllowed(const config::LocationConfig* loc, const std::string& metho
  * @note HTTP/1.1 defaults to keep-alive unless client sends "Connection: close"
  *       HTTP/1.0 defaults to close unless client sends "Connection: keep-alive" -> filtered out in validation stage
  * @note Connection header value is Case-insensitivity (all valid) -> Convert to lowercase
- * 
+ *
  * @example of connection headerlines
  * Connection: Keep-Alive
  * Connection: CLOSE
@@ -43,7 +43,7 @@ bool isMethodAllowed(const config::LocationConfig* loc, const std::string& metho
 bool shouldKeepAlive(const HttpRequest& req){
    std::string version = req.getVersion();
    const std::map<std::string, std::string>& headers = req.getHeaders();
-    
+
    auto it = headers.find("Connection");
    if (it != headers.end()) {
       std::string connValue = it->second;
@@ -83,9 +83,9 @@ namespace fs = std::filesystem; // Alias for filesystem
  * @example_format:  type / subtype
  * @example          text/html
  */
-std::string getMimeType(const std::string& path) 
+std::string getMimeType(const std::string& path)
 {
-   static const std::map<std::string, std::string> mimeMap = 
+   static const std::map<std::string, std::string> mimeMap =
    {
       {".html","text/html"},
       {".htm","text/html"},
@@ -153,7 +153,7 @@ const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh,
    size_t qpos = uri.find('?');  // yuxin need to reconsider
    if (qpos != std::string::npos)
       uri = uri.substr(0, qpos);
-   
+
    const config::LocationConfig* best = nullptr;
    size_t bestLen = 0;
 
@@ -180,7 +180,7 @@ const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh,
  * @note    used to translate request URIs into actual file paths on the server
  */
 std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
-{    
+{
    std::string root = loc->root;     // e.g. "./sites/static"
 
    // Ensure root ends with "/"
@@ -226,7 +226,7 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
          return makeErrorResponse(500);
       }
    }
-      
+
    std::string headersString = out.substr(0, pos);
    std::string bodyString = out.substr(pos + 4);
 
@@ -307,7 +307,7 @@ HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, 
  * @brief   Handles an HTTP GET request and generates the appropriate HttpResponse
  *
  * @param   req the HttpRequest object representing the client's GET request
- * @param   vh pointer to the ServerConfig (virtual host)   
+ * @param   vh pointer to the ServerConfig (virtual host)
  * @return  HttpResponse object representing the server's response to the GET request
  *
  * @note    need to check CGI first, it has priority over static files
@@ -315,8 +315,8 @@ HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, 
  * @example request:
  * GET /hello HTTP/1.1
  * Host: example.com
- * User-Agent: curl/7.81.0             
- * Accept: text/plain 
+ * User-Agent: curl/7.81.0
+ * Accept: text/plain
  * @example response:
  * HTTP/1.1 200 OK
  * Date: Thu, 21 Nov 2025 10:05:00 GMT
@@ -343,7 +343,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
          return makeErrorResponse(500);
-      return parseCGIOutput(cgi_output, req);   
+      return parseCGIOutput(cgi_output, req);
    }
 
    // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
@@ -365,6 +365,9 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       if (lc->autoindex) {
          return generateAutoIndex(fullpath, req);
       }
+	  //Note: we should check if the aotuindex is false, then return error
+	  else
+		return makeErrorResponse(404); //check correct error code
       // try index files
       std::string index_file = getIndexFile(fullpath, lc);
       std::cout << "---------------------" << index_file << std::endl;
@@ -385,7 +388,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    if (mime_type.empty())
       mime_type = "text/html";
 
-   // Read file content → sent as response body. 
+   // Read file content → sent as response body.
    // using: std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    if (!ifs.is_open())
@@ -414,7 +417,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
  * @brief   Handles an HTTP POST request and generates the appropriate HttpResponse
  *
  * @param   req the HttpRequest object representing the client's GET request
- * @param   vh pointer to the ServerConfig (virtual host)   
+ * @param   vh pointer to the ServerConfig (virtual host)
  * @return  HttpResponse object representing the server's response to the POST request
  *
  * @note    need to check CGI first, it has priority over static files
@@ -435,7 +438,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // Server receives POST /submit-data.
    std::string uri = req.getPath();
 
-   // Determines the target resource:Typically a CGI script, an upload handler, or a location block. 
+   // Determines the target resource:Typically a CGI script, an upload handler, or a location block.
    // Example: /var/www/html/submit-data (or routed to CGI)
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc)
@@ -445,7 +448,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    }
    if (!isMethodAllowed(lc, "POST"))
       return makeErrorResponse(405);
-   CGI cgi(req, *lc); 
+   CGI cgi(req, *lc);
    if (cgi.isCGI()) {
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
@@ -457,7 +460,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // yuxin need to check, should the upload_dir be in root?
    std::string uploadDir = lc->upload_dir; // NOTE FROM LIN date:10/12 change this to lc->upload_dir
    if (uploadDir.empty())
-       return makeErrorResponse(500); 
+       return makeErrorResponse(500);
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string savepath = uploadDir + "/" + filename;
 
@@ -497,7 +500,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
  * @brief   Handles an HTTP DELETE request and generates the appropriate HttpResponse
  *
  * @param   req the HttpRequest object representing the client's GET request
- * @param   vh pointer to the ServerConfig (virtual host)   
+ * @param   vh pointer to the ServerConfig (virtual host)
  * @return  HttpResponse object representing the server's response to the DELETE request
  *
  * @note    need to check CGI first, it has priority over static files
@@ -516,7 +519,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::ServerConfig* vh){
    // Server receives DELETE /files/file1.txt.
    std::string uri = req.getPath();
-   
+
    // first check CGI, below are fake code
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc) {
@@ -525,7 +528,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    }
    if (!isMethodAllowed(lc, "DELETE"))
       return makeErrorResponse(405);
-   CGI cgi(req, *lc); 
+   CGI cgi(req, *lc);
    if (cgi.isCGI()) {
          std::string cgi_output = cgi.execute();
          if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
@@ -536,8 +539,8 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    // otherwie, it is a static delete. Maps path: /files/file1.txt → /var/www/html/files/file1.txt
    std::string fullpath = mapUriToPath(lc, uri);
 
-   // Validates: 
-   // Does file exist? 
+   // Validates:
+   // Does file exist?
    // Is it allowed to delete this path? (check directory permissions)?
    //  Is DELETE method allowed in this location?
    struct stat st;
@@ -571,7 +574,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
  * @param  req HttpRequest object representing the client's request
  * @param  vh pointer to the ServerConfig for the virtual host
  * @return HttpResponse object representing the server's response
- 
+
  * @note for the server to handle the request based on method type
  */
 HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::ServerConfig* vh){
