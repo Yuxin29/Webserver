@@ -602,6 +602,7 @@ HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::
 }
 
 static const std::map<int, std::string> STATUS_REASON = {
+    {301, "Moved Permanently"},
     {400, "Bad Request"},
     {403, "Forbidden"},
     {404, "Not Found"},

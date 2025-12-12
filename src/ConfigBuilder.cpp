@@ -86,6 +86,7 @@ namespace config{
 	std::map<int, std::string> ConfigBuilder::defaultErrorPages()
 	{
 		std::map<int, std::string> pages;
+		pages[301] = "/errors/301.html";
 		pages[400] = "/errors/400.html";
 		pages[403] = "/errors/403.html";
 		pages[404] = "/errors/404.html";
