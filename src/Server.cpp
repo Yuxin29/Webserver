@@ -136,15 +136,12 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	if (parser.getState() == ERROR) {
 		HttpResponse error_res = makeErrorResponse(parser.getErrStatus(), virtualHost);
 		std::string error_res_string = error_res.buildResponseString();
-		std::cout << error_res_string << std::endl;
-		std::cout << "----------------" << std::endl << std::endl << std::endl;
 		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
 	HttpResponse response = _httpHandler.handleRequest(request, virtualHost);
 	std::string responseString = response.buildResponseString();
-	std::cout << responseString << std::endl;
 	ssize_t sent = send(clientFd, responseString.c_str(), responseString.size(), 0);
 	if (sent < 0){
 		cleanMaps(clientFd);
