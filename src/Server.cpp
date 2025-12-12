@@ -85,7 +85,7 @@ int  Server::acceptConnection(void){
  *
  * @note This method reads data from the client socket, parses the HTTP request,
  *       matches the appropriate virtual host, generates an HTTP response, and sends it back to the client.
- *       It also manages connection persistence based on the response's keep-alive status.		
+ *       It also manages connection persistence based on the response's keep-alive status.
  */
 Server::ClientStatus Server::handleClient(int clientFd){
 	// listening
@@ -105,16 +105,16 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	HttpParser& parser = _parsers[clientFd];
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
-	if (parser.getState() != DONE && parser.getState() != ERROR)
+	if (parser.getState() == ERROR) {
+		HttpResponse error_res = makeErrorResponse(parser.getErrStatus());
+		std::string error_res_string = error_res.buildResponseString();
+		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
+		cleanMaps(clientFd);
+		return CLIENT_ERROR;
+	}
+	if (parser.getState() != DONE)
 		return CLIENT_INCOMPLETE;
-	// if (parser.getState() == ERROR) {
-	// 	HttpResponse error_res = makeErrorResponse(parser.getErrStatus());
-	// 	std::string error_res_string = error_res.buildResponseString();
-	// 	send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
-	// 	cleanMaps(clientFd);
-	// 	return CLIENT_ERROR;
-	// }
-	_requestCount[clientFd]++;	
+	_requestCount[clientFd]++;
 	std::map<std::string, std::string> headers = request.getHeaders();
 	auto it = headers.find("Host");
 	if (it == headers.end()){
@@ -124,13 +124,6 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	std::string hostHeader = it->second;
 	const ServerConfig* virtualHost = matchVirtualHost(hostHeader);
 	if (!virtualHost){
-		cleanMaps(clientFd);
-		return CLIENT_ERROR;
-	}
-	if (parser.getState() == ERROR) {
-		HttpResponse error_res = makeErrorResponse(parser.getErrStatus(), virtualHost);
-		std::string error_res_string = error_res.buildResponseString();
-		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}

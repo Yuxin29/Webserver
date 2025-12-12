@@ -45,7 +45,7 @@ bool HttpParser::validateStartLine()
     }
     // Enhancement: path cannot be too long check
     if (_req.getPath().size() > 2048){
-        _errStatus = 400;        
+        _errStatus = 400;
         std::cout << "Request_URI too long" << _req.getPath() << std::endl;
         return false;
     }
@@ -53,7 +53,7 @@ bool HttpParser::validateStartLine()
     for (size_t i = 0; i < _req.getPath().size(); ++i){
         char c = _req.getPath()[i];
         if (c < 31 || c == ' '){
-            _errStatus = 400;        
+            _errStatus = 400;
             std::cout << "Path must not have empty space or controling chars: " << _req.getPath() << std::endl;
             return false;
         }
@@ -67,12 +67,12 @@ bool HttpParser::validateStartLine()
  * @param HttpParser map headers within class HttpRequest nested in HttpParser
  * @return true or false, on false, set the _errStatus the coresponding error code
  *
- * @note exxample of headers: 
+ * @note exxample of headers:
  * POST /login HTTP/1.1
  * Host: example.com
- * User-Agent: curl/7.81.0 
- * Content-Type: application/x-www-form-urlencoded 
- * Content-Length: 27 
+ * User-Agent: curl/7.81.0
+ * Content-Type: application/x-www-form-urlencoded
+ * Content-Length: 27
  */
 bool    HttpParser::validateHeaders()
 {
@@ -88,13 +88,13 @@ bool    HttpParser::validateHeaders()
 
         // Enhancement: the headers can not be too big, like todal length 8192 8KB
         if (totalSize > 8192){
-            _errStatus = 431; 
+            _errStatus = 431;
             std::cout << "Total header size to big" << std::endl;
             return false;
         }
         // a single header can not be too long: 431, Request Header Fields Too Large
         if (key.size() > 1024 || value.size() > 4096){
-            _errStatus = 431; 
+            _errStatus = 431;
             std::cout << "Header field too large: " << key << std::endl;
             return false;
         }
@@ -109,7 +109,7 @@ bool    HttpParser::validateHeaders()
         //validateMandatoryHeaders: loop though all keys, has to find host
         if (key == "Host"){
             if (hasHost){
-                _errStatus = 400; 
+                _errStatus = 400;
                 std::cout << "Multiple Host headers found." << std::endl;
                 return false;
             }
@@ -122,12 +122,12 @@ bool    HttpParser::validateHeaders()
             return false;
         }
         seenKeys.insert(key);
-        // Enhancement: value cannot have empty space or controling chars, 
+        // Enhancement: value cannot have empty space or controling chars,
         // can not have it: Header value must not include empty space or controling chars: gzip, deflate, br, zstd
         // for (size_t i = 0; i < value.size(); ++i){
         //     char c = value[i];
         //     if (c < 31 || c == ' '){
-        //         _errStatus = 400;        
+        //         _errStatus = 400;
         //         std::cout << "Header value must not include empty space or controling chars: " << value << std::endl;
         //         return false;
         //     }
@@ -155,7 +155,7 @@ bool    HttpParser::validateHeaders()
                 }
             }
             // can not be minus
-            long long len = atoll(value.c_str()); 
+            long long len = atoll(value.c_str());
             if (len < 0){
                 _errStatus = 400;
                 std::cout << "Negative Content-Length value." << std::endl;
@@ -272,10 +272,10 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     if (dd == std::string::npos)
         return;
     std::string key = headerline.substr(0, dd);
-    std::string value = headerline.substr(dd + 1);        
+    std::string value = headerline.substr(dd + 1);
     key = trim_space(key);
     value = trim_space(value);
-    _req.addHeader(key, value); 
+    _req.addHeader(key, value);
 }
 
 /**
@@ -287,14 +287,14 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
  * @note iss : in stringstream
  */
 void HttpParser::parseBody(size_t pos)
-{   
+{
     size_t              available = _buffer.size() - pos;
     const std::string&  curBody = _req.getBody();
     size_t              toRead = std::min(available, _bodyLength - curBody.size());
     std::string         newBody = _req.getBody();       // copy (const ok)
 
     newBody += _buffer.substr(pos, toRead);             // modify copy
-    _req.setBody(newBody);  
+    _req.setBody(newBody);
     pos += toRead;
     if (_req.getBody().size() >= _bodyLength)
         _state = DONE;
@@ -306,14 +306,14 @@ void HttpParser::parseBody(size_t pos)
  * @param str rawLine (the data rawLine might be ramdom pieces, not neccessarily a full line)
  * @return an HttpRequest object
  *
- * @note this one is going to called mamy times, basically whenever recv() some new bytes, 
+ * @note this one is going to called mamy times, basically whenever recv() some new bytes,
  */
 HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
 {
     _buffer += rawLine;
-    
+
     size_t pos = 0;
-    // first startine and headers and body 
+    // first startine and headers and body
     while (_state != DONE)
     {
         if (_state < BODY)

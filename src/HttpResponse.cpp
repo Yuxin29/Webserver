@@ -15,7 +15,7 @@ std::string HttpResponse::buildResponseString(){
     std::ostringstream response;
 
     response << _version << " " << _status << " " << _reason << "\r\n";
-    
+
     bool hasContentLength = false;
     // iterates though the _responseHeaders map container and check if there is Content-Length
     for (const auto &header : _responseHeaders) {

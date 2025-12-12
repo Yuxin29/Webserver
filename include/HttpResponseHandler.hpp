@@ -31,7 +31,7 @@ private:
     // --------------------
     // Internal Utility Methods
     // --------------------
-    HttpResponse                    parseCGIOutput(const std::string& out, const HttpRequest& req, const config::ServerConfig* vh);
+    HttpResponse                    parseCGIOutput(const std::string& out, const HttpRequest& req);
     HttpResponse                    generateAutoIndex(const std::string& dirPath, HttpRequest& req);
     // --------------------
     //  InternalHandlers for different HTTP methods
@@ -51,5 +51,4 @@ public:
 //   Utility Functions
 // --------------------
 std::string loadFile(const std::string& path);
-//HttpResponse makeErrorResponse(int status);
-HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh);
+HttpResponse makeErrorResponse(int status);
