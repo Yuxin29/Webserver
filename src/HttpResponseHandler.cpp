@@ -149,8 +149,12 @@ std::string mapUriToPath(const config::LocationConfig* loc, const std::string& u
    if (ec)
       return "";
 
-   // check of the real path canonicalPath is under is rootPath
-   if (canonicalPath.string().find(rootPath.string()) != 0) 
+   // SAFEST check: “canonicalPath relative to rootPath”
+   fs::path rel = fs::relative(canonicalPath, rootPath, ec);
+      if (ec) return "";
+
+   // If result starts with ".." => OUTSIDE root
+   if (rel.string().size() >= 2 && rel.string().substr(0, 2) == "..")
       return "";
 
    return canonicalPath.string();
@@ -340,18 +344,23 @@ HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, 
  *
  * Hello, world!
  */
-HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh){
+HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh)
+{
    // get the request URI: uniform Resource Identifier, _path in the request
+   return makeErrorResponse(403, vh);
    std::string uri = req.getPath();
 
-   // First check if it is cgi
+   // First find LocationConfig check if it is cgi
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc){
       //std::cout << "debug 1" << uri << std::endl;
       return makeErrorResponse(404, vh);
    }
+   std::cout << "test1: " << lc->autoindex << std::endl;
+
    if (!isMethodAllowed(lc, "GET"))
       return makeErrorResponse(405, vh);
+
    CGI cgi(req, *lc);
    if (cgi.isCGI()){
       std::string cgi_output = cgi.execute();
@@ -359,12 +368,19 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
          return makeErrorResponse(500, vh);
       return parseCGIOutput(cgi_output, req, vh);   
    }
+   std::cout << "test2: " << lc->autoindex << std::endl;
 
    // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
    std::string fullpath = mapUriToPath(lc, uri);
-   if (fullpath.empty())
+   std::cout << "test5: " << lc->autoindex << std::endl;
+   return makeErrorResponse(403, vh);
+   if (fullpath.empty()){
+      std::cout << uri << std::endl;
+      std::cout << fullpath << std::endl;
+      std::cout << "debug 0" << uri << std::endl;
       return makeErrorResponse(403, vh);
-
+   }
+   std::cout << "test6: " << lc->autoindex << std::endl;
    // Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0)
@@ -372,31 +388,32 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       //std::cout << "debug 2" << uri << std::endl;
       return makeErrorResponse(404, vh);
    }
-   if (access(fullpath.c_str(), R_OK) < 0)
-      return makeErrorResponse(403, vh);
-   if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
-      return makeErrorResponse(403, vh);
+   std::cout << "test5: " << lc->autoindex << std::endl;
    if (S_ISDIR(st.st_mode)) {
-      // autoindex enabled → return HTML directory listing
-      if (lc->autoindex) {
-         return generateAutoIndex(fullpath, req);
-      }
-	  //Note: we should check if the aotuindex is false, then return error
-	//   else
-	// 	return makeErrorResponse(404); //check correct error code
+      if (!lc->autoindex)
+         return makeErrorResponse(403, vh); //check correct error code
       // try index files
       std::string index_file = getIndexFile(fullpath, lc);
-     // std::cout << "---------------------" << index_file << std::endl;
+      // std::cout << "---------------------" << index_file << std::endl;
       if (!index_file.empty()) {
          fullpath += "/" + index_file;
          if (stat(fullpath.c_str(), &st) < 0 || !S_ISREG(st.st_mode))
             return makeErrorResponse(404, vh);
       }
       else
-      {
-         std::cout << "is it here?" << std::endl;
-         return makeErrorResponse(403, vh);
-      }
+	      // autoindex enabled → return HTML directory listing
+         return generateAutoIndex(fullpath, req);
+   }
+   std::cout << "test3: " << lc->autoindex << std::endl;
+   if (access(fullpath.c_str(), R_OK) < 0){
+      //std::cout << "debug 1" << uri << std::endl;
+      return makeErrorResponse(403, vh);
+   }
+   std::cout << "test4: " << lc->autoindex << std::endl;
+   if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
+   {
+      //std::cout << "debug 2" << uri << std::endl;
+      return makeErrorResponse(403, vh);
    }
 
    // Determined MIME type (text/plain for .txt or plain text).
@@ -409,6 +426,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    if (!ifs.is_open())
       return makeErrorResponse(500, vh);
+
    ifs.seekg(0, std::ios::end);
    std::streamsize size = ifs.tellg();
    if (size < 0)

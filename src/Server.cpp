@@ -114,14 +114,20 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	// 	cleanMaps(clientFd);
 	// 	return CLIENT_ERROR;
 	// }
-	_requestCount[clientFd]++;	
-	std::map<std::string, std::string> headers = request.getHeaders();
-	auto it = headers.find("Host");
-	if (it == headers.end()){
-		cleanMaps(clientFd);
-		return CLIENT_ERROR;
+	_requestCount[clientFd]++;
+	std::string hostHeader;
+	if (parser.getState() == DONE)
+	{
+		std::map<std::string, std::string> headers = request.getHeaders();
+		auto it = headers.find("Host");
+		if (it == headers.end()){
+			cleanMaps(clientFd);
+			return CLIENT_ERROR;
+		}
+		hostHeader = it->second;
 	}
-	std::string hostHeader = it->second;
+	else 
+		hostHeader = "";
 	const ServerConfig* virtualHost = matchVirtualHost(hostHeader);
 	if (!virtualHost){
 		cleanMaps(clientFd);
@@ -130,12 +136,15 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	if (parser.getState() == ERROR) {
 		HttpResponse error_res = makeErrorResponse(parser.getErrStatus(), virtualHost);
 		std::string error_res_string = error_res.buildResponseString();
+		std::cout << error_res_string << std::endl;
+		std::cout << "----------------" << std::endl << std::endl << std::endl;
 		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
 	HttpResponse response = _httpHandler.handleRequest(request, virtualHost);
 	std::string responseString = response.buildResponseString();
+	std::cout << responseString << std::endl;
 	ssize_t sent = send(clientFd, responseString.c_str(), responseString.size(), 0);
 	if (sent < 0){
 		cleanMaps(clientFd);
@@ -153,6 +162,9 @@ Server::ClientStatus Server::handleClient(int clientFd){
 }
 
 const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
+	//yuxin added
+	if (hostHeader.empty())
+		return &_virtualHosts[0];
 	for(size_t i = 0; i < _virtualHosts.size(); i++){
 		for (size_t j = 0; j < _virtualHosts[i].serverNames.size(); j++){
 			if (_virtualHosts[i].serverNames[j] == hostHeader){
