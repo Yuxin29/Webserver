@@ -366,11 +366,11 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
          return generateAutoIndex(fullpath, req);
       }
 	  //Note: we should check if the aotuindex is false, then return error
-	  else
-		return makeErrorResponse(404); //check correct error code
+	//   else
+	// 	return makeErrorResponse(404); //check correct error code
       // try index files
       std::string index_file = getIndexFile(fullpath, lc);
-      std::cout << "---------------------" << index_file << std::endl;
+     // std::cout << "---------------------" << index_file << std::endl;
       if (!index_file.empty()) {
          fullpath += "/" + index_file;
          if (stat(fullpath.c_str(), &st) < 0 || !S_ISREG(st.st_mode))
