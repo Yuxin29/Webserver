@@ -49,12 +49,12 @@ static void validateUploaddir(const std::string& upload)
 
 
 namespace config{
-	std::vector<std::string> ConfigBuilder::defaultIndex()
-	{
-		std::vector<std::string> result;
-		result.push_back("index.html");
-		return result;
-	}
+	// std::vector<std::string> ConfigBuilder::defaultIndex()
+	// {
+	// 	std::vector<std::string> result;
+	// 	result.push_back("index.html");
+	// 	return result;
+	// }
 
 	long ConfigBuilder::defaultClientMaxBodySize()
 	{
@@ -144,7 +144,7 @@ namespace config{
 		cfg.errorPages = node.errorPages.empty() ? defaultErrorPages() : node.errorPages;
 		cfg.root = node.root.empty() ? "." : node.root;
 		validateRoot(cfg.root);
-		cfg.index = node.index.empty() ? defaultIndex() : node.index;
+		cfg.index = node.index;
 		validateindex(cfg.index);
 		cfg.clientMaxBodySize = node.clientMaxBodySize.empty()
 									? defaultClientMaxBodySize()
