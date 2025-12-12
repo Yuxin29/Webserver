@@ -6,9 +6,8 @@
  * - Git Repo
  * - Team composition 
  * - Webserver workflow
- * - Week 1 plan 
- * - Week 2 plan 
- * - Week 3 plan 
+ * - Weekly
+ * - Debugging
  *
  * @details
  * This file uses Doxygen HTML-style block comments
@@ -117,7 +116,6 @@ ASCII diagrams must be placed inside triple backticks to render properly.
          │    A: Sends response to client     │
          └────────────────────────────────────┘
 ```
-
 # If I want to finish my HTTP project in 3 weeks
     Legend: ✅ = done, ❌ = missing, ⏳ = in progress, ⚠️ = caution
 
@@ -262,23 +260,41 @@ Test:
 - RFC validation  
 - Real browser testing  
 
+# Debugging
+  below are bugs my team found during the ddevelopment
 
-1. Autoindex
-2. err page           in process.
-3. content length 0
+## 1. path traversal  
+  user should not be able to visit other locations other than root folders.
+  example of failing test: echo -e "GET /../../lin_note HTTP/1.1\r\nHost: localhost\r\n\r\n" | nc localhost 8080
+### how
+  used std::filesystem::canonical to get the real path and check if it is under root
+  modified functions: std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
+
+## 2.error page
+  the ready made error page should be returned from site/static/error/xxx.html
+### how
+  modified functions: HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
+
+
+To be fixed:
+1. content length 0
 % ./tester http://localhost:8080
-4. std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
-{    
-   std::string root = loc->root;     // e.g. "./sites/static"
 
-    // Ensure root ends with "/"
-    if (!root.empty() && root[root.size() - 1] != '/')
-        root += "/";
+2. Autoindex
+when it is off,  http://localhost:8080/files it should not show the file list/
 
-    // Ensure uri does NOT start with "/" (avoid double slash)
-    std::string cleanUri = uri_raw;
-    if (!cleanUri.empty() && cleanUri[0] == '/')
-        cleanUri = cleanUri.substr(1);
+When autoindex is off, navigating to a directory such as:
+http://localhost:8080/files
 
-    return root + cleanUri;
-}
+should not show any directory listing.
+
+Expected behavior (consistent with Nginx):
+
+If autoindex = off and the directory has an index file → return the index file
+If autoindex = off and the directory has no index file → return 403 Forbidden
+
+Never generate a directory listing when autoindex is off
+Currently, the reason you are seeing a file list is because the directory contains:
+files/index.html
+
+which is a manually written file, not autoindex output.

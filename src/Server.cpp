@@ -105,15 +105,15 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	HttpParser& parser = _parsers[clientFd];
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
-	if (parser.getState() == ERROR) {
-		HttpResponse error_res = makeErrorResponse(parser.getErrStatus());
-		std::string error_res_string = error_res.buildResponseString();
-		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
-		cleanMaps(clientFd);
-		return CLIENT_ERROR;
-	}
-	if (parser.getState() != DONE)
+	if (parser.getState() != DONE && parser.getState() != ERROR)
 		return CLIENT_INCOMPLETE;
+	// if (parser.getState() == ERROR) {
+	// 	HttpResponse error_res = makeErrorResponse(parser.getErrStatus());
+	// 	std::string error_res_string = error_res.buildResponseString();
+	// 	send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
+	// 	cleanMaps(clientFd);
+	// 	return CLIENT_ERROR;
+	// }
 	_requestCount[clientFd]++;	
 	std::map<std::string, std::string> headers = request.getHeaders();
 	auto it = headers.find("Host");
@@ -124,6 +124,13 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	std::string hostHeader = it->second;
 	const ServerConfig* virtualHost = matchVirtualHost(hostHeader);
 	if (!virtualHost){
+		cleanMaps(clientFd);
+		return CLIENT_ERROR;
+	}
+	if (parser.getState() == ERROR) {
+		HttpResponse error_res = makeErrorResponse(parser.getErrStatus(), virtualHost);
+		std::string error_res_string = error_res.buildResponseString();
+		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
