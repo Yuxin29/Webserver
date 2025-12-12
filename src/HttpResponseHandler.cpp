@@ -260,7 +260,18 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
    }
    // manually setup this one
    headersMap["Content-Length"] = std::to_string(bodyString.size());
-      return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, shouldKeepAlive(req), true);
+   //if (req.getHeaders()){
+   for (std::map<std::string, std::string>::const_iterator it = req.getHeaders().begin(); it != req.getHeaders().end(); ++it){
+      const std::string& key = it->first;
+      const std::string& value = it->second;
+      if (key ==  "Content-Type" )
+      {
+         headersMap["Content-Type"] = value;
+         return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, shouldKeepAlive(req), true);
+      }
+   }
+   headersMap["Content-Type"] = "text/html";
+   return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, shouldKeepAlive(req), true);
 }
 
 /**
