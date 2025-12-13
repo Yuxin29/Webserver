@@ -29,9 +29,7 @@ Webserver::~Webserver(){
 	}
 }
 
-/* First step to start Webserver once passed configuration/parsing stage. This creates the necessary servers, grouping
-   them by host:port and call Server::start which bind ips and assign initial listening fds.
-*/
+/* This creates the necessary servers, grouping them by host:port. Call Server::Start to bind ips and create listening sockets.*/
 int Webserver::createServers(const std::vector<ServerConfig>& config){
 	std::map<std::string, std::vector<config::ServerConfig>> bindGroups;
 	for (size_t i = 0; i < config.size(); i++){
@@ -75,10 +73,7 @@ int Webserver::createServers(const std::vector<ServerConfig>& config){
 	return SUCCESS;
 }
 
-/* Main loop to run throughout the server execution, after servers
-   were created successfully. It handles Epoll events and manages connections, as well
-   as fds.
-*/
+/* Main loop running during server execution. It handles Epoll events, manages server and client connections.*/
 int Webserver::runWebserver(){	
 	_running = true;
 	const int MAX_EVENTS = 64;
