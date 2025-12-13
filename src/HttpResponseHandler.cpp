@@ -128,30 +128,49 @@ std::string formatTime(std::time_t t) {
  * @note    path traversal should not be allowed
  * @note    use std::filesystem::canonical to get the real path and check if it is under root
  */
+// std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
+// {
+//    std::string root = loc->root; // e.g., "./sites/static"
+//    fs::path rootPath = fs::absolute(root);
+
+//    std::string cleanUri = uri_raw;
+//    if (!cleanUri.empty() && cleanUri[0] == '/')
+//       cleanUri = cleanUri.substr(1);
+//    fs::path fullPath = rootPath / cleanUri;
+//    std::error_code ec;
+
+//    // path exists → canonicalize
+//    if (fs::exists(fullPath)) {
+//       fs::path canonicalPath = fs::canonical(fullPath, ec);
+//       if (ec)
+//          return ""; // should never happen for existing path
+//       // security: ensure canonical path is inside root
+//       fs::path rel = fs::relative(canonicalPath, rootPath, ec);
+//       if (ec || (!rel.empty() && rel.string().substr(0, 2) == ".."))
+//          return "";
+//       return canonicalPath.string();
+//    }
+//    // Path does NOT exist → return full path anyway (for 404 later)
+//    return fullPath.string();
+// }
 std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
 {
-   std::string root = loc->root; // e.g., "./sites/static"
-   fs::path rootPath = fs::absolute(root);
+    std::string rel = uri_raw;
+    if (rel.find(loc->path) == 0)
+        rel = rel.substr(loc->path.length());
+    if (!rel.empty() && rel[0] == '/')
+        rel = rel.substr(1);
 
-   std::string cleanUri = uri_raw;
-   if (!cleanUri.empty() && cleanUri[0] == '/')
-      cleanUri = cleanUri.substr(1);
-   fs::path fullPath = rootPath / cleanUri;
-   std::error_code ec;
+    fs::path full = fs::absolute(loc->root) / rel;
 
-   // path exists → canonicalize
-   if (fs::exists(fullPath)) {
-      fs::path canonicalPath = fs::canonical(fullPath, ec);
-      if (ec)
-         return ""; // should never happen for existing path
-      // security: ensure canonical path is inside root
-      fs::path rel = fs::relative(canonicalPath, rootPath, ec);
-      if (ec || (!rel.empty() && rel.string().substr(0, 2) == ".."))
-         return "";
-      return canonicalPath.string();
-   }
-   // Path does NOT exist → return full path anyway (for 404 later)
-   return fullPath.string();
+    std::error_code ec;
+    if (fs::exists(full))
+    {
+        fs::path canon = fs::canonical(full, ec);
+        if (!ec)
+            return canon.string();
+    }
+    return full.string();
 }
 
 /**
@@ -348,6 +367,35 @@ HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, 
  *
  * Hello, world!
  */
+
+std::string mapUriToServerRoot(
+    const config::ServerConfig* vh,
+    const std::string& uri_raw)
+{
+    fs::path rootPath = fs::absolute(vh->root);
+
+    std::string cleanUri = uri_raw;
+    if (!cleanUri.empty() && cleanUri[0] == '/')
+        cleanUri = cleanUri.substr(1);
+
+    fs::path fullPath = rootPath / cleanUri;
+
+    std::error_code ec;
+    if (fs::exists(fullPath))
+    {
+        fs::path canonicalPath = fs::canonical(fullPath, ec);
+        if (ec)
+            return "";
+
+        fs::path rel = fs::relative(canonicalPath, rootPath, ec);
+        if (ec || (!rel.empty() && rel.string().substr(0, 2) == ".."))
+            return "";
+
+        return canonicalPath.string();
+    }
+    return fullPath.string();
+}
+
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh)
 {
    // get the request URI: uniform Resource Identifier, _path in the request
@@ -356,7 +404,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    // First find LocationConfig check if it is cgi
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc){
-      //std::cout << "debug 1" << uri << std::endl;
+      std::cout << "debug 1" << uri << std::endl;
       return makeErrorResponse(404, vh);
    }
    if (!isMethodAllowed(lc, "GET"))
@@ -376,31 +424,33 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
    // Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
-   if (stat(fullpath.c_str(), &st) < 0)
+   if (stat(fullpath.c_str(), &st) == 0) 
    {
-      //std::cout << "debug 2" << uri << std::endl;
-      return makeErrorResponse(404, vh);
-   }
-   if (access(fullpath.c_str(), R_OK) < 0)
-      return makeErrorResponse(403, vh);
-   if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
-      return makeErrorResponse(403, vh);
-   if (S_ISDIR(st.st_mode)) {
-      std::cout << "debug, fullpath: "<< fullpath << std::endl;
-      // try index files
-      std::string index_file = getIndexFile(fullpath, lc);
-      if (!index_file.empty()) {
-         fullpath += "/" + index_file;
-         if (stat(fullpath.c_str(), &st) < 0 || !S_ISREG(st.st_mode))
-            return makeErrorResponse(404, vh);
-      }
-      else
+      if (S_ISDIR(st.st_mode))
       {
-         if (!lc->autoindex)
-            return makeErrorResponse(403, vh); //check correct error code
-         // autoindex enabled → return HTML directory listing
-         return generateAutoIndex(fullpath, req);
-      }
+         // URI does NOT end with '/'
+         if (uri[uri.size() - 1] != '/')
+            return makeRedirect301(uri + "/", vh);
+         //try index files
+         std::string index_file = getIndexFile(fullpath, lc);
+         if (!index_file.empty()) {
+            fullpath += "/" + index_file;
+            if (stat(fullpath.c_str(), &st) < 0 || !S_ISREG(st.st_mode))
+               return makeErrorResponse(404, vh);
+         }
+         else
+         {
+            if (!lc->autoindex)
+               return makeErrorResponse(403, vh); //check correct error code
+            // autoindex enabled → return HTML directory listing
+            return generateAutoIndex(fullpath, req);
+         }
+      }  
+   }
+   else
+   {
+      std::cout << "debug 2" << uri << std::endl;
+      return makeErrorResponse(404, vh);
    }
    if (access(fullpath.c_str(), R_OK) < 0)
       return makeErrorResponse(403, vh);
@@ -467,10 +517,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // Example: /var/www/html/submit-data (or routed to CGI)
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc)
-   {
-      //std::cout << "debug 3" << uri << std::endl;
       return makeErrorResponse(404, vh);
-   }
    if (!isMethodAllowed(lc, "POST"))
       return makeErrorResponse(405, vh);
    CGI cgi(req, *lc);
@@ -685,4 +732,34 @@ HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
    headers["Content-Type"] = "text/html";
 
    return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
+}
+
+HttpResponse makeRedirect301(const std::string& location, const config::ServerConfig* vh)
+{
+    int status = 301;
+    std::string reason = "Moved Permanently";
+
+    // Load static HTML body if available in vh->errorPages
+    std::string body;
+    if (vh && vh->errorPages.count(status)) {
+        body = loadFile(vh->errorPages.at(status));
+    }
+
+    // Fallback if no static file
+    if (body.empty()) {
+        body = "<h1>301 Moved Permanently</h1>";
+    }
+
+    std::map<std::string, std::string> headers;
+    headers["Location"] = location;
+
+    return HttpResponse(
+        "HTTP/1.1",
+        status,
+        reason,
+        body,
+        headers,
+        false, // keep-alive
+        false  // chunked?
+    );
 }
