@@ -275,26 +275,21 @@ Test:
 ### how
   modified functions: HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
 
+## 3.Autoindex 
+  When autoindex is off, navigating to a directory such as: http://localhost:8080/files
+  should not show any directory listing.
+
+  Expected behavior (consistent with Nginx):
+  If autoindex = off and the directory has an index file → return the index file
+  If autoindex = off and the directory has no index file → return 403 Forbidden
+
+  Never generate a directory listing when autoindex is off
+  Currently, the reason you are seeing a file list is because the directory contains: files/index.html
+  which is a manually written file, not autoindex output.
+
+### how
+  Lin removed defaulautoindex
 
 To be fixed:
 1. content length 0
 % ./tester http://localhost:8080
-
-2. Autoindex
-when it is off,  http://localhost:8080/files it should not show the file list/
-
-When autoindex is off, navigating to a directory such as:
-http://localhost:8080/files
-
-should not show any directory listing.
-
-Expected behavior (consistent with Nginx):
-
-If autoindex = off and the directory has an index file → return the index file
-If autoindex = off and the directory has no index file → return 403 Forbidden
-
-Never generate a directory listing when autoindex is off
-Currently, the reason you are seeing a file list is because the directory contains:
-files/index.html
-
-which is a manually written file, not autoindex output.

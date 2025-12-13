@@ -272,7 +272,17 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
    }
    // manually setup this one
    headersMap["Content-Length"] = std::to_string(bodyString.size());
-      return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, shouldKeepAlive(req), true);
+   for (std::map<std::string, std::string>::const_iterator it = req.getHeaders().begin(); it != req.getHeaders().end(); ++it){
+      const std::string& key = it->first;
+      const std::string& value = it->second;
+      if (key ==  "Content-Type" )
+      {
+         headersMap["Content-Type"] = value;
+         return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, shouldKeepAlive(req), true);
+      }
+   }
+   headersMap["Content-Type"] = "text/html";
+   return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, shouldKeepAlive(req), true);
 }
 
 /**
@@ -345,18 +355,18 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
    // First find LocationConfig check if it is cgi
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
-   if (!lc)
+   if (!lc){
+      //std::cout << "debug 1" << uri << std::endl;
       return makeErrorResponse(404, vh);
-
+   }
    if (!isMethodAllowed(lc, "GET"))
       return makeErrorResponse(405, vh);
-
    CGI cgi(req, *lc);
    if (cgi.isCGI()){
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
          return makeErrorResponse(500, vh);
-      return parseCGIOutput(cgi_output, req, vh);   
+      return parseCGIOutput(cgi_output, req, vh);
    }
 
    // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
@@ -367,8 +377,14 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    // Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0)
+   {
+      //std::cout << "debug 2" << uri << std::endl;
       return makeErrorResponse(404, vh);
-
+   }
+   if (access(fullpath.c_str(), R_OK) < 0)
+      return makeErrorResponse(403, vh);
+   if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
+      return makeErrorResponse(403, vh);
    if (S_ISDIR(st.st_mode)) {
       std::cout << "debug, fullpath: "<< fullpath << std::endl;
       // try index files
@@ -457,7 +473,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    }
    if (!isMethodAllowed(lc, "POST"))
       return makeErrorResponse(405, vh);
-   CGI cgi(req, *lc); 
+   CGI cgi(req, *lc);
    if (cgi.isCGI()) {
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
@@ -469,7 +485,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // yuxin need to check, should the upload_dir be in root?
    std::string uploadDir = lc->upload_dir; // NOTE FROM LIN date:10/12 change this to lc->upload_dir
    if (uploadDir.empty())
-       return makeErrorResponse(500, vh); 
+       return makeErrorResponse(500, vh);
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string savepath = uploadDir + "/" + filename;
 
@@ -537,7 +553,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    }
    if (!isMethodAllowed(lc, "DELETE"))
       return makeErrorResponse(405, vh);
-   CGI cgi(req, *lc); 
+   CGI cgi(req, *lc);
    if (cgi.isCGI()) {
          std::string cgi_output = cgi.execute();
          if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
@@ -602,15 +618,16 @@ HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::
 }
 
 static const std::map<int, std::string> STATUS_REASON = {
-   {400, "Bad Request"},
-   {403, "Forbidden"},
-   {404, "Not Found"},
-   {405, "Method Not Allowed"},
-   {408, "Request Timeout"},
-   {413, "Payload Too Large"},
-   {414, "URI Too Long"},
-   {431, "Request Header Fields Too Large"},
-   {500, "Internal Server Error"},
+    {301, "Moved Permanently"},
+    {400, "Bad Request"},
+    {403, "Forbidden"},
+    {404, "Not Found"},
+    {405, "Method Not Allowed"},
+    {408, "Request Timeout"},
+    {413, "Payload Too Large"},
+    {414, "URI Too Long"},
+    {431, "Request Header Fields Too Large"},
+    {500, "Internal Server Error"},
 };
 
 std::string loadFile(const std::string& path)

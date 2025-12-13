@@ -15,7 +15,8 @@ class Server {
 			CLIENT_INCOMPLETE,
 			CLIENT_KEEP_ALIVE,
 			CLIENT_COMPLETE,
-			CLIENT_ERROR
+			CLIENT_ERROR,
+			CLIENT_WRITING
 		};
 
 		enum StartResult {
@@ -23,6 +24,15 @@ class Server {
 			START_SOCKET_ERROR,
 			START_BIND_ERROR,
 			START_LISTEN_ERROR
+		};
+
+		struct WriteBuffer {
+			std::string data;
+			size_t sent = 0;
+			bool keepAlive = false;
+
+			bool isComplete() const;
+			size_t remainingToSend() const;
 		};
 
 	private:
@@ -36,11 +46,12 @@ class Server {
 		sockaddr_in					_addr;
 		std::map<int, int>			_requestCount;
 		std::map<int, HttpParser>	_parsers;
+		std::map<int, WriteBuffer>	_writeBuffers;
 		HttpResponseHandler			_httpHandler;
 
 		const config::ServerConfig* matchVirtualHost(const std::string& hostHeader);
-		void  cleanMaps(int clientFd);
-
+		const config::ServerConfig* getDefaultVhost() const;
+		
 	public:
 		Server() = delete;
 		explicit Server(const std::string& host, int port, const std::vector<config::ServerConfig>& serverBlocks);
@@ -53,6 +64,9 @@ class Server {
 		void shutdown(void);
 		int  acceptConnection(void);
 		ClientStatus handleClient(int clientFd);
+		ClientStatus handleClientWrite(int clientFd);
 		int  getListenFd(void) const;
 		int  getPort(void) const;
+		bool hasWriteBuffer(int clientFd) const;
+		void cleanMaps(int clientFd);
 };
