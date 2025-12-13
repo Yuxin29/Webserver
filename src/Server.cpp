@@ -179,12 +179,6 @@ Server::ClientStatus Server::handleClientWrite(int clientFd) {
 }
 
 const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
-	if (hostHeader.empty()){
-		if (!_virtualHosts.empty()){
-			return &_virtualHosts[0];
-		}
-		return nullptr;
-	}
 	for(size_t i = 0; i < _virtualHosts.size(); i++){
 		for (size_t j = 0; j < _virtualHosts[i].serverNames.size(); j++){
 			if (_virtualHosts[i].serverNames[j] == hostHeader){
