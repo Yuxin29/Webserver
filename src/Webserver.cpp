@@ -92,6 +92,11 @@ int Webserver::runWebserver(){
 		}
 		for (int i = 0; i < nfds; i++){
 			int fd = events[i].data.fd;
+			if (hasError(events[i])){
+				removeClientFd(fd);
+				continue;
+			}
+
 			if (events[i].events & EPOLLIN){
 				if (isListeningSocket(fd)){
 					handleNewConnection(fd);
@@ -99,11 +104,9 @@ int Webserver::runWebserver(){
 					handleClientRequest(fd);
 				}
 			}
+			
 			if (events[i].events & EPOLLOUT){
 				handleClientWrite(fd);
-			}
-			if (hasError(events[i])){
-				removeClientFd(fd);
 			}
 		}
 	}

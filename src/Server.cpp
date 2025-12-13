@@ -152,7 +152,11 @@ Server::ClientStatus Server::handleClient(int clientFd){
 }
 
 Server::ClientStatus Server::handleClientWrite(int clientFd) {
-	WriteBuffer& buffer = _writeBuffers[clientFd];
+	auto it = _writeBuffers.find(clientFd);
+	if (it == _writeBuffers.end()){
+		return CLIENT_ERROR;
+	}
+	WriteBuffer& buffer = it->second;
 	const char* dataPtr = buffer.data.c_str() + buffer.sent;
 	size_t remaining = buffer.remainingToSend();
 
