@@ -21,6 +21,8 @@ class Webserver {
 		bool isListeningSocket(int fd) const;
 		void handleNewConnection(int listenFd);
 		void handleClientRequest(int clientFd);
+		void handleClientWrite(int clientFd);
+		void modifyClientEvents(int clientFd, uint32_t events);
 		void checkIdleConnections();
 		void addClientToPoll(int clientFd, size_t serverIndex);
 		void removeFdFromPoll(int fd);
@@ -28,6 +30,7 @@ class Webserver {
 		void closeAllClients(void);
 		bool hasError(const epoll_event& event) const;
 		void sendTimeoutResponse(int clientFd);
+		bool isFdWriting(int clientFd) const;
 
 	public:
 		explicit Webserver();

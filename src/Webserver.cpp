@@ -16,7 +16,6 @@ Webserver::Webserver() : _running(false){
 	signal(SIGINT, signalHandler);
 	signal(SIGTERM, signalHandler);
 	signal(SIGPIPE, SIG_IGN);
-
 	_epollFd = epoll_create1(0);
 	if (_epollFd < 0){
 		throw std::runtime_error("Failed to create epoll instance");
@@ -30,6 +29,9 @@ Webserver::~Webserver(){
 	}
 }
 
+/* First step to start Webserver once passed configuration/parsing stage. This creates the necessary servers, grouping
+   them by host:port and call Server::start which bind ips and assign initial listening fds.
+*/
 int Webserver::createServers(const std::vector<ServerConfig>& config){
 	std::map<std::string, std::vector<config::ServerConfig>> bindGroups;
 	for (size_t i = 0; i < config.size(); i++){
@@ -73,6 +75,10 @@ int Webserver::createServers(const std::vector<ServerConfig>& config){
 	return SUCCESS;
 }
 
+/* Main loop to run throughout the server execution, after servers
+   were created successfully. It handles Epoll events and manages connections, as well
+   as fds.
+*/
 int Webserver::runWebserver(){	
 	_running = true;
 	const int MAX_EVENTS = 64;
@@ -94,9 +100,12 @@ int Webserver::runWebserver(){
 			if (events[i].events & EPOLLIN){
 				if (isListeningSocket(fd)){
 					handleNewConnection(fd);
-				} else {
+				} else if (!isFdWriting(fd)) {
 					handleClientRequest(fd);
 				}
+			}
+			if (events[i].events & EPOLLOUT){
+				handleClientWrite(fd);
 			}
 			if (hasError(events[i])){
 				removeClientFd(fd);
@@ -132,13 +141,14 @@ void Webserver::handleNewConnection(int listenFd){
 }
 
 void Webserver::handleClientRequest(int clientFd){
-	const auto& it = _clientFdToServerIndex.find(clientFd);
+	auto it = _clientFdToServerIndex.find(clientFd);
 	if (it == _clientFdToServerIndex.end()){
 		return;
 	}
 	time_t now = time(NULL);
 	size_t serverIndex = it->second;
 	Server::ClientStatus status = _servers[serverIndex].handleClient(clientFd);
+
 	switch (status){
 	case Server::CLIENT_INCOMPLETE:
 		if (now - _lastActivity[clientFd] > CONNECTION_TIMEOUT){ 
@@ -149,6 +159,10 @@ void Webserver::handleClientRequest(int clientFd){
 		}
 		_lastActivity[clientFd] = now;
 		break;
+	case Server::CLIENT_WRITING:
+		modifyClientEvents(clientFd, EPOLLOUT);
+		_lastActivity[clientFd] = now;
+		break;
 	case Server::CLIENT_KEEP_ALIVE:
 		_lastActivity[clientFd] = now;
 		break;
@@ -156,6 +170,41 @@ void Webserver::handleClientRequest(int clientFd){
 	case Server::CLIENT_ERROR:
 		removeClientFd(clientFd);
 		break;
+	}
+}
+
+void Webserver::handleClientWrite(int clientFd){
+	auto it = _clientFdToServerIndex.find(clientFd);
+	if (it == _clientFdToServerIndex.end()){
+		return ;
+	}
+	size_t serverIndex = it->second;
+	Server::ClientStatus status = _servers[serverIndex].handleClientWrite(clientFd);
+
+	switch (status){
+	case Server::CLIENT_WRITING:
+		_lastActivity[clientFd] = time(NULL);
+		break;
+	case Server::CLIENT_KEEP_ALIVE:
+		modifyClientEvents(clientFd, EPOLLIN);
+		_lastActivity[clientFd] = time(NULL);
+		break;
+	case Server::CLIENT_COMPLETE:
+	case Server::CLIENT_ERROR:
+		removeClientFd(clientFd);
+		break;
+	case Server::CLIENT_INCOMPLETE:
+		break;
+	}
+}
+
+void Webserver::modifyClientEvents(int clientFd, uint32_t events){
+	struct epoll_event ev;
+	ev.events = events;
+	ev.data.fd = clientFd;
+	if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, &ev) < 0){
+		std::cerr << "epoll_ctl MOD failed: " << strerror(errno) << std::endl;
+		removeClientFd(clientFd);
 	}
 }
 
@@ -209,12 +258,22 @@ void Webserver::checkIdleConnections(){
 	}
 	for (int fd : toRemove){
 		std::cerr << "Idle connection timeout on fd: " << fd << std::endl;
-		sendTimeoutResponse(fd);
+		if (!isFdWriting(fd)){
+			sendTimeoutResponse(fd);
+		}
 		removeClientFd(fd);
 	}
 }
 
-bool Webserver::hasError(const epoll_event& event) const{
+bool Webserver::isFdWriting(int clientFd) const {
+	auto it = _clientFdToServerIndex.find(clientFd);
+	if (it == _clientFdToServerIndex.end()){
+		return false;
+	}
+	return _servers[it->second].hasWriteBuffer(clientFd);
+}
+
+bool Webserver::hasError(const epoll_event& event) const {
 	return (event.events & EPOLLHUP) ||
 		   (event.events & EPOLLERR) ||
 		   (event.events & EPOLLRDHUP);
@@ -223,7 +282,7 @@ bool Webserver::hasError(const epoll_event& event) const{
 void Webserver::sendTimeoutResponse(int clientFd){
 	std::string body;
 	std::ifstream file("sites/static/errors/408.html");
-	
+		
 	if (file.is_open()){
 		std::stringstream buffer;
 		buffer << file.rdbuf();

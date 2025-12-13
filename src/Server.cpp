@@ -20,7 +20,7 @@ Server::Server(Server&& other) noexcept
 	: _host(std::move(other._host)), _listenFd(other._listenFd), _port(other._port),
 		 _virtualHosts(std::move(other._virtualHosts)), _addr(other._addr),
 		 	_requestCount(std::move(other._requestCount)), _parsers(std::move(other._parsers)),
-				 _httpHandler(std::move(other._httpHandler)){
+				 _writeBuffers(std::move(other._writeBuffers)), _httpHandler(std::move(other._httpHandler)){
 		other._listenFd = NOT_VALID_FD;
 }
 
@@ -106,6 +106,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
 	if (parser.getState() == ERROR) {
+
 		HttpResponse error_res = makeErrorResponse(parser.getErrStatus());
 		std::string error_res_string = error_res.buildResponseString();
 		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
@@ -129,12 +130,17 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	}
 	HttpResponse response = _httpHandler.handleRequest(request, virtualHost);
 	std::string responseString = response.buildResponseString();
+	bool keepAlive = response.isKeepAlive();
 	ssize_t sent = send(clientFd, responseString.c_str(), responseString.size(), 0);
 	if (sent < 0){
-		cleanMaps(clientFd);
-		return CLIENT_ERROR;
+		sent = 0;
 	}
-	bool keepAlive = response.isKeepAlive();
+	if ((size_t)sent < responseString.size()){
+		_writeBuffers[clientFd].data = responseString.substr(sent);
+		_writeBuffers[clientFd].sent = 0;
+		_writeBuffers[clientFd].keepAlive = keepAlive;
+		return CLIENT_WRITING;
+	}
 	if (keepAlive){
 		_parsers[clientFd] = HttpParser();
 		return CLIENT_KEEP_ALIVE;
@@ -143,6 +149,25 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		cleanMaps(clientFd);
 		return CLIENT_COMPLETE;
 	}
+}
+
+Server::ClientStatus Server::handleClientWrite(int clientFd) {
+	WriteBuffer& buffer = _writeBuffers[clientFd];
+	const char* dataPtr = buffer.data.c_str() + buffer.sent;
+	size_t remaining = buffer.remainingToSend();
+
+	ssize_t bytesSent = send(clientFd, dataPtr, remaining, 0);
+	if (bytesSent < 0){
+		return CLIENT_WRITING;
+	}
+	buffer.sent += bytesSent;
+	if (buffer.isComplete()){
+		bool keepAlive = buffer.keepAlive;
+		_writeBuffers.erase(clientFd);
+		_parsers[clientFd] = HttpParser();
+		return keepAlive ? CLIENT_KEEP_ALIVE : CLIENT_COMPLETE;
+	}
+	return CLIENT_WRITING;
 }
 
 const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
@@ -162,6 +187,7 @@ const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
 void  Server::cleanMaps(int clientFd){
 	_parsers.erase(clientFd);
 	_requestCount.erase(clientFd);
+	_writeBuffers.erase(clientFd);
 }
 
 int Server::getListenFd() const {
@@ -172,6 +198,17 @@ int Server::getPort() const {
 	return _port;
 }
 
+inline bool Server::WriteBuffer::isComplete() const {
+	return sent >= data.size();
+}
+
+inline size_t Server::WriteBuffer::remainingToSend() const {
+	return data.size() - sent;
+}
+
+bool Server::hasWriteBuffer(int clientFd) const {
+    return _writeBuffers.find(clientFd) != _writeBuffers.end();
+}
 // const LocationConfig* Server::findLocation(const ServerConfig& server, const std::string& path) const {
 // 	const LocationConfig* bestMatch = nullptr;
 // 	size_t longestPrefix = 0;
