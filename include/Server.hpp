@@ -50,6 +50,7 @@ class Server {
 		HttpResponseHandler			_httpHandler;
 
 		const config::ServerConfig* matchVirtualHost(const std::string& hostHeader);
+		const config::ServerConfig* getDefaultVhost() const;
 		
 	public:
 		Server() = delete;

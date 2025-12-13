@@ -216,14 +216,14 @@ std::string mapUriToPath(const config::LocationConfig* loc, const std::string& u
  * \r\n
  * <html>...</html>
  */
-HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const HttpRequest& req){
+HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const HttpRequest& req, const config::ServerConfig* vh){
    //it is after last header valuse and then the empty line
    //Note from lucio, should check both "\r\n\r\n"(for python) and "\n\n" (for php and bash)
    size_t pos = out.find("\r\n\r\n");
    if (pos == std::string::npos){
       pos = out.find("\n\n");
       if (pos == std::string::npos){
-         return makeErrorResponse(500);
+         return makeErrorResponse(500, vh);
       }
    }
 
@@ -345,16 +345,16 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc){
       //std::cout << "debug 1" << uri << std::endl;
-      return makeErrorResponse(404);
+      return makeErrorResponse(404, vh);
    }
    if (!isMethodAllowed(lc, "GET"))
-      return makeErrorResponse(405);
+      return makeErrorResponse(405, vh);
    CGI cgi(req, *lc);
    if (cgi.isCGI()){
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-         return makeErrorResponse(500);
-      return parseCGIOutput(cgi_output, req);
+         return makeErrorResponse(500, vh);
+      return parseCGIOutput(cgi_output, req, vh);
    }
 
    // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
@@ -365,12 +365,12 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    if (stat(fullpath.c_str(), &st) < 0)
    {
       //std::cout << "debug 2" << uri << std::endl;
-      return makeErrorResponse(404);
+      return makeErrorResponse(404, vh);
    }
    if (access(fullpath.c_str(), R_OK) < 0)
-      return makeErrorResponse(403);
+      return makeErrorResponse(403, vh);
    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
-      return makeErrorResponse(403);
+      return makeErrorResponse(403, vh);
    if (S_ISDIR(st.st_mode)) {
       // autoindex enabled → return HTML directory listing
       if (lc->autoindex) {
@@ -385,12 +385,12 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       if (!index_file.empty()) {
          fullpath += "/" + index_file;
          if (stat(fullpath.c_str(), &st) < 0 || !S_ISREG(st.st_mode))
-            return makeErrorResponse(404);
+            return makeErrorResponse(404, vh);
       }
       else
       {
          std::cout << "is it here?" << std::endl;
-         return makeErrorResponse(403);
+         return makeErrorResponse(403, vh);
       }
    }
 
@@ -403,11 +403,11 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    // using: std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    if (!ifs.is_open())
-      return makeErrorResponse(500);
+      return makeErrorResponse(500, vh);
    ifs.seekg(0, std::ios::end);
    std::streamsize size = ifs.tellg();
    if (size < 0)
-      return makeErrorResponse(500);
+      return makeErrorResponse(500, vh);
    ifs.seekg(0, std::ios::beg);
    std::string body(size, '\0');
    ifs.read(&body[0], size);
@@ -455,23 +455,23 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    if (!lc)
    {
       //std::cout << "debug 3" << uri << std::endl;
-      return makeErrorResponse(404);
+      return makeErrorResponse(404, vh);
    }
    if (!isMethodAllowed(lc, "POST"))
-      return makeErrorResponse(405);
+      return makeErrorResponse(405, vh);
    CGI cgi(req, *lc);
    if (cgi.isCGI()) {
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-         return makeErrorResponse(500);
-      return parseCGIOutput(cgi_output, req);
+         return makeErrorResponse(500, vh);
+      return parseCGIOutput(cgi_output, req, vh);
    }
 
    //  If not CGI, assume static file upload handler:
    // yuxin need to check, should the upload_dir be in root?
    std::string uploadDir = lc->upload_dir; // NOTE FROM LIN date:10/12 change this to lc->upload_dir
    if (uploadDir.empty())
-       return makeErrorResponse(500);
+       return makeErrorResponse(500, vh);
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string savepath = uploadDir + "/" + filename;
 
@@ -479,7 +479,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    struct stat st;
    if (stat(uploadDir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)){
       if (mkdir(uploadDir.c_str(), 0755) != 0)
-         return makeErrorResponse(500);
+         return makeErrorResponse(500, vh);
    }
 
    // Reads request body:
@@ -494,7 +494,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // - Example: store in a database, write to a file, pass to CGI, etc.
    std::ofstream ofs(savepath.c_str(), std::ios::binary);
    if (!ofs.is_open())
-      return makeErrorResponse(500);
+      return makeErrorResponse(500, vh);
    ofs.write(body.c_str(), body.size());
    ofs.close();
 
@@ -535,16 +535,16 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    const config::LocationConfig* lc = findLocationConfig(vh, uri);
    if (!lc) {
       //std::cout << "debug 4" << uri << std::endl;
-      return makeErrorResponse(404);
+      return makeErrorResponse(404, vh);
    }
    if (!isMethodAllowed(lc, "DELETE"))
-      return makeErrorResponse(405);
+      return makeErrorResponse(405, vh);
    CGI cgi(req, *lc);
    if (cgi.isCGI()) {
          std::string cgi_output = cgi.execute();
          if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-            return makeErrorResponse(500);
-         return parseCGIOutput(cgi_output, req);
+            return makeErrorResponse(500, vh);
+         return parseCGIOutput(cgi_output, req, vh);
    }
 
    // otherwie, it is a static delete. Maps path: /files/file1.txt → /var/www/html/files/file1.txt
@@ -557,16 +557,16 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0){
       //std::cout << "debug 5" << uri << std::endl;
-      return makeErrorResponse(404);
+      return makeErrorResponse(404, vh);
    }
    if (!S_ISREG(st.st_mode))
-      return makeErrorResponse(403);
+      return makeErrorResponse(403, vh);
    if (access(fullpath.c_str(), W_OK) < 0)
-      return makeErrorResponse(403);
+      return makeErrorResponse(403, vh);
 
    // Attempts deletion: - unlink("/var/www/html/files/file1.txt") //sth worng: (io err, permission)
    if (unlink(fullpath.c_str()) < 0)
-      return makeErrorResponse(500);
+      return makeErrorResponse(500, vh);
 
    // Generates response:
    std::map<std::string, std::string> headers;
@@ -642,27 +642,31 @@ std::string loadFile(const std::string& path)
    *
    * <h1>404 Not Found</h1>
  */
-HttpResponse makeErrorResponse(int status)
+HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
 {
-    // Find reason phrase
-    std::string reason;
-    if (STATUS_REASON.count(status))
-        reason = STATUS_REASON.at(status);
-    else {
-        status = 500;
-        reason = "Internal Server Error";
-    }
+   // Find reason phrase
+   std::string reason;
+   if (STATUS_REASON.count(status))
+      reason = STATUS_REASON.at(status);
+   else {
+      status = 500;
+      reason = "Internal Server Error";
+   }
 
-    // Load static HTML file hard-coded path: static/errors/404.html, need to implement later
-    std::string path = "sites/static/errors/" + std::to_string(status) + ".html";
-    std::string body = loadFile(path);
+   // Load static HTML file hard-coded path: static/errors/404.html, need to implement later
+   //std::string path = "sites/static/errors/" + std::to_string(status) + ".html";
+   std::string body;
+   if (vh && vh->errorPages.count(status)){
+      std::string path = vh->errorPages.at(status);
+      body = loadFile(vh->errorPages.at(status));
+   }
 
-    // Fallback
-    if (body.empty())
-        body = "<h1>" + std::to_string(status) + " " + reason + "</h1>";
+   // Fallback
+   if (body.empty())
+      body = "<h1>" + std::to_string(status) + " " + reason + "</h1>";
 
-    std::map<std::string, std::string> headers;
-    headers["Content-Type"] = "text/html";
+   std::map<std::string, std::string> headers;
+   headers["Content-Type"] = "text/html";
 
-    return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
+   return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
 }

@@ -107,7 +107,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	HttpRequest request = parser.parseHttpRequest(chunk);
 	if (parser.getState() == ERROR) {
 
-		HttpResponse error_res = makeErrorResponse(parser.getErrStatus());
+		HttpResponse error_res = makeErrorResponse(parser.getErrStatus(), getDefaultVhost());
 		std::string error_res_string = error_res.buildResponseString();
 		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
 		cleanMaps(clientFd);
@@ -179,13 +179,19 @@ Server::ClientStatus Server::handleClientWrite(int clientFd) {
 }
 
 const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
+	if (hostHeader.empty()){
+		if (!_virtualHosts.empty()){
+			return &_virtualHosts[0];
+		}
+		return nullptr;
+	}
 	for(size_t i = 0; i < _virtualHosts.size(); i++){
 		for (size_t j = 0; j < _virtualHosts[i].serverNames.size(); j++){
 			if (_virtualHosts[i].serverNames[j] == hostHeader){
 				return &_virtualHosts[i];
 			}
 		}
-	}
+	}	
 	if (!_virtualHosts.empty()){
 		return &_virtualHosts[0];
 	}
@@ -217,6 +223,15 @@ inline size_t Server::WriteBuffer::remainingToSend() const {
 bool Server::hasWriteBuffer(int clientFd) const {
     return _writeBuffers.find(clientFd) != _writeBuffers.end();
 }
+
+const config::ServerConfig* Server::getDefaultVhost() const {
+	if (_virtualHosts.empty()){
+		return nullptr;
+	}
+	return &_virtualHosts[0];
+}
+
+
 // const LocationConfig* Server::findLocation(const ServerConfig& server, const std::string& path) const {
 // 	const LocationConfig* bestMatch = nullptr;
 // 	size_t longestPrefix = 0;
