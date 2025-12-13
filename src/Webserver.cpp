@@ -104,7 +104,7 @@ int Webserver::runWebserver(){
 					handleClientRequest(fd);
 				}
 			}
-			
+
 			if (events[i].events & EPOLLOUT){
 				handleClientWrite(fd);
 			}
@@ -232,6 +232,8 @@ void Webserver::removeClientFd(int clientFd){
 	_lastActivity.erase(clientFd);
 	const auto& it = _clientFdToServerIndex.find(clientFd);
 	if (it != _clientFdToServerIndex.end()){
+		size_t serverIndex = it->second;
+		_servers[serverIndex].cleanMaps(clientFd);
 		_clientFdToServerIndex.erase(it);
 	}
 	removeFdFromPoll(clientFd);

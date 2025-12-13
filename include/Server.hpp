@@ -50,8 +50,7 @@ class Server {
 		HttpResponseHandler			_httpHandler;
 
 		const config::ServerConfig* matchVirtualHost(const std::string& hostHeader);
-		void  cleanMaps(int clientFd);
-
+		
 	public:
 		Server() = delete;
 		explicit Server(const std::string& host, int port, const std::vector<config::ServerConfig>& serverBlocks);
@@ -68,4 +67,5 @@ class Server {
 		int  getListenFd(void) const;
 		int  getPort(void) const;
 		bool hasWriteBuffer(int clientFd) const;
+		void cleanMaps(int clientFd);
 };
