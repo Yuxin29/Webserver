@@ -168,7 +168,11 @@ Server::ClientStatus Server::handleClientWrite(int clientFd) {
 	if (buffer.isComplete()){
 		bool keepAlive = buffer.keepAlive;
 		_writeBuffers.erase(clientFd);
-		_parsers[clientFd] = HttpParser();
+		if (keepAlive){
+			_parsers[clientFd] = HttpParser();
+		} else {
+			cleanMaps(clientFd);
+		}
 		return keepAlive ? CLIENT_KEEP_ALIVE : CLIENT_COMPLETE;
 	}
 	return CLIENT_WRITING;
