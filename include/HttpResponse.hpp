@@ -3,6 +3,10 @@
 #include <map>
 #include <string>
 #include <sstream>
+#include <fstream>
+
+#include "ConfigBuilder.hpp"
+#include "Cgi.hpp"
 
 /**
  * @class HttpResponse
@@ -77,24 +81,26 @@ public:
     //    Constructors
     // --------------------
     HttpResponse() {};
-    HttpResponse(const std::string& version,
-                    const int& status,
-                    const std::string& reason,
+    HttpResponse(const std::string& version, const int& status, const std::string& reason,
                     const std::string& body,
                     const std::map<std::string, std::string>& responseHeaders,
-                    bool alive,
-                    bool complete)
+                    bool alive, bool complete)
     {
-    _version = version;
-    _status = status;
-    _reason = reason;
+    _version = version; _status = status; _reason = reason;
     _body = body;
     _responseHeaders = responseHeaders;
-    _keepConnectionAlive = alive;
-    _requestComplete = complete;}
+    _keepConnectionAlive = alive; _requestComplete = complete;}
 
     // --------------------
     //   Serialization
     // --------------------
     std::string buildResponseString();
 };
+
+// --------------------
+//   Error Response Helpers
+// --------------------
+std::string loadFile(const std::string& path);
+
+HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh);
+HttpResponse makeRedirect301(const std::string& location, const config::ServerConfig* vh);
