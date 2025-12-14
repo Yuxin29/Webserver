@@ -244,9 +244,11 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    //  If not CGI, assume static file upload handler:
    // yuxin need to check, should the upload_dir be in root?
    std::string uploadDir = lc->upload_dir; // NOTE FROM LIN date:10/12 change this to lc->upload_dir
+   std::cout << "upload filder: " << lc->upload_dir << std::endl;
    if (uploadDir.empty())
        return makeErrorResponse(500, vh);
-   std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
+   // std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
+   std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000);
    std::string savepath = uploadDir + "/" + filename;
 
    //  Ensures upload directory exists

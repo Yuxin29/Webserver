@@ -195,11 +195,11 @@ bool    HttpParser::validateHeaders()
  */
 bool HttpParser::validateBody(){
     // Enhancement body cannot contain null byte
-    if (_req.getBody().find('\0') != std::string::npos) {
-        _errStatus = 400;
-        std::cout << "Body contains null byte." << std::endl;
-        return false;
-    }
+    // if (_req.getBody().find('\0') != std::string::npos) {
+    //     _errStatus = 400;
+    //     std::cout << "Body contains null byte." << std::endl;
+    //     return false;
+    // }
     if (_req.getMethod() == "POST")
     {
         // POST has to have body string and in headers, it has to have content-Length"
