@@ -8,7 +8,7 @@
  * @brief Represents a parsed HTTP request received by the server.
  *
  * This class stores the HTTP request line (method, path, version),
- * the request headers, and the optional message body. 
+ * the request headers, and the optional message body.
  * It is used by the HTTP parser and passed into the request handlers (GET/POST/DELETE).
  *
  * @note The supported HTTP methods according to the project specification are: GET; POST; DELETE

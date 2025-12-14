@@ -34,7 +34,7 @@ bool isMethodAllowed(const config::LocationConfig* loc, const std::string& metho
  * @note HTTP/1.1 defaults to keep-alive unless client sends "Connection: close"
  *       HTTP/1.0 defaults to close unless client sends "Connection: keep-alive" -> filtered out in validation stage
  * @note Connection header value is Case-insensitivity (all valid) -> Convert to lowercase
- * 
+ *
  * @example of connection headerlines
  * Connection: Keep-Alive
  * Connection: CLOSE
@@ -43,7 +43,7 @@ bool isMethodAllowed(const config::LocationConfig* loc, const std::string& metho
 bool shouldKeepAlive(const HttpRequest& req){
    std::string version = req.getVersion();
    const std::map<std::string, std::string>& headers = req.getHeaders();
-    
+
    auto it = headers.find("Connection");
    if (it != headers.end()) {
       std::string connValue = it->second;
@@ -83,9 +83,9 @@ namespace fs = std::filesystem; // Alias for filesystem
  * @example_format:  type / subtype
  * @example          text/html
  */
-std::string getMimeType(const std::string& path) 
+std::string getMimeType(const std::string& path)
 {
-   static const std::map<std::string, std::string> mimeMap = 
+   static const std::map<std::string, std::string> mimeMap =
    {
       {".html","text/html"},
       {".htm","text/html"},
@@ -159,12 +159,12 @@ std::string mapUriToPath(const config::LocationConfig* loc, const std::string& u
  */
 std::string getIndexFile(const std::string& dirPath, const config::LocationConfig* lc)
 {
-   struct stat st;
-   for (size_t i = 0; i < lc->index.size(); ++i)
-   {
-      std::string candidate = dirPath + "/" + lc->index[i];
-      if (stat(candidate.c_str(), &st) == 0 && S_ISREG(st.st_mode))
-         return lc->index[i]; // return filename only
+    struct stat st;
+    for (size_t i = 0; i < lc->index.size(); ++i)
+    {
+        std::string candidate = dirPath + "/" + lc->index[i];
+        if (stat(candidate.c_str(), &st) == 0 && S_ISREG(st.st_mode))
+            return lc->index[i]; // return filename only
     }
     return ""; // no index file found
 }
@@ -184,7 +184,7 @@ const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh,
    size_t qpos = uri.find('?');  // yuxin need to reconsider
    if (qpos != std::string::npos)
       uri = uri.substr(0, qpos);
-   
+
    const config::LocationConfig* best = nullptr;
    size_t bestLen = 0;
 
@@ -290,28 +290,28 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
  */
 HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, HttpRequest& req)
 {
-   namespace fs = std::filesystem;
-   std::string body = "<html><head><title>Index of " + req.getPath() + "</title></head><body>";
-   body += "<h1>Index of " + req.getPath() + "</h1><ul>";
+    namespace fs = std::filesystem;
+    std::string body = "<html><head><title>Index of " + req.getPath() + "</title></head><body>";
+    body += "<h1>Index of " + req.getPath() + "</h1><ul>";
 
-   for (const auto& entry : fs::directory_iterator(dirPath))
-   {
-      std::string name = entry.path().filename().string();
-      body += "<li><a href=\"" + req.getPath();
-      if (req.getPath().back() != '/')
-         body += "/";
-      body += name + "\">" + name + "</a></li>";
-   }
+    for (const auto& entry : fs::directory_iterator(dirPath))
+    {
+        std::string name = entry.path().filename().string();
+        body += "<li><a href=\"" + req.getPath();
+        if (req.getPath().back() != '/')
+            body += "/";
+        body += name + "\">" + name + "</a></li>";
+    }
 
-   body += "</ul></body></html>";
+    body += "</ul></body></html>";
 
-   std::map<std::string, std::string> headers;
-   headers["Content-Type"] = "text/html";
-   headers["Content-Length"] = std::to_string(body.size());
-   headers["Server"] = "MiniWebserv/1.0";
-   headers["Date"] = formatTime(time(NULL));
+    std::map<std::string, std::string> headers;
+    headers["Content-Type"] = "text/html";
+    headers["Content-Length"] = std::to_string(body.size());
+    headers["Server"] = "MiniWebserv/1.0";
+    headers["Date"] = formatTime(time(NULL));
 
-   return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
+    return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
 }
 
 // --------------------
@@ -394,8 +394,6 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
    // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
    std::string fullpath = mapUriToPath(lc, uri);
-   if (fullpath.empty())
-      return makeErrorResponse(403, vh);
 
    // Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
    struct stat st;
@@ -585,8 +583,6 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
 
    // otherwie, it is a static delete. Maps path: /files/file1.txt → /var/www/html/files/file1.txt
    std::string fullpath = mapUriToPath(lc, uri);
-   if (fullpath.empty())
-      return makeErrorResponse(403, vh);
 
    // Validates:
    // Does file exist?
@@ -654,13 +650,13 @@ static const std::map<int, std::string> STATUS_REASON = {
 
 std::string loadFile(const std::string& path)
 {
-   std::ifstream file(path.c_str());
-   if (!file.is_open())
-      return ""; // return empty so makeErrorResponse() can fallback
+    std::ifstream file(path.c_str());
+    if (!file.is_open())
+        return ""; // return empty so makeErrorResponse() can fallback
 
-   std::stringstream buffer;
-   buffer << file.rdbuf();
-   return buffer.str();
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
 }
 
 /**

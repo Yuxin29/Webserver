@@ -15,7 +15,7 @@
  */
 enum State{
     START_LINE,     ///< Parsing the initial request line ("GET / HTTP/1.1").
-    HEADERS,        ///< Reading header lines.  
+    HEADERS,        ///< Reading header lines.
     BODY,           ///< Parsing the message body (POST, PUT, etc.).
     DONE,           ///< Successfully finished parsing the request.
     ERROR           ///< Encountered malformed syntax or invalid structure.
@@ -25,7 +25,7 @@ enum State{
  * @class HttpParser
  * @brief Incrementally parses raw HTTP request data using a state machine.
  *
- * @note This parser accepts raw bytes (often from non-blocking socket reads) and processes them according to HTTP request grammar. 
+ * @note This parser accepts raw bytes (often from non-blocking socket reads) and processes them according to HTTP request grammar.
  * @note The parser maintains an internal state machine: check state -> get input -> do a thing -> change to next state
  *
  * Usage example:
@@ -39,7 +39,7 @@ enum State{
  */
 class HttpParser{
 private:
-    HttpRequest             _req;                   ///< The HttpRequest object being constructed   
+    HttpRequest             _req;                   ///< The HttpRequest object being constructed
     int                     _errStatus = 0;         ///< HTTP error status code if parsing fails
     State                   _state = START_LINE;    ///< Current state of the parser
 

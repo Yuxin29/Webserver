@@ -51,6 +51,7 @@ public:
 //   Utility Functions
 // --------------------
 std::string loadFile(const std::string& path);
-//HttpResponse makeErrorResponse(int status);
+
 HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh);
 HttpResponse makeRedirect301(const std::string& location, const config::ServerConfig* vh);
+
