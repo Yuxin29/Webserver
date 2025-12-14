@@ -1,18 +1,20 @@
 #include "HttpRequestParser.hpp"
+#include <algorithm>
+#include <cctype>
 
 /**
- * @brief Trims the empty space \t at the beginning and the end of a string
- *
- * @param str a string with possible '\t' at the beginning and end
- * @return a string without any '\t' at the beginning or end
- *
- * @note Currently supports 400, 405, 413, 431. Default is 400.
- */
-static std::string trim_space(std::string str)
-{
-    size_t start = str.find_first_not_of(" \t");
-    size_t end = str.find_last_not_of(" \t");
-    return str.substr(start, end - start + 1);
+* @brief sets the error status and logs the error message
+*
+* @param code the HTTP error code to set
+* @param msg the error message to log
+* @return bool always returns false to indicate an error occurred
+*
+* @note used internally to handle parsing errors and set the appropriate error status
+*/
+bool HttpParser::set_errstatus(int code, std::string const& msg) {
+    _errStatus = code;
+    std::cout << "req parsing error: " << msg << std::endl;
+    return false;
 }
 
 /**
@@ -26,37 +28,22 @@ static std::string trim_space(std::string str)
 bool HttpParser::validateStartLine()
 {
     //  GET, POST, DELETE  ---> 405: mathod not allowed
-    if (_req.getMethod() != "GET" && _req.getMethod() != "POST" && _req.getMethod() != "DELETE"){
-        _errStatus = 405;
-        std::cout << "Method not allowed: " << _req.getMethod() << std::endl;
-        return false;
-    }
+    if (_req.getMethod() != "GET" && _req.getMethod() != "POST" && _req.getMethod() != "DELETE")
+        return set_errstatus(405, "Method not allowed: " + _req.getMethod());
     //  Only accept HTTP/1.1
-    if (_req.getVersion() != "HTTP/1.1"){
-        _errStatus = 400;
-        std::cout << "Invalid HTTP version: " << _req.getVersion() << std::endl;
-        return false;
-    }
+    if (_req.getVersion() != "HTTP/1.1")
+        return set_errstatus(400, "Invalid HTTP version: " + _req.getVersion());
     // Enhancement: path must start with "/"
-    if (_req.getPath()[0] != '/'){
-        _errStatus = 400;
-        std::cout << "Path must not start with '/': " << _req.getPath() << std::endl;
-        return false;
-    }
+    if (_req.getPath()[0] != '/')
+        return set_errstatus(400, "Path must start with '/': " + _req.getPath());
     // Enhancement: path cannot be too long check
-    if (_req.getPath().size() > 2048){
-        _errStatus = 400;
-        std::cout << "Request_URI too long" << _req.getPath() << std::endl;
-        return false;
-    }
+    if (_req.getPath().size() > 2048)
+        return set_errstatus(414, "Request_URI too long: " + _req.getPath());
     // Enhancement: path cannot have empty space or controling chars
     for (size_t i = 0; i < _req.getPath().size(); ++i){
         char c = _req.getPath()[i];
-        if (c < 31 || c == ' '){
-            _errStatus = 400;
-            std::cout << "Path must not have empty space or controling chars: " << _req.getPath() << std::endl;
-            return false;
-        }
+        if (c < 31 || c == ' ')
+            return set_errstatus(400, "Path must not have empty space or controling chars: " + _req.getPath());
     }
     return true;
 }
@@ -87,96 +74,54 @@ bool    HttpParser::validateHeaders()
         totalSize += key.size() + value.size();
 
         // Enhancement: the headers can not be too big, like todal length 8192 8KB
-        if (totalSize > 8192){
-            _errStatus = 431;
-            std::cout << "Total header size to big" << std::endl;
-            return false;
-        }
+        if (totalSize > 8192)
+            return set_errstatus(431, "Total header size too big");
         // a single header can not be too long: 431, Request Header Fields Too Large
-        if (key.size() > 1024 || value.size() > 4096){
-            _errStatus = 431;
-            std::cout << "Header field too large: " << key << std::endl;
-            return false;
-        }
+        if (key.size() > 1024 || value.size() > 4096)
+            return set_errstatus(431, "Single header field too large: " + key);
         // validator key: key cannot has space in it
         for (size_t i = 0; i < key.size(); ++i) {
-            if (!isgraph(key[i]) || key[i] == ':') {
-                _errStatus = 400;
-                std::cout << "Invalid header key: " << key << std::endl;
-                return false;
-            }
+            if (!isgraph(key[i]) || key[i] == ':') 
+                return set_errstatus(400, "Invalid header key: " + key);
         }
         //validateMandatoryHeaders: loop though all keys, has to find host
         if (key == "Host"){
-            if (hasHost){
-                _errStatus = 400;
-                std::cout << "Multiple Host headers found." << std::endl;
-                return false;
-            }
+            if (hasHost)
+                return set_errstatus(400, "Multiple Host headers found.");
             hasHost = true;
         }
         // validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
-        if (seenKeys.count(key)) {
-            _errStatus = 400;
-            std::cout << "Duplicate header key found: " << key << std::endl;
-            return false;
-        }
+        if (seenKeys.count(key)) 
+            return set_errstatus(400, "Duplicate header key found: " + key); 
         seenKeys.insert(key);
-        // Enhancement: value cannot have empty space or controling chars,
-        // can not have it: Header value must not include empty space or controling chars: gzip, deflate, br, zstd
-        // for (size_t i = 0; i < value.size(); ++i){
-        //     char c = value[i];
-        //     if (c < 31 || c == ' '){
-        //         _errStatus = 400;
-        //         std::cout << "Header value must not include empty space or controling chars: " << value << std::endl;
-        //         return false;
-        //     }
-        // }
-        //validateContentLength: can not be too long like minus number ---> four hundred  or too big(Payload Too Large) ---> 43113
+        // Enhancement(optional, did not do):  reject control characters (CR/LF, other CTLs, DEL). Also reject embedded CR/LF (obs-fold is obsolete) and enforce trimming/size limits
+        // validateContentLength: can not be too long like minus number ---> four hundred  or too big(Payload Too Large) ---> 43113
         if (key == "Content-Length"){
             // can not be empty
-            if (value.empty()){
-                _errStatus = 400;
-                std::cout << "Empty Content-Length value." << std::endl;
-                return false;
-            }
+            if (value.empty())
+                return set_errstatus(400, "Empty Content-Length value.");
             // can not start with zero
-            if (value.size() > 1 && value[0] == '0'){
-                _errStatus = 400;
-                std::cout << "Content-Length cannot start with zero." << std::endl;
-                return false;
-            }
+            if (value.size() > 1 && value[0] == '0')
+                return set_errstatus(400, "Content-Length cannot start with zero.");
             // can not have non digits
             for (size_t i = 0; i < value.length(); ++i){
-                if (!isdigit(value[i])){
-                    _errStatus = 400;
-                    std::cout << "Non-digit character in Content-Length value." << std::endl;
-                    return false;
-                }
+                if (!isdigit(value[i]))
+                    return set_errstatus(400, "Non-digit character in Content-Length value.");
             }
             // can not be minus
             long long len = atoll(value.c_str());
-            if (len < 0){
-                _errStatus = 400;
-                std::cout << "Negative Content-Length value." << std::endl;
-                return false;
-            }
+            if (len < 0)
+                return set_errstatus(400, "Negative Content-Length value.");
              // can not be too big, 100 MB, max, ask lin or lucio what should be the max
-            if (len > 1024 * 1024 * 100){
-                _errStatus = 413;
-                std::cout << "Content-Length too large." << std::endl;
-                return false;
-            }
+            if (len > 1024 * 1024 * 100)
+                return set_errstatus(413, "Content-Length too large.");
             _bodyLength = static_cast<size_t>(len);
         }
     }
     // it has to have ont and only one host    // headers["Content-Type"] = "text/html";
     // headers["Content-Length"] = std::to_string(body.size());
-    if (!hasHost){
-        _errStatus = 400;
-        std::cout << "Missing Host header." << std::endl;
-        return false;
-    }
+    if (!hasHost)
+        return set_errstatus(400, "Missing Host header.");
     return true;
 }
 
@@ -194,28 +139,46 @@ bool    HttpParser::validateHeaders()
  * - incomplete body is not an error during streaming)
  */
 bool HttpParser::validateBody(){
-    // Enhancement body cannot contain null byte
-    // if (_req.getBody().find('\0') != std::string::npos) {
-    //     _errStatus = 400;
-    //     std::cout << "Body contains null byte." << std::endl;
-    //     return false;
-    // }
+    // Enhancement: for textual content types, body cannot contain null byte
+    // Binary content (images, multipart, application/octet-stream, etc.) may contain NULs and must be allowed.
+    const std::map<std::string, std::string>& headers = _req.getHeaders();
+    std::string contentType;
+    std::map<std::string, std::string>::const_iterator it = headers.find("Content-Type");
+    if (it != headers.end()) {
+        contentType = it->second;
+        //Content-Type: text/html; charset=UTF-8
+        size_t semi = contentType.find(';');
+        if (semi != std::string::npos)
+            contentType = contentType.substr(0, semi);
+        // eg contentType = "Text/HTML; Charset=UTF-8"; ->  contentType = "text/html; charset=utf-8";
+        for (size_t i = 0; i < contentType.size(); ++i)
+            contentType[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(contentType[i])));
+    }
+    bool isTextual = false;
+    if (contentType.empty() ||
+        contentType.rfind("text/", 0) == 0 ||
+        contentType == "application/x-www-form-urlencoded" ||
+        contentType == "application/json" ||
+        contentType == "application/xml")
+        isTextual = true;
+    if (isTextual) {
+        if (_req.getBody().find('\0') != std::string::npos) 
+            return set_errstatus(400, "Body contains null byte for textual Content-Type: " + contentType);
+    }
+
     if (_req.getMethod() == "POST")
     {
-        // POST has to have body string and in headers, it has to have content-Length"
-        // THIS CAN BE 0
-        //NOTE DATE:12/12 To check, modify this maybe?
-        //if (_bodyLength == 0 && !_req.getHeaders().count("Content-Length")){
-        // if (!_req.getHeaders().count("Content-Length")){
-        //     _errStatus = 400;
-        //     std::cout << "POST request missing Content-Length header." << std::endl; //here
-        //     return false;
-        // }
-        // body lenth can not be too long: in theory it should not happen
-        if (_req.getBody().size() > _bodyLength){
-            _errStatus = 400;
-            std::cout << "POST request body length exceeds Content-Length." << std::endl; //here
-            return false;
+        // For POST: require Content-Length only if there is a non-empty body. 
+        bool hasContentLength = _req.getHeaders().count("Content-Length") != 0;
+        if (!hasContentLength) {
+            // No Content-Length header: allowed only for an empty body.
+            if (!_req.getBody().empty())
+                return set_errstatus(400, "POST request has body but missing Content-Length header.");
+        }
+        else {
+            // Content-Length present: ensure body size does not exceed declared length.
+            if (_req.getBody().size() > _bodyLength)
+                return set_errstatus(400, "POST request body length exceeds Content-Length.");
         }
     }
     return true;
@@ -274,10 +237,10 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     if (dd == std::string::npos)
         return;
     std::string key = headerline.substr(0, dd);
-    std::string value = headerline.substr(dd + 1);
-    key = trim_space(key);
-    value = trim_space(value);
-    _req.addHeader(key, value);
+    std::string val = headerline.substr(dd + 1);
+    key = httpUtils::trim_space(key);
+    val = httpUtils::trim_space(val);
+    _req.addHeader(key, val);
 }
 
 /**

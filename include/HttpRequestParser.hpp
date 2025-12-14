@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "HttpRequest.hpp"  // map, string here
+#include "HttpUtils.hpp"
 
 /**
  * @enum State
@@ -49,6 +50,7 @@ private:
     // --------------------
     //  Internal Validation Methods
     // --------------------
+    bool                     set_errstatus(int code, std::string const& msg);
     bool                     validateStartLine();
     bool                     validateHeaders();
     bool                     validateBody();

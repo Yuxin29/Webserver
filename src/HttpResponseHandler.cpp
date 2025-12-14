@@ -242,11 +242,16 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    }
 
    //  If not CGI, assume static file upload handler:
-   // yuxin need to check, should the upload_dir be in root?
-   std::string uploadDir = lc->upload_dir; // NOTE FROM LIN date:10/12 change this to lc->upload_dir
+   std::string uploadDir = lc->upload_dir;
    std::cout << "upload filder: " << lc->upload_dir << std::endl;
    if (uploadDir.empty())
        return makeErrorResponse(500, vh);
+   
+   // yuxin need to consider filename conflict
+   // HTTP POST itself does not automatically preserve an original filename. 
+   // The client must send a filename (commonly via multipart/form-data Content-Disposition filename="..." or a custom header). 
+   // The server should not blindly trust that filename 
+   // — generate a safe server-side name and optionally preserve only the extension or use Content-Type to infer an extension.
    // std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000);
    std::string savepath = uploadDir + "/" + filename;
@@ -271,7 +276,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    std::ofstream ofs(savepath.c_str(), std::ios::binary);
    if (!ofs.is_open())
       return makeErrorResponse(500, vh);
-   ofs.write(body.c_str(), body.size());
+   ofs.write(body.data(), body.size());
    ofs.close();
 
    // Generates response: Set headers (Content-Type, Content-Length, Date, Server)
@@ -280,7 +285,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    headers["Content-Length"] = std::to_string(responseBody.size());
    headers["Content-Type"] = "application/json";
 
-   return HttpResponse("HTTP/1.1", 201, "Created", responseBody, std::map<std::string, std::string>(), httpUtils::shouldKeepAlive(req), true);
+   return HttpResponse("HTTP/1.1", 201, "Created", responseBody, headers, httpUtils::shouldKeepAlive(req), true);
 }
 
 /**

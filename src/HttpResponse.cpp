@@ -121,4 +121,4 @@ HttpResponse makeRedirect301(const std::string& location, const config::ServerCo
    headers["Location"] = location;
 
    return HttpResponse("HTTP/1.1", 301, "Moved Permanently", body, headers, false, true);
-}		// yuxin need to tell lin
+}
