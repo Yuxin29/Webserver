@@ -304,17 +304,14 @@ Test:
   GET /directory/	  200 OK,         serve youpi.bad_extension
 
 ### Unix filesystem
-  /directory is a directory, but missing trailing slash.
-
+  HTTP rule:
+  - If a path refers to a directory and does not end with /,
+  - the server must redirect to the slash version.
 ```c
 YoupiBanane/
  └── directory/
      └── youpi.bad_extension
 ```
-### Unix filesystem
-  HTTP rule:
-  - If a path refers to a directory and does not end with /,
-  - the server must redirect to the slash version.
 
 ### how 
   I missed to check: URI does not end with / AND path is directory
