@@ -1,21 +1,6 @@
 #include "HttpRequestParser.hpp"
 
 /**
- * @brief Trims the empty space \t at the beginning and the end of a string
- *
- * @param str a string with possible '\t' at the beginning and end
- * @return a string without any '\t' at the beginning or end
- *
- * @note Currently supports 400, 405, 413, 431. Default is 400.
- */
-static std::string trim_space(std::string str)
-{
-    size_t start = str.find_first_not_of(" \t");
-    size_t end = str.find_last_not_of(" \t");
-    return str.substr(start, end - start + 1);
-}
-
-/**
  * @brief validates the startline of a http request
  *
  * @param HttpParser _method within class HttpRequest nested in HttpParser
@@ -107,7 +92,7 @@ bool    HttpParser::validateHeaders()
             }
         }
         //validateMandatoryHeaders: loop though all keys, has to find host
-        if (key == "Host"){
+        if (key == "host"){
             if (hasHost){
                 _errStatus = 400;
                 std::cout << "Multiple Host headers found." << std::endl;
@@ -133,7 +118,7 @@ bool    HttpParser::validateHeaders()
         //     }
         // }
         //validateContentLength: can not be too long like minus number ---> four hundred  or too big(Payload Too Large) ---> 43113
-        if (key == "Content-Length"){
+        if (key == "content-length"){
             // can not be empty
             if (value.empty()){
                 _errStatus = 400;
@@ -261,7 +246,7 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     {
         // try to find content length in map to see it there is body
         const std::map<std::string, std::string>& headers = _req.getHeaders();
-        std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
+        std::map<std::string, std::string>::const_iterator it = headers.find("content-length");
         if (it != headers.end()){
             _bodyLength = std::stoi(it->second);
             _state = BODY;
@@ -277,6 +262,7 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     std::string value = headerline.substr(dd + 1);
     key = trim_space(key);
     value = trim_space(value);
+    key = normalizeHeaderKey(key);
     _req.addHeader(key, value);
 }
 

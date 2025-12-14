@@ -146,7 +146,6 @@
                 <li><a href="/">Home (this page)</a></li>
                 <li><a href="/about.html">About This Project</a></li>
                 <li><a href="/files">File Directory</a> - Directory listing example</li>
-                <li><a href="/uploads">Upload Area</a> - File upload testing</li>
             </ul>
         </div>
 
@@ -163,6 +162,43 @@
                     Upload File
                 </button>
             </form>
+        </div>
+
+        <h2>📥 Download Files</h2>
+        <div class="feature-box">
+            <p>Download files from the server:</p>
+            <div style="background: #e3f2fd; padding: 20px; border-radius: 5px; margin: 15px 0;">
+                <label for="downloadPath" style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">
+                    File path (e.g., /files/test1.txt):
+                </label>
+                <input type="text" id="downloadPath" placeholder="/files/test1.txt" 
+                       style="display: block; margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                <button onclick="downloadFile()" style="background: #2196F3; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold;">
+                    Download File
+                </button>
+            </div>
+            <p style="color: #666; font-size: 0.9em; margin-top: 10px;">
+                Available files: <code>/files/test1.txt</code>, <code>/files/data.json</code>, <code>/files/sample.txt</code>
+            </p>
+        </div>
+
+        <h2>🗑️ Delete Files</h2>
+        <div class="feature-box">
+            <p>Delete files from the uploads directory:</p>
+            <div style="background: #ffebee; padding: 20px; border-radius: 5px; margin: 15px 0;">
+                <label for="deletePath" style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">
+                    File path (e.g., /uploads/testfile.txt):
+                </label>
+                <input type="text" id="deletePath" placeholder="/uploads/testfile.txt" 
+                       style="display: block; margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                <button onclick="deleteFile()" style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold;">
+                    Delete File
+                </button>
+                <div id="deleteResult" style="margin-top: 15px; padding: 10px; border-radius: 4px; display: none;"></div>
+            </div>
+            <p style="color: #666; font-size: 0.9em; margin-top: 10px;">
+                ⚠️ Warning: This will permanently delete the file from the server.
+            </p>
         </div>
 
         <h2>🔗 Other Servers</h2>
@@ -195,5 +231,57 @@
             Built with ❤️ for 42 School | Check out the <a href="http://localhost:8081/cgi-bin/hello.py">CGI server</a>
         </p>
     </div>
+
+    <script>
+        function downloadFile() {
+            const path = document.getElementById('downloadPath').value.trim();
+            if (!path) {
+                alert('Please enter a file path');
+                return;
+            }
+            // Add ?download parameter to trigger Content-Disposition header
+            const downloadUrl = path + '?download';
+            window.location.href = downloadUrl;
+        }
+
+        function deleteFile() {
+            const path = document.getElementById('deletePath').value.trim();
+            const resultDiv = document.getElementById('deleteResult');
+            
+            if (!path) {
+                alert('Please enter a file path');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete ${path}?`)) {
+                return;
+            }
+
+            // Send DELETE request
+            fetch(path, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = '#d4edda';
+                    resultDiv.style.color = '#155724';
+                    resultDiv.style.border = '1px solid #c3e6cb';
+                    resultDiv.textContent = `✓ Successfully deleted ${path}`;
+                } else {
+                    return response.text().then(text => {
+                        throw new Error(`HTTP ${response.status}: ${text}`);
+                    });
+                }
+            })
+            .catch(error => {
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = '#f8d7da';
+                resultDiv.style.color = '#721c24';
+                resultDiv.style.border = '1px solid #f5c6cb';
+                resultDiv.textContent = `✗ Error: ${error.message}`;
+            });
+        }
+    </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-#include "HttpUtils.hpp"
+#include "httpUtils.hpp"
 
 namespace fs = std::filesystem; // Alias for filesystem
 
@@ -42,7 +42,7 @@ bool shouldKeepAlive(const HttpRequest& req){
    std::string version = req.getVersion();
    const std::map<std::string, std::string>& headers = req.getHeaders();
 
-   auto it = headers.find("Connection");
+   auto it = headers.find("connection");
    if (it != headers.end()) {
       std::string connValue = it->second;
       std::transform(connValue.begin(), connValue.end(), connValue.begin(), ::tolower);
@@ -51,8 +51,6 @@ bool shouldKeepAlive(const HttpRequest& req){
       if (connValue.find("keep-alive") != std::string::npos)
          return true;
    }
-
-   // HTTP/1.1 default behavior: keep connection alive
    return true;
 }
 
@@ -69,6 +67,12 @@ std::string trim_space(std::string str)
     size_t start = str.find_first_not_of(" \t");
     size_t end = str.find_last_not_of(" \t");
     return str.substr(start, end - start + 1);
+}
+
+std::string normalizeHeaderKey(const std::string& key){
+   std::string lowerCase = key;
+   std::transform(lowerCase.begin(), lowerCase.end(), lowerCase.begin(), ::tolower);
+   return lowerCase;
 }
 
 /**
@@ -188,11 +192,23 @@ const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh,
 
    for (size_t i = 0; i < vh->locations.size(); i++) {
       const config::LocationConfig& loc = vh->locations[i];
-      // rfind == 0 → prefix match
+      
+      // Check exact prefix match
       if (uri.rfind(loc.path, 0) == 0){
          if (loc.path.length() > bestLen) {
             best = &loc;
             bestLen = loc.path.length();
+         }
+      }
+      // Also check if location ends with / and uri matches without the trailing /
+      // e.g., uri="/directory" should match location="/directory/"
+      else if (loc.path.length() > 1 && loc.path.back() == '/') {
+         std::string locWithoutSlash = loc.path.substr(0, loc.path.length() - 1);
+         if (uri == locWithoutSlash) {
+            if (loc.path.length() > bestLen) {
+               best = &loc;
+               bestLen = loc.path.length();
+            }
          }
       }
    }

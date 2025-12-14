@@ -5,7 +5,9 @@
 #include <unistd.h>
 
 #include "HttpResponse.hpp"
-#include "HttpUtils.hpp"
+#include "httpUtils.hpp"
+
+using namespace httpUtils;
 
 /**
  * @class HttpResponseHandler

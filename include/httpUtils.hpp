@@ -3,8 +3,9 @@
 #include <filesystem>
 #include <algorithm>
 #include <ctime>
+#include <sys/stat.h>
 
-#include "HttpResponseHandler.hpp"
+#include "ConfigBuilder.hpp"
 #include "HttpResponse.hpp"
 
 namespace httpUtils {
@@ -12,6 +13,7 @@ namespace httpUtils {
     bool                            shouldKeepAlive(const HttpRequest& req);
 
     std::string                     trim_space(std::string str);
+    std::string                     normalizeHeaderKey(const std::string& key);
     std::string                     getMimeType(const std::string& path);
     std::string                     formatTime(std::time_t t);
     std::string                     mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw);

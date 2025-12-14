@@ -70,7 +70,7 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
    for (std::map<std::string, std::string>::const_iterator it = req.getHeaders().begin(); it != req.getHeaders().end(); ++it){
       const std::string& key = it->first;
       const std::string& value = it->second;
-      if (key ==  "Content-Type" )
+      if (key ==  "content-type" )
       {
          headersMap["Content-Type"] = value;
          return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
@@ -121,7 +121,14 @@ HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, 
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh)
 {
    // get the request URI: uniform Resource Identifier, _path in the request
-   std::string uri = req.getPath();
+   std::string fullUri = req.getPath();  // Full URI including query string
+   
+   // Split URI from query parameters
+   std::string uri = fullUri;
+   size_t queryPos = fullUri.find('?');
+   if (queryPos != std::string::npos) {
+      uri = fullUri.substr(0, queryPos);
+   }
 
    // First find LocationConfig check if it is cgi
    const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
@@ -129,6 +136,21 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       return makeErrorResponse(404, vh);
    if (!httpUtils::isMethodAllowed(lc, "GET"))
       return makeErrorResponse(405, vh);
+   
+   // If location path ends with / but uri doesn't, normalize uri for path mapping
+   if (lc->path.length() > 1 && lc->path.back() == '/' && !uri.empty() && uri.back() != '/') {
+      // Check if uri matches location without trailing slash
+      std::string locWithoutSlash = lc->path.substr(0, lc->path.length() - 1);
+      if (uri == locWithoutSlash) {
+         uri += "/";  // Add trailing slash for consistent path mapping
+      }
+   }
+   
+   // Check for configured redirect
+   if (!lc->redirect.empty()) {
+      return makeRedirect301(lc->redirect, vh);
+   }
+   
    CGI cgi(req, *lc);
    if (cgi.isCGI()){
       std::string cgi_output = cgi.execute();
@@ -175,6 +197,9 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    // Determined MIME type (text/plain for .txt or plain text).
    std::string mime_type = httpUtils::getMimeType(fullpath);
    
+   // Check if download should be forced (via ?download query parameter)
+   bool forceDownload = (fullUri.find("?download") != std::string::npos);
+   
    // Read file content → sent as response body.
    // using: std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    std::ifstream ifs(fullpath.c_str(), std::ios::binary);
@@ -195,10 +220,17 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    headers["Content-Type"] = mime_type;
    headers["Content-Length"] = std::to_string(body.size());
    headers["Server"] = "MiniWebserv/1.0";
-   headers["Last-Modified"] = httpUtils::formatTime(st.st_mtime);
-   headers["Date"] = httpUtils::formatTime(time(NULL));
-
-   return HttpResponse("HTTP/1.1", 200, "OK", body, headers, httpUtils::shouldKeepAlive(req), true);
+   headers["Last-Modified"] = formatTime(st.st_mtime);
+   headers["Date"] = formatTime(time(NULL));
+   // Add Content-Disposition for forced downloads
+   if (forceDownload) {
+      size_t lastSlash = fullpath.find_last_of('/');
+      std::string filename = (lastSlash != std::string::npos) 
+         ? fullpath.substr(lastSlash + 1) 
+         : "download";
+      headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+   }
+   return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
 }
 
 /**
