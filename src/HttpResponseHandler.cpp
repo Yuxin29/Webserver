@@ -128,49 +128,24 @@ std::string formatTime(std::time_t t) {
  * @note    path traversal should not be allowed
  * @note    use std::filesystem::canonical to get the real path and check if it is under root
  */
-// std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
-// {
-//    std::string root = loc->root; // e.g., "./sites/static"
-//    fs::path rootPath = fs::absolute(root);
-
-//    std::string cleanUri = uri_raw;
-//    if (!cleanUri.empty() && cleanUri[0] == '/')
-//       cleanUri = cleanUri.substr(1);
-//    fs::path fullPath = rootPath / cleanUri;
-//    std::error_code ec;
-
-//    // path exists → canonicalize
-//    if (fs::exists(fullPath)) {
-//       fs::path canonicalPath = fs::canonical(fullPath, ec);
-//       if (ec)
-//          return ""; // should never happen for existing path
-//       // security: ensure canonical path is inside root
-//       fs::path rel = fs::relative(canonicalPath, rootPath, ec);
-//       if (ec || (!rel.empty() && rel.string().substr(0, 2) == ".."))
-//          return "";
-//       return canonicalPath.string();
-//    }
-//    // Path does NOT exist → return full path anyway (for 404 later)
-//    return fullPath.string();
-// }
 std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
 {
-    std::string rel = uri_raw;
-    if (rel.find(loc->path) == 0)
-        rel = rel.substr(loc->path.length());
-    if (!rel.empty() && rel[0] == '/')
-        rel = rel.substr(1);
+   std::string rel = uri_raw;
+   if (rel.find(loc->path) == 0)
+      rel = rel.substr(loc->path.length());
+   if (!rel.empty() && rel[0] == '/')
+      rel = rel.substr(1);
 
-    fs::path full = fs::absolute(loc->root) / rel;
+   fs::path full = fs::absolute(loc->root) / rel;
 
-    std::error_code ec;
-    if (fs::exists(full))
-    {
-        fs::path canon = fs::canonical(full, ec);
-        if (!ec)
-            return canon.string();
-    }
-    return full.string();
+   std::error_code ec;
+   if (fs::exists(full))
+   {
+      fs::path canon = fs::canonical(full, ec);
+      if (!ec)
+         return canon.string();
+   }
+   return full.string();
 }
 
 /**
@@ -429,7 +404,9 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       if (S_ISDIR(st.st_mode))
       {
          // URI does NOT end with '/'
-         if (uri[uri.size() - 1] != '/')
+         std::cout << "[DEBUG] fullpath is directory: " << fullpath << ", uri: " << uri << std::endl;
+         //if (uri[uri.size() - 1] != '/')
+         if (uri.empty() || uri.back() != '/')
             return makeRedirect301(uri + "/", vh);
          //try index files
          std::string index_file = getIndexFile(fullpath, lc);
@@ -459,9 +436,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
    // Determined MIME type (text/plain for .txt or plain text).
    std::string mime_type = getMimeType(fullpath);
-   // if (mime_type.empty())
-   //    mime_type = "text/html";
-
+   
    // Read file content → sent as response body.
    // using: std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    std::ifstream ifs(fullpath.c_str(), std::ios::binary);
@@ -736,30 +711,15 @@ HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
 
 HttpResponse makeRedirect301(const std::string& location, const config::ServerConfig* vh)
 {
-    int status = 301;
-    std::string reason = "Moved Permanently";
+   std::string body;
+   if (vh && vh->errorPages.count(301)) {
+      body = loadFile(vh->errorPages.at(301));
+   }
+   if (body.empty())
+      body = "<h1>301 Moved Permanently</h1>";
 
-    // Load static HTML body if available in vh->errorPages
-    std::string body;
-    if (vh && vh->errorPages.count(status)) {
-        body = loadFile(vh->errorPages.at(status));
-    }
+   std::map<std::string, std::string> headers;
+   headers["Location"] = location;
 
-    // Fallback if no static file
-    if (body.empty()) {
-        body = "<h1>301 Moved Permanently</h1>";
-    }
-
-    std::map<std::string, std::string> headers;
-    headers["Location"] = location;
-
-    return HttpResponse(
-        "HTTP/1.1",
-        status,
-        reason,
-        body,
-        headers,
-        false, // keep-alive
-        false  // chunked?
-    );
-}
+   return HttpResponse("HTTP/1.1", 301, "Moved Permanently", body, headers, false, true);
+}		// yuxin need to tell lin

@@ -86,7 +86,6 @@ namespace config{
 	std::map<int, std::string> ConfigBuilder::defaultErrorPages()
 	{
 		std::map<int, std::string> pages;
-		// yuxin need to tell lin
 		pages[301] = "sites/static/errors/301.html";
 		pages[400] = "sites/static/errors/400.html";
 		pages[403] = "sites/static/errors/403.html";
