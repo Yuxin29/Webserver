@@ -49,12 +49,12 @@ static void validateUploaddir(const std::string& upload)
 
 
 namespace config{
-	std::vector<std::string> ConfigBuilder::defaultIndex()
-	{
-		std::vector<std::string> result;
-		result.push_back("index.html");
-		return result;
-	}
+	// std::vector<std::string> ConfigBuilder::defaultIndex()
+	// {
+	// 	std::vector<std::string> result;
+	// 	result.push_back("index.html");
+	// 	return result;
+	// }
 
 	long ConfigBuilder::defaultClientMaxBodySize()
 	{
@@ -86,31 +86,19 @@ namespace config{
 	std::map<int, std::string> ConfigBuilder::defaultErrorPages()
 	{
 		std::map<int, std::string> pages;
-		// pages[400] = "/errors/400.html";
-		// pages[403] = "/errors/403.html";
-		// pages[404] = "/errors/404.html";
-		// pages[405] = "/errors/405.html";
-		// pages[408] = "/errors/408.html";
-		// pages[413] = "/errors/413.html";
-		// pages[414] = "/errors/414.html";
-		// pages[431] = "/errors/431.html";
-		// pages[500] = "/errors/500.html";
-		// pages[502] = "/errors/502.html";
-		// pages[503] = "/errors/503.html";
-		// pages[504] = "/errors/504.html";
-		// yuxin need to tell lin
-		pages[400] = "sites/static/errors/400.html";
-		pages[403] = "sites/static/errors/403.html";
-		pages[404] = "sites/static/errors/404.html";
-		pages[405] = "sites/static/errors/405.html";
-		pages[408] = "sites/static/errors/408.html";
-		pages[413] = "sites/static/errors/413.html";
-		pages[414] = "sites/static/errors/414.html";
-		pages[431] = "sites/static/errors/431.html";
-		pages[500] = "sites/static/errors/500.html";
-		pages[502] = "sites/static/errors/502.html";
-		pages[503] = "sites/static/errors/503.html";
-		pages[504] = "sites/static/errors/504.html";
+		pages[301] = "/errors/301.html";
+		pages[400] = "/errors/400.html";
+		pages[403] = "/errors/403.html";
+		pages[404] = "/errors/404.html";
+		pages[405] = "/errors/405.html";
+		pages[408] = "/errors/408.html";
+		pages[413] = "/errors/413.html";
+		pages[414] = "/errors/414.html";
+		pages[431] = "/errors/431.html";
+		pages[500] = "/errors/500.html";
+		pages[502] = "/errors/502.html";
+		pages[503] = "/errors/503.html";
+		pages[504] = "/errors/504.html";
 		return pages;
 	}
 
@@ -156,7 +144,7 @@ namespace config{
 		cfg.errorPages = node.errorPages.empty() ? defaultErrorPages() : node.errorPages;
 		cfg.root = node.root.empty() ? "." : node.root;
 		validateRoot(cfg.root);
-		cfg.index = node.index.empty() ? defaultIndex() : node.index;
+		cfg.index = node.index;
 		validateindex(cfg.index);
 		cfg.clientMaxBodySize = node.clientMaxBodySize.empty()
 									? defaultClientMaxBodySize()
