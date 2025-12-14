@@ -3,6 +3,10 @@
 #include <map>
 #include <string>
 #include <sstream>
+#include <fstream>
+
+#include "ConfigBuilder.hpp"
+#include "Cgi.hpp"
 
 /**
  * @class HttpResponse
@@ -23,21 +27,21 @@
  *
  * @note Required / recommended response components:
  * - **Status Codes** commonly used:
- *      - 200 OK  
- *      - 404 Not Found  
- *      - 500 Internal Server Error  
- *      - 413 Payload Too Large  
+ *      - 200 OK
+ *      - 404 Not Found
+ *      - 500 Internal Server Error
+ *      - 413 Payload Too Large
  *
  * @note Mandatory / optional headers:
- * - **Content-Length** is required.  
- * - **Content-Type** is recommended (e.g., text/html, text/plain, image/png).  
- * - **Connection** can be `"close"` or `"keep-alive"`.  
+ * - **Content-Length** is required.
+ * - **Content-Type** is recommended (e.g., text/html, text/plain, image/png).
+ * - **Connection** can be `"close"` or `"keep-alive"`.
  *
  * @note Body:
  * - Contains file content (GET) or POST data.
  * - Its size **must match Content-Length** exactly.
   * @note _keepConnectionAlive:
- * - By default, HTTP/1.1 connections are persistent (keep-alive), unless the server sends Connection: close in its response. 
+ * - By default, HTTP/1.1 connections are persistent (keep-alive), unless the server sends Connection: close in its response.
  * - This means the TCP connection can be reused for multiple requests.
  */
 class HttpResponse{
@@ -65,7 +69,7 @@ public:
     // --------------------
     //        Setters
     // --------------------
-    void        setVersion(const std::string &v)                            { _version = v; }   
+    void        setVersion(const std::string &v)                            { _version = v; }
     void        setStatus(const int &s)                                     { _status = s; }
     void        setReason(const std::string &r)                             { _reason = r; }
     void        setBody(const std::string &b)                               { _body = b; }
@@ -77,24 +81,26 @@ public:
     //    Constructors
     // --------------------
     HttpResponse() {};
-    HttpResponse(const std::string& version, 
-                    const int& status, 
-                    const std::string& reason, 
-                    const std::string& body, 
-                    const std::map<std::string, std::string>& responseHeaders, 
-                    bool alive, 
-                    bool complete)
+    HttpResponse(const std::string& version, const int& status, const std::string& reason,
+                    const std::string& body,
+                    const std::map<std::string, std::string>& responseHeaders,
+                    bool alive, bool complete)
     {
-    _version = version;
-    _status = status;
-    _reason = reason;
+    _version = version; _status = status; _reason = reason;
     _body = body;
     _responseHeaders = responseHeaders;
-    _keepConnectionAlive = alive;
-    _requestComplete = complete;}
-    
+    _keepConnectionAlive = alive; _requestComplete = complete;}
+
     // --------------------
     //   Serialization
     // --------------------
     std::string buildResponseString();
 };
+
+// --------------------
+//   Error Response Helpers
+// --------------------
+std::string loadFile(const std::string& path);
+
+HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh);
+HttpResponse makeRedirect301(const std::string& location, const config::ServerConfig* vh);

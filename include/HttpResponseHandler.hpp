@@ -1,16 +1,11 @@
 #pragma once
 
-#include <fstream>
 #include <sys/types.h>
-#include <sys/stat.h> //stat
+#include <sys/stat.h>
 #include <unistd.h>
-#include <ctime>
-#include <filesystem>
-#include <algorithm>
 
 #include "HttpResponse.hpp"
-#include "ConfigBuilder.hpp"
-#include "Cgi.hpp"
+#include "HttpUtils.hpp"
 
 /**
  * @class HttpResponseHandler
@@ -46,10 +41,3 @@ public:
     // --------------------
     HttpResponse                    handleRequest(HttpRequest& req, const config::ServerConfig* vh);
 };
-
-// --------------------
-//   Utility Functions
-// --------------------
-std::string loadFile(const std::string& path);
-//HttpResponse makeErrorResponse(int status);
-HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh);

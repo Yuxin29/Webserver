@@ -7,7 +7,7 @@
  * - Team composition 
  * - Webserver workflow
  * - Weekly
- * - Debugging
+ * - Bugs and Debugging
  *
  * @details
  * This file uses Doxygen HTML-style block comments
@@ -271,30 +271,60 @@ Test:
   modified functions: std::string mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw)
 
 ## 2.error page
-  the ready made error page should be returned from site/static/error/xxx.html
+  the ready made error pages should be returned from site/static/error/xxx.html
 ### how
-  modified functions: HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
+  modified functions: 
+  HttpResponse makeErrorResponse(int status)
+  -> HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
 
+## 3.Autoindex 
+  Expected behavior (consistent with Nginx):
+  If autoindex = off and the directory has an index file → return the index file
+  If autoindex = off and the directory has no index file → return 403 Forbidden
 
-To be fixed:
-1. content length 0
-% ./tester http://localhost:8080
+  Never generate a directory listing when autoindex is off
+  Currently, the reason you are seeing a file list is because the directory contains: files/index.html
+  which is a manually written file, not autoindex output.
 
-2. Autoindex
-when it is off,  http://localhost:8080/files it should not show the file list/
+### how
+  Lin removed defaultAutoindex
 
-When autoindex is off, navigating to a directory such as:
-http://localhost:8080/files
+## 4.YoupiBanane 
+  Test GET http://localhost:8080/directory
 
-should not show any directory listing.
+### failed test:
+  Test GET http://localhost:8080/directory
+  FATAL ERROR ON LAST TEST: bad status code
 
-Expected behavior (consistent with Nginx):
+  -> curl -i http://localhost:8080/directory
 
-If autoindex = off and the directory has an index file → return the index file
-If autoindex = off and the directory has no index file → return 403 Forbidden
+### reasons
+  Request	          Expected
+  GET /directory	  301 Redirect →  /directory/
+  GET /directory/	  200 OK,         serve youpi.bad_extension
 
-Never generate a directory listing when autoindex is off
-Currently, the reason you are seeing a file list is because the directory contains:
-files/index.html
+### Unix filesystem
+  HTTP rule:
+  - If a path refers to a directory and does not end with /,
+  - the server must redirect to the slash version.
+```c
+YoupiBanane/
+ └── directory/
+     └── youpi.bad_extension
+```
 
-which is a manually written file, not autoindex output.
+### how 
+  I missed to check: URI does not end with / AND path is directory
+
+```cpp
+if (S_ISDIR(st.st_mode))
+{
+    // URI does NOT end with '/'
+    if (uri[uri.size() - 1] != '/')
+    {
+        std::map<std::string, std::string> headers;
+        headers["Location"] = uri + "/";
+        return errorHttpResponse(301);
+    }
+}
+```
