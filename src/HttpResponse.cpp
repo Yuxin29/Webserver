@@ -124,11 +124,11 @@ HttpResponse makeRedirect301(const std::string& location, const config::ServerCo
    if (vh && vh->errorPages.count(301)) {
       body = loadFile(vh->errorPages.at(301));
    }
-   if (body.empty())
+   if (body.empty()){
       body = "<h1>301 Moved Permanently</h1>";
-
+   }
    std::map<std::string, std::string> headers;
    headers["Location"] = location;
-
+   
    return HttpResponse("HTTP/1.1", 301, "Moved Permanently", body, headers, false, true);
 }
