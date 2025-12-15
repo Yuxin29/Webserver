@@ -17,21 +17,21 @@ std::string HttpResponse::buildResponseString(){
     response << _version << " " << _status << " " << _reason << "\r\n";
 
     bool hasContentLength = false;
-    // iterates though the _responseHeaders map container and check if there is Content-Length
+    // iterates though the _responseHeaders map container and check if there is content-length
     for (const auto &header : _responseHeaders) {
-        if (header.first == "Content-Length")
+        if (header.first == "content-length")
             hasContentLength = true;
         response << header.first << ": " << header.second << "\r\n";
     }
     if (!hasContentLength) {
-        response << "Content-Length: " << _body.size() << "\r\n";
+        response << "content-length: " << _body.size() << "\r\n";
     }
-    // Add Connection header based on _keepConnectionAlive flag
-    if (_responseHeaders.find("Connection") == _responseHeaders.end()) {
+    // Add connection header based on _keepconnectionAlive flag
+    if (_responseHeaders.find("connection") == _responseHeaders.end()) {
         if (_keepConnectionAlive)
-            response << "Connection: keep-alive\r\n";
+            response << "connection: keep-alive\r\n";
         else
-            response << "Connection: close\r\n";
+            response << "connection: close\r\n";
     }
     response << "\r\n";
     response << _body;
@@ -74,8 +74,8 @@ std::string loadFile(const std::string& path)
  *
  * @example response:
    * HTTP/1.1 404 Not Found
-   * Content-Type: text/html
-   * Content-Length: 23
+   * content-type: text/html
+   * content-length: 23
    *
    * <h1>404 Not Found</h1>
  */
@@ -103,7 +103,7 @@ HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
       body = "<h1>" + std::to_string(status) + " " + reason + "</h1>";
 
    std::map<std::string, std::string> headers;
-   headers["Content-Type"] = "text/html";
+   headers["content-type"] = "text/html";
 
    return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
 }
@@ -146,8 +146,8 @@ HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
 
 //    // Build headers
 //    std::map<std::string, std::string> headers;
-//    headers["Content-Type"] = "text/html; charset=UTF-8";
-//    headers["Content-Length"] = std::to_string(body.size());
+//    headers["content-type"] = "text/html; charset=UTF-8";
+//    headers["content-length"] = std::to_string(body.size());
 //    headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
 //    headers["Pragma"] = "no-cache";
 //    headers["Expires"] = "0";
@@ -156,7 +156,7 @@ HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
 //    // headers["Server"] = "webserv/1.0";
    
 //    // Optional: Security headers
-//    // headers["X-Content-Type-Options"] = "nosniff";
+//    // headers["X-content-type-Options"] = "nosniff";
    
 //    return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
 // }
@@ -171,7 +171,7 @@ HttpResponse makeRedirect301(const std::string& location, const config::ServerCo
       body = "<h1>301 Moved Permanently</h1>";
 
    std::map<std::string, std::string> headers;
-   headers["Location"] = location;
+   headers["location"] = location;
 
    return HttpResponse("HTTP/1.1", 301, "Moved Permanently", body, headers, false, true);
 }

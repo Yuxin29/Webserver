@@ -56,14 +56,14 @@ bool HttpParser::validateStartLine()
  *
  * @note exxample of headers:
  * POST /login HTTP/1.1
- * Host: example.com
+ * host: example.com
  * User-Agent: curl/7.81.0
  * Content-Type: application/x-www-form-urlencoded
- * Content-Length: 27
+ * content-length: 27
  */
 bool    HttpParser::validateHeaders()
 {
-    bool hasHost = false;
+    bool hashost = false;
     std::set<std::string> seenKeys;
     size_t totalSize = 0;
 
@@ -85,43 +85,43 @@ bool    HttpParser::validateHeaders()
                 return set_errstatus(400, "Invalid header key: " + key);
         }
         //validateMandatoryHeaders: loop though all keys, has to find host
-        if (key == "Host"){
-            if (hasHost)
-                return set_errstatus(400, "Multiple Host headers found.");
-            hasHost = true;
+        if (key == "host"){
+            if (hashost)
+                return set_errstatus(400, "Multiple host headers found.");
+            hashost = true;
         }
-        // validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple Hosts
+        // validateRepeatingHeaders: loop though all keys, can not have repeating keys, multiple hosts
         if (seenKeys.count(key)) 
             return set_errstatus(400, "Duplicate header key found: " + key); 
         seenKeys.insert(key);
         // Enhancement(optional, did not do):  reject control characters (CR/LF, other CTLs, DEL). Also reject embedded CR/LF (obs-fold is obsolete) and enforce trimming/size limits
         // validateContentLength: can not be too long like minus number ---> four hundred  or too big(Payload Too Large) ---> 43113
-        if (key == "Content-Length"){
+        if (key == "content-length"){
             // can not be empty
             if (value.empty())
-                return set_errstatus(400, "Empty Content-Length value.");
+                return set_errstatus(400, "Empty content-length value.");
             // can not start with zero
             if (value.size() > 1 && value[0] == '0')
-                return set_errstatus(400, "Content-Length cannot start with zero.");
+                return set_errstatus(400, "content-length cannot start with zero.");
             // can not have non digits
             for (size_t i = 0; i < value.length(); ++i){
                 if (!isdigit(value[i]))
-                    return set_errstatus(400, "Non-digit character in Content-Length value.");
+                    return set_errstatus(400, "Non-digit character in content-length value.");
             }
             // can not be minus
             long long len = atoll(value.c_str());
             if (len < 0)
-                return set_errstatus(400, "Negative Content-Length value.");
+                return set_errstatus(400, "Negative content-length value.");
              // can not be too big, 100 MB, max, ask lin or lucio what should be the max
             if (len > 1024 * 1024 * 100)
-                return set_errstatus(413, "Content-Length too large.");
+                return set_errstatus(413, "content-length too large.");
             _bodyLength = static_cast<size_t>(len);
         }
     }
     // it has to have ont and only one host    // headers["Content-Type"] = "text/html";
-    // headers["Content-Length"] = std::to_string(body.size());
-    if (!hasHost)
-        return set_errstatus(400, "Missing Host header.");
+    // headers["content-length"] = std::to_string(body.size());
+    if (!hashost)
+        return set_errstatus(400, "Missing host header.");
     return true;
 }
 
@@ -168,17 +168,17 @@ bool HttpParser::validateBody(){
 
     if (_req.getMethod() == "POST")
     {
-        // For POST: require Content-Length only if there is a non-empty body. 
-        bool hasContentLength = _req.getHeaders().count("Content-Length") != 0;
+        // For POST: require content-length only if there is a non-empty body. 
+        bool hasContentLength = _req.getHeaders().count("content-length") != 0;
         if (!hasContentLength) {
-            // No Content-Length header: allowed only for an empty body.
+            // No content-length header: allowed only for an empty body.
             if (!_req.getBody().empty())
-                return set_errstatus(400, "POST request has body but missing Content-Length header.");
+                return set_errstatus(400, "POST request has body but missing content-length header.");
         }
         else {
-            // Content-Length present: ensure body size does not exceed declared length.
+            // content-length present: ensure body size does not exceed declared length.
             if (_req.getBody().size() > _bodyLength)
-                return set_errstatus(400, "POST request body length exceeds Content-Length.");
+                return set_errstatus(400, "POST request body length exceeds content-length.");
         }
     }
     return true;
@@ -240,7 +240,7 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     std::string val = headerline.substr(dd + 1);
     key = httpUtils::trim_space(key);
     val = httpUtils::trim_space(val);
-    _req.addHeader(key, val);
+    _req.addHeader(httpUtils::normalizeHeaderKey(key), httpUtils::normalizeHeaderKey(val));
 }
 
 /**

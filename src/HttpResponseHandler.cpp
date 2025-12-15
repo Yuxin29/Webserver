@@ -59,7 +59,7 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
 
       // check if it is special status code in headerlines
       // eg: Status: 404 Not Found
-      if (key == "Status") {
+      if (key == "status") {
          size_t space = val.find(" ");
          statusCode = val.substr(0, space);
          statusMsg  = val.substr(space + 1);
@@ -68,17 +68,17 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
          headersMap[key] = val;
    }
    // manually setup this one
-   headersMap["Content-Length"] = std::to_string(bodyString.size());
+   headersMap["content-length"] = std::to_string(bodyString.size());
    for (std::map<std::string, std::string>::const_iterator it = req.getHeaders().begin(); it != req.getHeaders().end(); ++it){
       const std::string& key = it->first;
       const std::string& value = it->second;
       if (key ==  "content-type" )
       {
-         headersMap["Content-Type"] = value;
+         headersMap["content-type"] = value;
          return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
       }
    }
-   headersMap["Content-Type"] = "text/html";
+   headersMap["content-type"] = "text/html";
    return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
 }
 
@@ -109,10 +109,10 @@ HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, 
     body += "</ul></body></html>";
 
     std::map<std::string, std::string> headers;
-    headers["Content-Type"] = "text/html";
-    headers["Content-Length"] = std::to_string(body.size());
-    headers["Server"] = "MiniWebserv/1.0";
-    headers["Date"] = httpUtils::formatTime(time(NULL));
+    headers["content-type"] = "text/html";
+    headers["content-length"] = std::to_string(body.size());
+    headers["server"] = "MiniWebserv/1.0";
+    headers["date"] = httpUtils::formatTime(time(NULL));
 
     return HttpResponse("HTTP/1.1", 200, "OK", body, headers, httpUtils::shouldKeepAlive(req), true);
 }
@@ -223,18 +223,18 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
    // Filled headers like Date and Server. maybe more headers
    std::map<std::string, std::string> headers;
-   headers["Content-Type"] = mime_type;
-   headers["Content-Length"] = std::to_string(body.size());
-   headers["Server"] = "MiniWebserv/1.0";
-   headers["Last-Modified"] = formatTime(st.st_mtime);
-   headers["Date"] = formatTime(time(NULL));
+   headers["content-type"] = mime_type;
+   headers["content-length"] = std::to_string(body.size());
+   headers["server"] = "MiniWebserv/1.0";
+   headers["last-modified"] = formatTime(st.st_mtime);
+   headers["date"] = formatTime(time(NULL));
    // Add Content-Disposition for forced downloads
    if (forceDownload) {
       size_t lastSlash = fullpath.find_last_of('/');
       std::string filename = (lastSlash != std::string::npos) 
          ? fullpath.substr(lastSlash + 1) 
          : "download";
-      headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+      headers["content-disposition"] = "attachment; filename=\"" + filename + "\"";
    }
    return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
 }
@@ -320,8 +320,8 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    // Generates response: Set headers (Content-Type, Content-Length, Date, Server)
    std::map<std::string, std::string> headers;
    std::string responseBody = "{\"status\":\"success\"}";
-   headers["Content-Length"] = std::to_string(responseBody.size());
-   headers["Content-Type"] = "application/json";
+   headers["content-length"] = std::to_string(responseBody.size());
+   headers["content-type"] = "application/json";
 
    return HttpResponse("HTTP/1.1", 201, "Created", responseBody, headers, httpUtils::shouldKeepAlive(req), true);
 }
@@ -385,7 +385,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
 
    // Generates response:
    std::map<std::string, std::string> headers;
-   headers["Content-Length"] = "0";  // No response body
+   headers["content-length"] = "0";  // No response body
 
    // - If success → 204 No Content (most common) - Or 200 OK with optional message
    return HttpResponse("HTTP/1.1", 204, "No Content", "", std::map<std::string, std::string>(), httpUtils::shouldKeepAlive(req), true);
