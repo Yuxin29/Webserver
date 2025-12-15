@@ -108,6 +108,59 @@ HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
    return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
 }
 
+// HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
+// {
+//    // Find reason phrase
+//    std::string reason;
+//    if (STATUS_REASON.count(status))
+//       reason = STATUS_REASON.at(status);
+//    else {
+//       status = 500;
+//       reason = "Internal Server Error";
+//    }
+
+//    // Load custom error page if configured
+//    std::string body;
+//    if (vh && vh->errorPages.count(status)){
+//       const std::string& path = vh->errorPages.at(status);
+//       body = loadFile(path);
+      
+//       // Log if custom error page fails to load
+//       if (body.empty()) {
+//          std::cerr << "Warning: Failed to load custom error page: " 
+//                    << path << " for status " << status << std::endl;
+//       }
+//    }
+
+//    // Fallback to default HTML
+//    if (body.empty()) {
+//       body = "<!DOCTYPE html>\n"
+//              "<html>\n"
+//              "<head><title>" + std::to_string(status) + " " + reason + "</title></head>\n"
+//              "<body>\n"
+//              "<h1>" + std::to_string(status) + " " + reason + "</h1>\n"
+//              "<p>The server encountered an error processing your request.</p>\n"
+//              "</body>\n"
+//              "</html>";
+//    }
+
+//    // Build headers
+//    std::map<std::string, std::string> headers;
+//    headers["Content-Type"] = "text/html; charset=UTF-8";
+//    headers["Content-Length"] = std::to_string(body.size());
+//    headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+//    headers["Pragma"] = "no-cache";
+//    headers["Expires"] = "0";
+   
+//    // Optional: Add server identification
+//    // headers["Server"] = "webserv/1.0";
+   
+//    // Optional: Security headers
+//    // headers["X-Content-Type-Options"] = "nosniff";
+   
+//    return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
+// }
+
 HttpResponse makeRedirect301(const std::string& location, const config::ServerConfig* vh)
 {
    std::string body;

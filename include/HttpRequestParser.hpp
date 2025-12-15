@@ -6,7 +6,9 @@
 #include <vector>
 
 #include "HttpRequest.hpp"  // map, string here
-#include "HttpUtils.hpp"
+#include "httpUtils.hpp"
+
+using namespace httpUtils;
 
 /**
  * @enum State

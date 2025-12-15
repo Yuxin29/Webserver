@@ -117,7 +117,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 		return CLIENT_INCOMPLETE;
 	_requestCount[clientFd]++;	
 	std::map<std::string, std::string> headers = request.getHeaders();
-	auto it = headers.find("Host");
+	auto it = headers.find("host");
 	if (it == headers.end()){
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;

@@ -224,7 +224,7 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     {
         // try to find content length in map to see it there is body
         const std::map<std::string, std::string>& headers = _req.getHeaders();
-        std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
+        std::map<std::string, std::string>::const_iterator it = headers.find("content-length");
         if (it != headers.end()){
             _bodyLength = std::stoi(it->second);
             _state = BODY;

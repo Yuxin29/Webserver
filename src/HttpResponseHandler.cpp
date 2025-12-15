@@ -27,15 +27,17 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
    //it is after last header valuse and then the empty line
    //Note from lucio, should check both "\r\n\r\n"(for python) and "\n\n" (for php and bash)
    size_t pos = out.find("\r\n\r\n");
+   size_t sepLen = 4; // NOTE 15.12, when \r\n\r\n, it the length should be 4
    if (pos == std::string::npos){
       pos = out.find("\n\n");
+      sepLen = 2; // NOTE 15.12, when \n\n, it the length should be 2
       if (pos == std::string::npos){
          return makeErrorResponse(500, vh);
       }
    }
 
    std::string headersString = out.substr(0, pos);
-   std::string bodyString = out.substr(pos + 4);
+   std::string bodyString = out.substr(pos + sepLen); // NOTE 15.12
 
    std::string statusCode = "200";
    std::string statusMsg = "OK";
@@ -70,7 +72,7 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
    for (std::map<std::string, std::string>::const_iterator it = req.getHeaders().begin(); it != req.getHeaders().end(); ++it){
       const std::string& key = it->first;
       const std::string& value = it->second;
-      if (key ==  "Content-Type" )
+      if (key ==  "content-type" )
       {
          headersMap["Content-Type"] = value;
          return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
@@ -121,22 +123,48 @@ HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, 
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh)
 {
    // get the request URI: uniform Resource Identifier, _path in the request
-   std::string uri = req.getPath();
-
-   // First find LocationConfig check if it is cgi
-   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
-   if (!lc)
-      return makeErrorResponse(404, vh);
-   if (!httpUtils::isMethodAllowed(lc, "GET"))
-      return makeErrorResponse(405, vh);
-   CGI cgi(req, *lc);
-   if (cgi.isCGI()){
+   std::string fullUri = req.getPath();  // Full URI including query string
+   
+   // Split URI from query parameters
+   std::string uri = fullUri;
+   size_t queryPos = fullUri.find('?');
+   if (queryPos != std::string::npos) {
+      uri = fullUri.substr(0, queryPos);
+   }
+   if (httpUtils::isCgiRequest(req, *vh)){
+      const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+      if (!lc){
+         return makeErrorResponse(403, vh);
+      }
+      CGI cgi(req, *lc);
+      if (!cgi.isAllowedCgi()){
+        return makeErrorResponse(403, vh);
+      }
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
          return makeErrorResponse(500, vh);
       return parseCGIOutput(cgi_output, req, vh);
    }
 
+    // First find LocationConfig check if it is cgi
+   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+   if (!lc)
+      return makeErrorResponse(404, vh);
+   if (!httpUtils::isMethodAllowed(lc, "GET"))
+      return makeErrorResponse(405, vh);
+   
+   // If location path ends with / but uri doesn't, normalize uri for path mapping
+   if (lc->path.length() > 1 && lc->path.back() == '/' && !uri.empty() && uri.back() != '/') {
+      // Check if uri matches location without trailing slash
+      std::string locWithoutSlash = lc->path.substr(0, lc->path.length() - 1);
+      if (uri == locWithoutSlash) {
+         uri += "/";  // Add trailing slash for consistent path mapping
+      }
+   }
+   // Check for configured redirect
+   if (!lc->redirect.empty()) {
+      return makeRedirect301(lc->redirect, vh);
+   }
    // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
    std::string fullpath = httpUtils::mapUriToPath(lc, uri);
 
@@ -175,6 +203,9 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    // Determined MIME type (text/plain for .txt or plain text).
    std::string mime_type = httpUtils::getMimeType(fullpath);
    
+   // Check if download should be forced (via ?download query parameter)
+   bool forceDownload = (fullUri.find("?download") != std::string::npos);
+   
    // Read file content → sent as response body.
    // using: std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    std::ifstream ifs(fullpath.c_str(), std::ios::binary);
@@ -195,10 +226,17 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    headers["Content-Type"] = mime_type;
    headers["Content-Length"] = std::to_string(body.size());
    headers["Server"] = "MiniWebserv/1.0";
-   headers["Last-Modified"] = httpUtils::formatTime(st.st_mtime);
-   headers["Date"] = httpUtils::formatTime(time(NULL));
-
-   return HttpResponse("HTTP/1.1", 200, "OK", body, headers, httpUtils::shouldKeepAlive(req), true);
+   headers["Last-Modified"] = formatTime(st.st_mtime);
+   headers["Date"] = formatTime(time(NULL));
+   // Add Content-Disposition for forced downloads
+   if (forceDownload) {
+      size_t lastSlash = fullpath.find_last_of('/');
+      std::string filename = (lastSlash != std::string::npos) 
+         ? fullpath.substr(lastSlash + 1) 
+         : "download";
+      headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+   }
+   return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
 }
 
 /**
@@ -234,7 +272,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    if (!httpUtils::isMethodAllowed(lc, "POST"))
       return makeErrorResponse(405, vh);
    CGI cgi(req, *lc);
-   if (cgi.isCGI()) {
+   if (cgi.isAllowedCgi()) {
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
          return makeErrorResponse(500, vh);
@@ -319,7 +357,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    if (!httpUtils::isMethodAllowed(lc, "DELETE"))
       return makeErrorResponse(405, vh);
    CGI cgi(req, *lc);
-   if (cgi.isCGI()) {
+   if (cgi.isAllowedCgi()) {
          std::string cgi_output = cgi.execute();
          if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
             return makeErrorResponse(500, vh);

@@ -10,12 +10,6 @@ static void validateRoot(const std::string& root)
 		throw std::runtime_error("Invalid root: '" + root + "' must be an existing directory");
 }
 
-// static void validatePath(const std::string& path)
-// {
-// 	if(path.empty() || path[0] != '/')
-// 		throw std::runtime_error("Location path must start with '/' : "+path);
-// }
-
 static void validateindex(const std::vector<std::string>& index)
 {
 	for(size_t i = 0; i < index.size(); i++){
@@ -47,15 +41,20 @@ static void validateUploaddir(const std::string& upload)
 		throw std::runtime_error("Invalid upload_dir : "+upload);
 }
 
+static void validateErrpages(const std::map<int, std::string>& error_pages)
+{
+	for (std::map<int, std::string>::const_iterator it = error_pages.begin();
+			it != error_pages.end(); ++it)
+	{
+		const std::string& uri = it->second;
+		struct stat st;
+		if (stat(uri.c_str(), &st) != 0 || !S_ISREG(st.st_mode) ||access(uri.c_str(), R_OK) != 0)
+			throw std::runtime_error("Invalid error_page path : " + uri);
+	}
+}
+
 
 namespace config{
-	// std::vector<std::string> ConfigBuilder::defaultIndex()
-	// {
-	// 	std::vector<std::string> result;
-	// 	result.push_back("index.html");
-	// 	return result;
-	// }
-
 	long ConfigBuilder::defaultClientMaxBodySize()
 	{
 		long size = 1*1024*1024;
@@ -96,9 +95,6 @@ namespace config{
 		pages[414] = "sites/static/errors/414.html";
 		pages[431] = "sites/static/errors/431.html";
 		pages[500] = "sites/static/errors/500.html";
-		pages[502] = "sites/static/errors/502.html";
-		pages[503] = "sites/static/errors/503.html";
-		pages[504] = "sites/static/errors/504.html";
 		return pages;
 	}
 
@@ -142,6 +138,7 @@ namespace config{
 		cfg.port = node.listen.second;
 		cfg.serverNames = node.serverNames;
 		cfg.errorPages = node.errorPages.empty() ? defaultErrorPages() : node.errorPages;
+		validateErrpages(cfg.errorPages);
 		cfg.root = node.root.empty() ? "." : node.root;
 		validateRoot(cfg.root);
 		cfg.index = node.index;

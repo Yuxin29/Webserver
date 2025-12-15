@@ -4,9 +4,10 @@
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <iostream>
 
 #include "ConfigBuilder.hpp"
-#include "Cgi.hpp"
+#include "CGI.hpp"
 
 /**
  * @class HttpResponse

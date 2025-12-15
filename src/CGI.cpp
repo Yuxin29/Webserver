@@ -1,4 +1,4 @@
-#include "Cgi.hpp"
+#include "CGI.hpp"
 #include <unistd.h> //pipe, dup2, fork, execve, access
 #include <string>
 #include <sys/wait.h>
@@ -30,13 +30,13 @@ _serverName("")
 		_query = "";
 	}
 	//count() and at() come from std::map
-	if (_header.count("Content-Type")) //count can check if Content-Type exits in map
-		_contentType = _header.at("Content-Type"); //retrieves the value for the Content-type
-	if (_header.count("Host"))
-		_serverName = _header.at("Host");
+	if (_header.count("content-type")) //count can check if Content-Type exits in map
+		_contentType = _header.at("content-type"); //retrieves the value for the Content-type
+	if (_header.count("host"))
+		_serverName = _header.at("host");
 }
 
-bool CGI::isCGI()const
+bool CGI::isAllowedCgi()const
 {
 	if (_cgiPass.empty())
 		return false;
@@ -125,16 +125,37 @@ std::string CGI::execute()
 		close(stdin_pipe[0]);
 		//Write POST body (GET writes nothing)
 		if(_method=="POST" && !_body.empty()){
-			if (write(stdin_pipe[1], _body.c_str(), _body.size()) < 0)
-				std::cerr << "[CGI] write() failed"<<std::endl;
+			size_t total = 0;
+			size_t len = _body.size();
+			while(total < len)
+			{
+				ssize_t written = write(stdin_pipe[1], _body.c_str() + total, len - total);
+				if(written < 0)
+				{
+					std::cerr << "[CGI] write() failed\n";
+					break;
+				}
+				total += written;
+			}
 		}
 		close(stdin_pipe[1]);
 		//Read CGI output from stdout_pipe[0]
 		char buffer[4096];
 		std::string output;
-		ssize_t bytes; //should use ssize_t, If read returns -1, this becomes a large integer
-		while((bytes = read(stdout_pipe[0], buffer, sizeof(buffer))) > 0) //one read can not get everything.
-			output.append(buffer, bytes);
+		ssize_t bytes;
+		while(true)
+		{
+			bytes = read(stdout_pipe[0], buffer, sizeof(buffer));
+			if(bytes > 0)
+				output.append(buffer, bytes);
+			else if(bytes == 0)
+				break; //EOF
+			else
+			{
+				std::cerr << "[CGI] read() failed\n";
+				break;
+			}
+		}
 		close(stdout_pipe[0]);
 		//Wait for the child process
 		int status;
