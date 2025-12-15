@@ -146,8 +146,6 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
    if (!lc)
       return makeErrorResponse(404, vh);
-   if (!httpUtils::isMethodAllowed(lc, "GET"))
-      return makeErrorResponse(405, vh);
    
    // If location path ends with / but uri doesn't, normalize uri for path mapping
    if (lc->path.length() > 1 && lc->path.back() == '/' && !uri.empty() && uri.back() != '/') {
@@ -173,6 +171,11 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
          // URI does NOT end with '/'
          if (uri.empty() || uri.back() != '/')
             return makeRedirect301(uri + "/", vh);
+         
+         // Now check method after redirect handled
+         if (!httpUtils::isMethodAllowed(lc, "GET"))
+            return makeErrorResponse(405, vh);
+         
          //try index files
          std::string index_file = httpUtils::getIndexFile(fullpath, lc);
          if (!index_file.empty()) {
@@ -183,11 +186,14 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
          else
          {
             if (!lc->autoindex)
-               return makeErrorResponse(403, vh); //check correct error code
+               return makeErrorResponse(404, vh); // No index file and autoindex disabled
             // autoindex enabled → return HTML directory listing
             return generateAutoIndex(fullpath, req);
          }
       }  
+      // Not a directory - check method for regular files
+      else if (!httpUtils::isMethodAllowed(lc, "GET"))
+         return makeErrorResponse(405, vh);
    }
    else
       return makeErrorResponse(404, vh);
