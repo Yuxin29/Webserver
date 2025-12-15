@@ -21,9 +21,9 @@ email = form_data.get('email', 'Not provided')
 category = form_data.get('category', 'general')
 message = form_data.get('message', 'No message')
 
-# Output HTTP headers
-print("Content-Type: text/html")
-print()
+# CGI Header - MUST come first
+print("Content-Type: text/html; charset=UTF-8\r")
+print("\r")
 
 # Generate HTML response
 html = f"""<!DOCTYPE html>

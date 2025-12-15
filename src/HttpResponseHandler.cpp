@@ -69,16 +69,12 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
    }
    // manually setup this one
    headersMap["Content-Length"] = std::to_string(bodyString.size());
-   for (std::map<std::string, std::string>::const_iterator it = req.getHeaders().begin(); it != req.getHeaders().end(); ++it){
-      const std::string& key = it->first;
-      const std::string& value = it->second;
-      if (key ==  "content-type" )
-      {
-         headersMap["Content-Type"] = value;
-         return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
-      }
+   
+   // Check if CGI already set Content-Type, otherwise use default
+   if (headersMap.find("Content-Type") == headersMap.end()) {
+      headersMap["Content-Type"] = "text/html; charset=UTF-8";
    }
-   headersMap["Content-Type"] = "text/html";
+   
    return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
 }
 

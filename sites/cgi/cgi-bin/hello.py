@@ -9,7 +9,7 @@ import sys
 from urllib.parse import parse_qs
 
 # CGI Header - MUST come first
-print("Content-Type: text/html\r")
+print("Content-Type: text/html; charset=UTF-8\r")
 print("\r")
 
 # Get request method
