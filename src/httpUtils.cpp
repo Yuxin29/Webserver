@@ -4,6 +4,21 @@ namespace fs = std::filesystem; // Alias for filesystem
 
 namespace httpUtils{
 
+   // Helper: Check if path has common CGI extension
+   static bool isCgiExtension(const std::string& path) {
+      std::string ext = fs::path(path).extension().string();
+      return ext == ".php" || ext == ".py" || ext == ".sh" || 
+             ext == ".cgi" || ext == ".pl" || ext == ".rb";
+   }
+
+   // Helper: Check if path is in common CGI directory
+   static bool isCgiDirectory(const std::string& path) {
+      return path.find("/cgi-bin/") != std::string::npos ||
+             path.find("/cgi/") != std::string::npos ||
+             path.rfind("/cgi-bin", 0) == 0 ||
+             path.rfind("/cgi", 0) == 0;
+   }
+
    // Helper: Check if path matches extension-based location
    static bool matchesExtensionLocation(const std::string& path, const config::LocationConfig& loc) {
       if (loc.path.empty() || loc.path[0] != '.'){
@@ -37,19 +52,23 @@ namespace httpUtils{
          const config::LocationConfig& loc = vh.locations[i];
          if (loc.cgiPass.empty() && loc.cgiExt.empty()){
             continue;
-         } 
-         bool methodAllowed = false;
-         for (size_t j = 0; j < loc.methods.size(); j++){
-            if (loc.methods[j] == method) {
-               methodAllowed = true;
-               break;
-            }
-         }
-         if (!methodAllowed){
-            continue;
          }
          if (matchesExtensionLocation(path, loc) 
             || matchesDirectoryLocation(path, loc)) {
+            bool methodAllowed = false;
+            for (size_t j = 0; j < loc.methods.size(); j++){
+               if (loc.methods[j] == method) {
+                  methodAllowed = true;
+                  break;
+               }
+            }
+            if (methodAllowed) {
+               return true;
+            }
+         }
+      }
+      if (method == "GET" || method == "POST") {
+         if (isCgiExtension(path) || isCgiDirectory(path)) {
             return true;
          }
       }
