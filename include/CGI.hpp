@@ -23,7 +23,7 @@ private:
 
 public:
 	CGI(const HttpRequest& req, const config::LocationConfig& lc);
-	bool isCGI()const;
+	bool isAllowedCgi()const;
 	std::string execute();
 };
 

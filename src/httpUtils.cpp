@@ -4,6 +4,41 @@ namespace fs = std::filesystem; // Alias for filesystem
 
 namespace httpUtils{
 
+   bool isCgiExtension(const std::string& path){
+      std::vector<std::string> cgiExtensions = {".sh", ".php", ".pl", ".py"};
+      std::string extPath = path.substr(0, path.find('?'));
+      for (size_t i = 0; i < cgiExtensions.size(); i++){
+         const std::string& extension = cgiExtensions[i];
+         if (extPath.size() >= extension.size() && 
+               extPath.compare(extPath.size() - extension.size(),
+                   extension.size(), extension) == 0){
+               return true;
+         }
+      }
+      return false;
+   };
+
+   bool isCgiDirectory(const std::string& path, const config::ServerConfig& vh){
+      for (const auto& loc : vh.locations){
+         if (!loc.cgiPass.empty() && path.rfind(loc.path, 0) == 0) {
+            if (path.length() == loc.path.length() || 
+               path[loc.path.length()] == '/' ||
+               loc.path.back() == '/') {
+               return true;
+            }
+         }
+      }
+      return false;
+   }
+
+   bool isCgiRequest(HttpRequest& request, const config::ServerConfig& vh){
+      std::string path = request.getPath();
+      if (isCgiExtension(path) || isCgiDirectory(path, vh)){
+         return true;
+      }
+      return false;
+   }
+
 /**
  * @brief Checks if the HTTP method is allowed in the given LocationConfig
  *
