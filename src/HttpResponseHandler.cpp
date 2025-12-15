@@ -128,7 +128,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       uri = fullUri.substr(0, queryPos);
    }
    if (httpUtils::isCgiRequest(req, *vh)){
-      const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+      const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "GET");
       if (!lc){
          return makeErrorResponse(403, vh);
       }
@@ -143,7 +143,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    }
 
     // First find LocationConfig check if it is cgi
-   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "GET");
    if (!lc)
       return makeErrorResponse(404, vh);
    
@@ -230,6 +230,9 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    headers["Server"] = "MiniWebserv/1.0";
    headers["Last-Modified"] = formatTime(st.st_mtime);
    headers["Date"] = formatTime(time(NULL));
+   headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+   headers["Pragma"] = "no-cache";
+   headers["Expires"] = "0";
    // Add Content-Disposition for forced downloads
    if (forceDownload) {
       size_t lastSlash = fullpath.find_last_of('/');
@@ -268,7 +271,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 
    // Determines the target resource:Typically a CGI script, an upload handler, or a location block.
    // Example: /var/www/html/submit-data (or routed to CGI)
-   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
    if (!lc)
       return makeErrorResponse(404, vh);
    if (!httpUtils::isMethodAllowed(lc, "POST"))
@@ -348,7 +351,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    std::string uri = req.getPath();
 
    // first check CGI, below are fake code
-   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "DELETE");
    if (!lc)
       return makeErrorResponse(404, vh);
    if (!httpUtils::isMethodAllowed(lc, "DELETE"))
