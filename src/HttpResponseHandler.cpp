@@ -347,41 +347,73 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    * {"status":"success"}
  */
 HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::ServerConfig* vh){
-   // Server receives DELETE /files/file1.txt.
-   std::string uri = req.getPath();
+   // Server receives DELETE /files/file1.txt?version=2 HTTP/1.1
+   std::string fullUri = req.getPath();
 
-   // first check CGI, below are fake code
+   // remove the ? part: DELETE /files/file1.txt
+   std::string uri = fullUri;
+   size_t queryPos = fullUri.find('?');
+   if (queryPos != std::string::npos)
+      uri = fullUri.substr(0, queryPos);
+
+   // first check CGI,
+   if (httpUtils::isCgiRequest(req, *vh)){
+      const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+      if (!lc){
+         return makeErrorResponse(404, vh);
+      }
+      CGI cgi(req, *lc);
+      if (!cgi.isAllowedCgi()){
+        return makeErrorResponse(403, vh);
+      }
+      std::string cgi_output = cgi.execute();
+      if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+         return makeErrorResponse(500, vh);
+      return parseCGIOutput(cgi_output, req, vh);
+   }
+
+   // otherwie, it is a static delete.
    const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
    if (!lc)
       return makeErrorResponse(404, vh);
    if (!httpUtils::isMethodAllowed(lc, "DELETE"))
       return makeErrorResponse(405, vh);
-   CGI cgi(req, *lc);
-   if (cgi.isAllowedCgi()) {
-         std::string cgi_output = cgi.execute();
-         if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-            return makeErrorResponse(500, vh);
-         return parseCGIOutput(cgi_output, req, vh);
-   }
 
-   // otherwie, it is a static delete. Maps path: /files/file1.txt → /var/www/html/files/file1.txt
+   // DELETE should NOT auto-fix trailing slash (only for GET): /files → /files/
+
+   // Check for configured redirect
+   if (!lc->redirect.empty())
+      return makeErrorResponse(307, vh);
+
+   // Maps path: /files/file1.txt → /var/www/html/files/file1.txt: path to disk path
    std::string fullpath = httpUtils::mapUriToPath(lc, uri);
 
-   // Validates:
+   // Validates: lstat instead of stat: not follwoing symbolic link
    // Does file exist?
    // Is it allowed to delete this path? (check directory permissions)?
    //  Is DELETE method allowed in this location?
    struct stat st;
-   if (stat(fullpath.c_str(), &st) < 0)
+   if (lstat(fullpath.c_str(), &st) < 0)
       return makeErrorResponse(404, vh);
+   if (S_ISLNK(st.st_mode))
+      return makeErrorResponse(403, vh);
    if (!S_ISREG(st.st_mode))
       return makeErrorResponse(403, vh);
-   if (access(fullpath.c_str(), W_OK) < 0)
-      return makeErrorResponse(403, vh);
 
-   // Attempts deletion: - unlink("/var/www/html/files/file1.txt") //sth worng: (io err, permission)
+   // Attempts deletion: - unlink("/var/www/html/files/file1.txt")
    if (unlink(fullpath.c_str()) < 0)
+   {
+      // file not existing
+      if (errno == ENOENT)
+         return makeErrorResponse(404, vh);
+      // not access   
+      if (errno == EACCES || errno == EPERM)
+         return makeErrorResponse(403, vh);
+      // is dir or not empty dir
+      if (errno == EISDIR || errno == ENOTEMPTY)
+         return makeErrorResponse(409, vh);
       return makeErrorResponse(500, vh);
+   }
 
    // Generates response:
    std::map<std::string, std::string> headers;
@@ -403,7 +435,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
 
  * @note for the server to handle the request based on method type
  */
-HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::ServerConfig* vh){
+HttpResponse   HttpResponseHandler::handleRequest(HttpRequest& req, const config::ServerConfig* vh) {
    if (!vh)
       return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "", {}, false, false);
    if (req.getMethod() == "GET")

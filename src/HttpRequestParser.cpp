@@ -141,31 +141,34 @@ bool    HttpParser::validateHeaders()
 bool HttpParser::validateBody(){
     // Enhancement: for textual content types, body cannot contain null byte
     // Binary content (images, multipart, application/octet-stream, etc.) may contain NULs and must be allowed.
-    const std::map<std::string, std::string>& headers = _req.getHeaders();
     std::string contentType;
-    std::map<std::string, std::string>::const_iterator it = headers.find("Content-Type");
+    const auto& headers = _req.getHeaders();
+    auto it = headers.find("content-type");
     if (it != headers.end()) {
         contentType = it->second;
         //Content-Type: text/html; charset=UTF-8
         size_t semi = contentType.find(';');
         if (semi != std::string::npos)
             contentType = contentType.substr(0, semi);
-        // eg contentType = "Text/HTML; Charset=UTF-8"; ->  contentType = "text/html; charset=utf-8";
-        for (size_t i = 0; i < contentType.size(); ++i)
-            contentType[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(contentType[i])));
     }
     bool isTextual = false;
-    if (contentType.empty() ||
-        contentType.rfind("text/", 0) == 0 ||
-        contentType == "application/x-www-form-urlencoded" ||
-        contentType == "application/json" ||
-        contentType == "application/xml")
-        isTextual = true;
+    bool isBinary = false;
+    if (contentType.empty())
+    {
+        if (contentType.rfind("text/", 0) == 0 || contentType == "application/x-www-form-urlencoded" || contentType == "application/json" || contentType == "application/xml")
+            isTextual = true;
+        else if (contentType.rfind("image/", 0) == 0 || contentType.rfind("video/", 0) == 0 || contentType.rfind("audio/", 0) == 0 || contentType.find("octet-stream") != std::string::npos || contentType.find("multipart/") != std::string::npos)
+            isBinary = true;
+    }
+    // Default unknown content-types to binary
+    if (!isTextual && !isBinary)
+        isBinary = true;
+
     if (isTextual) {
         if (_req.getBody().find('\0') != std::string::npos) 
             return set_errstatus(400, "Body contains null byte for textual Content-Type: " + contentType);
     }
-
+    
     if (_req.getMethod() == "POST")
     {
         // For POST: require content-length only if there is a non-empty body. 
