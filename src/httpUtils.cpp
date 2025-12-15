@@ -6,7 +6,11 @@ namespace httpUtils{
 
    bool isCgiExtension(const std::string& path){
       std::vector<std::string> cgiExtensions = {".sh", ".php", ".pl", ".py"};
-      std::string extPath = path.substr(0, path.find('?'));
+      std::string extPath = path;
+      size_t queryPos = path.find('?');
+      if (queryPos != std::string::npos) {
+         extPath = path.substr(0, queryPos);
+      }
       for (size_t i = 0; i < cgiExtensions.size(); i++){
          const std::string& extension = cgiExtensions[i];
          if (extPath.size() >= extension.size() && 
