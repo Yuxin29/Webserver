@@ -52,6 +52,7 @@ private:
     // --------------------
     //  Internal Validation Methods
     // --------------------
+    bool                     set_errstatus(int code, std::string const& msg);
     bool                     validateStartLine();
     bool                     validateHeaders();
     bool                     validateBody();
