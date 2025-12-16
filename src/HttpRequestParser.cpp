@@ -181,9 +181,12 @@ bool HttpParser::validateBody(){
         else {
             // content-length present: ensure body size does not exceed declared length.
             if (_req.getBody().size() > _bodyLength)
-                return set_errstatus(400, "POST request body length exceeds content-length.");
+                return set_errstatus(400, "Body: Payload Too Large.");
         }
     }
+
+    // if (_req.getBody().size() > 1048576000 )   //10 MB (1,048,576 bytes)  100000000
+    //     return set_errstatus(413, "POST request body length exceeds content-length.");
     return true;
 }
 
