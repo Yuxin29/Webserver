@@ -298,5 +298,8 @@ void Webserver::sendTimeoutResponse(int clientFd){
 	response += "\r\n";
 	response += body;
 	
-	send(clientFd, response.c_str(), response.size(), 0);
+	ssize_t sent = send(clientFd, response.c_str(), response.size(), 0);
+	if (sent <= 0){
+		return;
+	}
 }

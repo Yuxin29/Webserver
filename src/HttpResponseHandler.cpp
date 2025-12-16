@@ -68,17 +68,12 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
          headersMap[key] = val;
    }
    // manually setup this one
-   headersMap["content-length"] = std::to_string(bodyString.size());
-   for (std::map<std::string, std::string>::const_iterator it = req.getHeaders().begin(); it != req.getHeaders().end(); ++it){
-      const std::string& key = it->first;
-      const std::string& value = it->second;
-      if (key ==  "content-type" )
-      {
-         headersMap["content-type"] = value;
-         return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
-      }
+   headersMap["Content-Length"] = std::to_string(bodyString.size());
+   
+   // Check if CGI already set Content-Type, otherwise use default
+   if (headersMap.find("Content-Type") == headersMap.end()) {
+      headersMap["Content-Type"] = "text/html; charset=UTF-8";
    }
-   headersMap["content-type"] = "text/html";
    return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
 }
 
@@ -132,7 +127,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       uri = fullUri.substr(0, queryPos);
    }
    if (httpUtils::isCgiRequest(req, *vh)){
-      const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+      const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "GET");
       if (!lc){
          return makeErrorResponse(403, vh);
       }
@@ -147,11 +142,9 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    }
 
     // First find LocationConfig check if it is cgi
-   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "GET");
    if (!lc)
       return makeErrorResponse(404, vh);
-   if (!httpUtils::isMethodAllowed(lc, "GET"))
-      return makeErrorResponse(405, vh);
    
    // If location path ends with / but uri doesn't, normalize uri for path mapping
    if (lc->path.length() > 1 && lc->path.back() == '/' && !uri.empty() && uri.back() != '/') {
@@ -177,6 +170,11 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
          // URI does NOT end with '/'
          if (uri.empty() || uri.back() != '/')
             return makeRedirect301(uri + "/", vh);
+         
+         // Now check method after redirect handled
+         if (!httpUtils::isMethodAllowed(lc, "GET"))
+            return makeErrorResponse(405, vh);
+         
          //try index files
          std::string index_file = httpUtils::getIndexFile(fullpath, lc);
          if (!index_file.empty()) {
@@ -187,11 +185,14 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
          else
          {
             if (!lc->autoindex)
-               return makeErrorResponse(403, vh); //check correct error code
+               return makeErrorResponse(404, vh); // No index file and autoindex disabled
             // autoindex enabled → return HTML directory listing
             return generateAutoIndex(fullpath, req);
          }
       }  
+      // Not a directory - check method for regular files
+      else if (!httpUtils::isMethodAllowed(lc, "GET"))
+         return makeErrorResponse(405, vh);
    }
    else
       return makeErrorResponse(404, vh);
@@ -223,11 +224,15 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
    // Filled headers like Date and Server. maybe more headers
    std::map<std::string, std::string> headers;
-   headers["content-type"] = mime_type;
-   headers["content-length"] = std::to_string(body.size());
-   headers["server"] = "MiniWebserv/1.0";
-   headers["last-modified"] = formatTime(st.st_mtime);
-   headers["date"] = formatTime(time(NULL));
+   headers["Content-Type"] = mime_type;
+   headers["Content-Length"] = std::to_string(body.size());
+   headers["Server"] = "MiniWebserv/1.0";
+   headers["Last-Modified"] = formatTime(st.st_mtime);
+   headers["Date"] = formatTime(time(NULL));
+   headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+   headers["Pragma"] = "no-cache";
+   headers["Expires"] = "0";
+
    // Add Content-Disposition for forced downloads
    if (forceDownload) {
       size_t lastSlash = fullpath.find_last_of('/');
@@ -266,7 +271,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 
    // Determines the target resource:Typically a CGI script, an upload handler, or a location block.
    // Example: /var/www/html/submit-data (or routed to CGI)
-   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
    if (!lc)
       return makeErrorResponse(404, vh);
    if (!httpUtils::isMethodAllowed(lc, "POST"))
@@ -356,24 +361,25 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
    if (queryPos != std::string::npos)
       uri = fullUri.substr(0, queryPos);
 
-   // first check CGI,
-   if (httpUtils::isCgiRequest(req, *vh)){
-      const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
-      if (!lc){
-         return makeErrorResponse(404, vh);
-      }
-      CGI cgi(req, *lc);
-      if (!cgi.isAllowedCgi()){
-        return makeErrorResponse(403, vh);
-      }
-      std::string cgi_output = cgi.execute();
-      if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-         return makeErrorResponse(500, vh);
-      return parseCGIOutput(cgi_output, req, vh);
-   }
+   // first check CGI, Lucio said not necessary
+   // if (httpUtils::isCgiRequest(req, *vh)){
+   //    const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+   //    if (!lc){
+   //       return makeErrorResponse(404, vh);
+   //    }
+   //    CGI cgi(req, *lc);
+   //    if (!cgi.isAllowedCgi()){
+   //      return makeErrorResponse(403, vh);
+   //    }
+   //    std::string cgi_output = cgi.execute();
+   //    if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+   //       return makeErrorResponse(500, vh);
+   //    return parseCGIOutput(cgi_output, req, vh);
+   // }
 
    // otherwie, it is a static delete.
    const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri);
+
    if (!lc)
       return makeErrorResponse(404, vh);
    if (!httpUtils::isMethodAllowed(lc, "DELETE"))

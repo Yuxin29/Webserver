@@ -109,6 +109,7 @@ std::string CGI::execute()
 		envStrings.push_back("PATH_INFO="+_scriptPath);
 		envStrings.push_back("CONTENT_TYPE="+_contentType);
 		envStrings.push_back("SERVER_NAME="+_serverName);
+		envStrings.push_back("REDIRECT_STATUS=200");  // Required for PHP-CGI security
 		for(auto& s : envStrings)
 			env.push_back(const_cast<char *>(s.c_str()));
 		env.push_back(NULL);

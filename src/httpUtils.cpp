@@ -4,37 +4,73 @@ namespace fs = std::filesystem; // Alias for filesystem
 
 namespace httpUtils{
 
-   bool isCgiExtension(const std::string& path){
-      std::vector<std::string> cgiExtensions = {".sh", ".php", ".pl", ".py"};
-      std::string extPath = path.substr(0, path.find('?'));
-      for (size_t i = 0; i < cgiExtensions.size(); i++){
-         const std::string& extension = cgiExtensions[i];
-         if (extPath.size() >= extension.size() && 
-               extPath.compare(extPath.size() - extension.size(),
-                   extension.size(), extension) == 0){
-               return true;
-         }
-      }
-      return false;
-   };
+   // Helper: Check if path has common CGI extension
+   static bool isCgiExtension(const std::string& path) {
+      std::string ext = fs::path(path).extension().string();
+      return ext == ".php" || ext == ".py" || ext == ".sh" || 
+             ext == ".cgi" || ext == ".pl" || ext == ".rb";
+   }
 
-   bool isCgiDirectory(const std::string& path, const config::ServerConfig& vh){
-      for (const auto& loc : vh.locations){
-         if (!loc.cgiPass.empty() && path.rfind(loc.path, 0) == 0) {
-            if (path.length() == loc.path.length() || 
-               path[loc.path.length()] == '/' ||
-               loc.path.back() == '/') {
-               return true;
-            }
-         }
+   // Helper: Check if path is in common CGI directory
+   static bool isCgiDirectory(const std::string& path) {
+      return path.find("/cgi-bin/") != std::string::npos ||
+             path.find("/cgi/") != std::string::npos ||
+             path.rfind("/cgi-bin", 0) == 0 ||
+             path.rfind("/cgi", 0) == 0;
+   }
+
+   // Helper: Check if path matches extension-based location
+   static bool matchesExtensionLocation(const std::string& path, const config::LocationConfig& loc) {
+      if (loc.path.empty() || loc.path[0] != '.'){
+         return false;
       }
-      return false;
+      return path.length() >= loc.path.length() &&
+             path.compare(path.length() - loc.path.length(), loc.path.length(), loc.path) == 0;
+   }
+
+   // Helper: Check if path matches directory-based location
+   static bool matchesDirectoryLocation(const std::string& path, const config::LocationConfig& loc) {
+      if (loc.path.empty() || loc.path[0] == '.'){
+         return false;
+      } 
+      if (path.rfind(loc.path, 0) != 0){
+         return false;
+      }
+      return path.length() == loc.path.length() || 
+             (path.length() > loc.path.length() && path[loc.path.length()] == '/') ||
+             loc.path.back() == '/';
    }
 
    bool isCgiRequest(HttpRequest& request, const config::ServerConfig& vh){
       std::string path = request.getPath();
-      if (isCgiExtension(path) || isCgiDirectory(path, vh)){
-         return true;
+      std::string method = request.getMethod();
+      size_t queryPos = path.find('?');
+      if (queryPos != std::string::npos) {
+         path = path.substr(0, queryPos);
+      }
+      for (size_t i = 0; i < vh.locations.size(); i++){
+         const config::LocationConfig& loc = vh.locations[i];
+         if (loc.cgiPass.empty() && loc.cgiExt.empty()){
+            continue;
+         }
+         if (matchesExtensionLocation(path, loc) 
+            || matchesDirectoryLocation(path, loc)) {
+            bool methodAllowed = false;
+            for (size_t j = 0; j < loc.methods.size(); j++){
+               if (loc.methods[j] == method) {
+                  methodAllowed = true;
+                  break;
+               }
+            }
+            if (methodAllowed) {
+               return true;
+            }
+         }
+      }
+      if (method == "GET" || method == "POST") {
+         if (isCgiExtension(path) || isCgiDirectory(path)) {
+            return true;
+         }
       }
       return false;
    }
@@ -211,25 +247,52 @@ std::string getIndexFile(const std::string& dirPath, const config::LocationConfi
  *
  * @param vh pointer to the ServerConfig (virtual host)
  * @param uri_raw the request URI
+ * @param method the HTTP method (optional, used for extension-based location matching)
  * @return  const pointer to the best matching LocationConfig, or NULL if none found
  *
  * @note  used to map request URIs to server location blocks based on longest prefix match
+ *        Extension-based locations (starting with .) only match if method is allowed
  */
-const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh, const std::string& uri_raw)
+const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh, const std::string& uri_raw, const std::string& method)
 {
    std::string uri = uri_raw;
-   size_t qpos = uri.find('?');  // yuxin need to reconsider
+   size_t qpos = uri.find('?');
    if (qpos != std::string::npos)
       uri = uri.substr(0, qpos);
 
    const config::LocationConfig* best = nullptr;
+   const config::LocationConfig* extMatch = nullptr;
    size_t bestLen = 0;
 
    for (size_t i = 0; i < vh->locations.size(); i++) {
       const config::LocationConfig& loc = vh->locations[i];
       
+      // Check for extension-based match (location starts with .)
+      if (!loc.path.empty() && loc.path[0] == '.') {
+         // Extension match: URI must end with the extension
+         if (uri.length() >= loc.path.length() &&
+             uri.substr(uri.length() - loc.path.length()) == loc.path) {
+            // Only use extension match if method is allowed (or method not specified)
+            if (method.empty()) {
+               extMatch = &loc;
+               break;
+            } else {
+               bool methodAllowed = false;
+               for (size_t j = 0; j < loc.methods.size(); j++){
+                  if (loc.methods[j] == method) {
+                     methodAllowed = true;
+                     break;
+                  }
+               }
+               if (methodAllowed) {
+                  extMatch = &loc;
+                  break;
+               }
+            }
+         }
+      }
       // Check exact prefix match
-      if (uri.rfind(loc.path, 0) == 0){
+      else if (uri.rfind(loc.path, 0) == 0){
          if (loc.path.length() > bestLen) {
             best = &loc;
             bestLen = loc.path.length();
@@ -247,6 +310,7 @@ const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh,
          }
       }
    }
-   return best;
+   // Extension match has priority over prefix match
+   return extMatch ? extMatch : best;
 }
 }

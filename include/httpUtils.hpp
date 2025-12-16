@@ -19,6 +19,6 @@ namespace httpUtils {
     std::string                     mapUriToPath(const config::LocationConfig* loc, const std::string& uri_raw);
     std::string                     getIndexFile(const std::string& dirPath, const config::LocationConfig* lc);
 
-    const config::LocationConfig*   findLocationConfig(const config::ServerConfig* vh, const std::string& uri_raw);
+    const config::LocationConfig*   findLocationConfig(const config::ServerConfig* vh, const std::string& uri_raw, const std::string& method = "");
     bool                            isCgiRequest(HttpRequest& request, const config::ServerConfig& vh);
 }
