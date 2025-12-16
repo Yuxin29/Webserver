@@ -1,7 +1,7 @@
 #include "utils.hpp"
 
 namespace utils {
-	/*Return an specific error message based on the error code passed to*/
+	//Return an specific error message based on the error code passed to
 	int returnErrorMessage(int errorCode){
 		std::string errorMessage;
 		switch (errorCode){
