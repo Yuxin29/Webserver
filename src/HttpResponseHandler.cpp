@@ -157,6 +157,10 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
       headersMap["Content-Type"] = "text/html; charset=UTF-8";
    }
 
+   // Disable keep-alive for POST requests to prevent chunked encoding issues
+   // on subsequent requests over the same connection
+  // BIG MAYBE IF DO THIS OR NOT: bool keepAlive = (req.getMethod() == "POST") ? false : httpUtils::shouldKeepAlive(req);
+
    return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
 }
 
@@ -462,17 +466,15 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
       return makeErrorResponse(404, vh);
    if (!httpUtils::isMethodAllowed(lc, "DELETE"))
       return makeErrorResponse(405, vh);
-   CGI cgi(req, *lc);
-   if (cgi.isAllowedCgi()) {
-         std::string cgi_output = cgi.execute();
-         if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-            return makeErrorResponse(500, vh);
-         return parseCGIOutput(cgi_output, req, vh);
-   }
-
+   // CGI cgi(req, *lc);
+   // if (cgi.isAllowedCgi()) {
+   //       std::string cgi_output = cgi.execute();
+   //       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+   //          return makeErrorResponse(500, vh);
+   //       return parseCGIOutput(cgi_output, req, vh);
+   // }
    // otherwie, it is a static delete. Maps fullPath: /files/file1.txt → /var/www/html/files/file1.txt
    std::string fullpath = httpUtils::mapUriToPath(lc, uri);
-
    // Validates:
    // Does file exist?
    // Is it allowed to delete this path? (check directory permissions)?
@@ -484,7 +486,6 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
       return makeErrorResponse(403, vh);
    if (access(fullpath.c_str(), W_OK) < 0)
       return makeErrorResponse(403, vh);
-
    // Attempts deletion: - unlink("/var/www/html/files/file1.txt") //sth worng: (io err, permission)
    if (unlink(fullpath.c_str()) < 0)
       return makeErrorResponse(500, vh);
