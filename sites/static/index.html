@@ -263,32 +263,32 @@
             // Server returns 404, 403, etc.
             // Page does not change
             // JS inspects the response and updates the DOM:
-            // fetch(path, {
-            //     method: 'DELETE'
-            // })
-            // .then(response => {
-            //     if (response.ok) {
-            //         resultDiv.style.display = 'block';
-            //         resultDiv.style.background = '#d4edda';
-            //         resultDiv.style.color = '#155724';
-            //         resultDiv.style.border = '1px solid #c3e6cb';
-            //         resultDiv.textContent = `✓ Successfully deleted ${path}`;
-            //     } else {
-            //         return response.text().then(text => {
-            //             throw new Error(`HTTP ${response.status}: ${text}`);
-            //         });
-            //     }
-            // })
-            // .catch(error => {
-            //     resultDiv.style.display = 'block';
-            //     resultDiv.style.background = '#f8d7da';
-            //     resultDiv.style.color = '#721c24';
-            //     resultDiv.style.border = '1px solid #f5c6cb';
-            //     resultDiv.textContent = `✗ Error: ${error.message}`;
-            // });
+            fetch(path, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = '#d4edda';
+                    resultDiv.style.color = '#155724';
+                    resultDiv.style.border = '1px solid #c3e6cb';
+                    resultDiv.textContent = `✓ Successfully deleted ${path}`;
+                } else {
+                    return response.text().then(text => {
+                        throw new Error(`HTTP ${response.status}: ${text}`);
+                    });
+                }
+            })
+            .catch(error => {
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = '#f8d7da';
+                resultDiv.style.color = '#721c24';
+                resultDiv.style.border = '1px solid #f5c6cb';
+                resultDiv.textContent = `✗ Error: ${error.message}`;
+            });
             
             // but if we want a unified UI
-            window.location.href = path + '?_method=DELETE';
+            // window.location.href = path + '?_method=DELETE';
         }
     </script>
 </body>
