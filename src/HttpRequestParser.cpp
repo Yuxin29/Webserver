@@ -58,6 +58,9 @@ bool HttpParser::validateStartLine()
  * User-Agent: curl/7.81.0
  * Content-Type: application/x-www-form-urlencoded
  * Content-Length: 27
+ *
+ * @note value cannot have empty space or controling chars? -> answer is no
+    - gzip, deflate, br, zstd has space themselves
  */
 bool    HttpParser::validateHeaders()
 {
@@ -107,35 +110,25 @@ bool    HttpParser::validateHeaders()
             return false;
         }
         seenKeys.insert(key);
-        // Enhancement: value cannot have empty space or controling chars,
-        // can not have it: Header value must not include empty space or controling chars: gzip, deflate, br, zstd
-        // for (size_t i = 0; i < value.size(); ++i){
-        //     char c = value[i];
-        //     if (c < 31 || c == ' '){
-        //         _errStatus = 400;
-        //         std::cout << "Header value must not include empty space or controling chars: " << value << std::endl;
-        //         return false;
-        //     }
-        // }
         //validateContentLength: can not be too long like minus number ---> four hundred  or too big(Payload Too Large) ---> 43113
         if (key == "content-length"){
             // can not be empty
             if (value.empty()){
                 _errStatus = 400;
-                std::cout << "Empty Content-Length value." << std::endl;
+                std::cout << "Empty content-length value." << std::endl;
                 return false;
             }
             // can not start with zero
             if (value.size() > 1 && value[0] == '0'){
                 _errStatus = 400;
-                std::cout << "Content-Length cannot start with zero." << std::endl;
+                std::cout << "content-length cannot start with zero." << std::endl;
                 return false;
             }
             // can not have non digits
             for (size_t i = 0; i < value.length(); ++i){
                 if (!isdigit(value[i])){
                     _errStatus = 400;
-                    std::cout << "Non-digit character in Content-Length value." << std::endl;
+                    std::cout << "Non-digit character in content-length value." << std::endl;
                     return false;
                 }
             }
@@ -143,20 +136,19 @@ bool    HttpParser::validateHeaders()
             long long len = atoll(value.c_str());
             if (len < 0){
                 _errStatus = 400;
-                std::cout << "Negative Content-Length value." << std::endl;
+                std::cout << "Negative content-length value." << std::endl;
                 return false;
             }
              // can not be too big, 100 MB, max, ask lin or lucio what should be the max
             if (len > 1024 * 1024 * 100){
                 _errStatus = 413;
-                std::cout << "Content-Length too large." << std::endl;
+                std::cout << "content-length too large." << std::endl;
                 return false;
             }
             _bodyLength = static_cast<size_t>(len);
         }
     }
-    // it has to have ont and only one host    // headers["Content-Type"] = "text/html";
-    // headers["Content-Length"] = std::to_string(body.size());
+    // it has to have ont and only one host   
     if (!hasHost){
         _errStatus = 400;
         std::cout << "Missing Host header." << std::endl;
@@ -172,31 +164,18 @@ bool    HttpParser::validateHeaders()
  * @return true or false, on false, set the _errStatus the coresponding error code
  *
  * @example example of body: username=John&password=1234
- * @note Post must have body, body must fullfill ContentLength, for GET / DELETE, it is not an error to have body
+ * @note POST must have body; GET / DELETE. it is not an error to have body
  * @note
- * - body string length has to be as long as the sontent-Length says
+ * - POST: body must fullfill ContentLength, 
  * - here, i can not have this check because the body might be not fully received yet
  * - incomplete body is not an error during streaming)
+ * @note http allowes: POST + Content-Length: 0 -> POST + "empty body"
+ * @note Enhancement body cannot contain null byte: but currently we do not check this
+        because body can be binary data as well: image. zip and pdf files
  */
 bool HttpParser::validateBody(){
-    // Enhancement body cannot contain null byte
-    // if (_req.getBody().find('\0') != std::string::npos) {
-    //     _errStatus = 400;
-    //     std::cout << "Body contains null byte." << std::endl;
-    //     return false;
-    // }
     if (_req.getMethod() == "POST")
     {
-        // POST has to have body string and in headers, it has to have content-Length"
-        // THIS CAN BE 0
-        //NOTE DATE:12/12 To check, modify this maybe?
-        //if (_bodyLength == 0 && !_req.getHeaders().count("Content-Length")){
-        // if (!_req.getHeaders().count("Content-Length")){
-        //     _errStatus = 400;
-        //     std::cout << "POST request missing Content-Length header." << std::endl; //here
-        //     return false;
-        // }
-        // body lenth can not be too long: in theory it should not happen
         if (_req.getBody().size() > _bodyLength){
             _errStatus = 400;
             std::cout << "POST request body length exceeds Content-Length." << std::endl; //here
