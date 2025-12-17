@@ -19,21 +19,28 @@ _header(req.getHeaders()),
 _contentType(""),
 _serverName("")
 {
-	std::string raw = req.getPath();
-	size_t pos = raw.find('?');
-	if(pos != std::string::npos){
-		_scriptPath = "./sites/cgi" + raw.substr(0, pos);
-		_query = raw.substr(pos + 1);
-	}
-	else{
-		_scriptPath = "./sites/cgi" + raw;
-		_query = "";
-	}
-	//count() and at() come from std::map
-	if (_header.count("content-type")) //count can check if Content-Type exits in map
-		_contentType = _header.at("content-type"); //retrieves the value for the Content-type
-	if (_header.count("host"))
-		_serverName = _header.at("host");
+    std::string root = lc.root;
+    if (root.ends_with("/"))
+        root.erase(root.size() - 1);
+    std::string raw = req.getPath();
+    size_t pos = raw.find('?');
+    std::string locationUri = lc.path;
+    if(root.find(locationUri) != std::string::npos)
+        root = "./sites/cgi" ;
+
+    if(pos != std::string::npos){
+        _scriptPath = root + raw.substr(0, pos);
+        _query = raw.substr(pos + 1);
+    }
+    else{
+        _scriptPath = root + raw;
+        _query = "";
+    }
+    //count() and at() come from std::map
+    if (_header.count("content-type")) //count can check if Content-Type exits in map
+        _contentType = _header.at("content-type"); //retrieves the value for the Content-type
+    if (_header.count("host"))
+        _serverName = _header.at("host");
 }
 
 bool CGI::isAllowedCgi()const
@@ -46,8 +53,9 @@ bool CGI::isAllowedCgi()const
 	if (!_scriptPath.ends_with(_cgiExt))
 		return false;
 	//exist and readable?
-	if(access(_scriptPath.c_str(), R_OK) != 0)
-		return false;
+	//MAYBE NEED TO CHECK THIS SOMEWHERE ELSE 17/12 Lucio's note
+	// if(access(_scriptPath.c_str(), R_OK) != 0)
+	// 	return false;
 	return true;
 }
 

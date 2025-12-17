@@ -274,7 +274,7 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
  *
  * @note iss : in stringstream
  */
-void HttpParser::parseBody(size_t pos)
+void HttpParser::parseBody(size_t& pos)
 {
     size_t              available = _buffer.size() - pos;
     const std::string&  curBody = _req.getBody();

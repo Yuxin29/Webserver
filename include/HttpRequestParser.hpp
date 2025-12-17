@@ -61,7 +61,7 @@ private:
     // --------------------
     void                    parseStartLine(const std::string& startline);
     void                    parseHeaderLine(const std::string& headerline);
-    void                    parseBody(size_t pos);
+    void                    parseBody(size_t& pos);
 
 public:
     // --------------------

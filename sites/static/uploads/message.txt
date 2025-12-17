@@ -236,4 +236,281 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
          //try index files
          std::string index_file = httpUtils::getIndexFile(fullpath, lc);
-    
+         if (!index_file.empty()) {
+            fullpath += "/" + index_file;
+            if (stat(fullpath.c_str(), &st) < 0 || !S_ISREG(st.st_mode))
+               return makeErrorResponse(404, vh);
+         }
+         else
+         {
+            if (!lc->autoindex)
+               return makeErrorResponse(404, vh); // No index file and autoindex disabled
+            // autoindex enabled → return HTML directory listing
+            return generateAutoIndex(fullpath, req);
+         }
+      }
+      // Not a directory - check method for regular files
+      else if (!httpUtils::isMethodAllowed(lc, "GET"))
+         return makeErrorResponse(405, vh);
+   }
+   else
+      return makeErrorResponse(404, vh);
+   if (access(fullpath.c_str(), R_OK) < 0)
+      return makeErrorResponse(403, vh);
+   if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
+      return makeErrorResponse(403, vh);
+
+   // Determined MIME type (text/plain for .txt or plain text).
+   std::string mime_type = httpUtils::getMimeType(fullpath);
+
+   // Check if download should be forced (via ?download query parameter)
+   bool forceDownload = (fullUri.find("?download") != std::string::npos);
+
+   // Read file content → sent as response body.
+   // using: std::ifstream ifs(fullpath.c_str(), std::ios::binary);
+   std::ifstream ifs(fullpath.c_str(), std::ios::binary);
+   if (!ifs.is_open())
+      return makeErrorResponse(500, vh);
+
+   ifs.seekg(0, std::ios::end);
+   std::streamsize size = ifs.tellg();
+   if (size < 0)
+      return makeErrorResponse(500, vh);
+   ifs.seekg(0, std::ios::beg);
+   std::string body(size, '\0');
+   ifs.read(&body[0], size);
+   ifs.close();
+
+   // Filled headers like Date and Server. maybe more headers
+   std::map<std::string, std::string> headers;
+   headers["Content-Type"] = mime_type;
+   headers["Content-Length"] = std::to_string(body.size());
+   headers["Server"] = "MiniWebserv/1.0";
+   headers["Last-Modified"] = formatTime(st.st_mtime);
+   headers["Date"] = formatTime(time(NULL));
+   headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+   headers["Pragma"] = "no-cache";
+   headers["Expires"] = "0";
+   // Add Content-Disposition for forced downloads
+   if (forceDownload) {
+      size_t lastSlash = fullpath.find_last_of('/');
+      std::string filename = (lastSlash != std::string::npos)
+         ? fullpath.substr(lastSlash + 1)
+         : "download";
+      headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+   }
+   return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
+}
+
+/**
+ * @brief   Handles an HTTP POST request and generates the appropriate HttpResponse
+ *
+ * @param   req the HttpRequest object representing the client's GET request
+ * @param   vh pointer to the ServerConfig (virtual host)
+ * @return  HttpResponse object representing the server's response to the POST request
+ *
+ * @note    need to check CGI first, it has priority over static files
+ *
+ * @example request:
+   * POST /submit-data HTTP/1.1
+   * Host: example.com
+   * Content-Type: application/json
+   * Content-Length: 27
+ * @example response:
+   * HTTP/1.1 201 Created
+   * Content-Type: application/json
+   * Content-Length: 23
+   *
+   * {"status":"success"}
+ */
+HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::ServerConfig* vh)
+{
+	std::string fullUri = req.getPath();  // Full URI including query string
+	// Split URI from query parameters
+	const config::LocationConfig* lc = NULL;
+	std::string uri = fullUri;
+	size_t queryPos = fullUri.find('?');
+	if (queryPos != std::string::npos) {
+		uri = fullUri.substr(0, queryPos);
+	}
+	if (httpUtils::isCgiRequest(req, *vh)){
+		lc = httpUtils::findLocationConfig(vh, uri, "POST");
+		if (!lc){
+			return makeErrorResponse(403, vh);
+		}
+		CGI cgi(req, *lc);
+		if (!cgi.isAllowedCgi()){
+		return makeErrorResponse(403, vh);
+		}
+		std::string cgi_output = cgi.execute();
+		std::cout << cgi_output ;
+		if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+			return makeErrorResponse(500, vh);
+		return parseCGIOutput(cgi_output, req, vh);
+	}
+	//Non-CGI POST handling (raw body only)
+	std::string ct;
+	if (req.getHeaders().count("content-type"))
+		ct = req.getHeaders().at("content-type");
+	if (ct.find("multipart/form-data") != std::string::npos)
+	{
+		std::string fileData;
+		if (!extractMultipartFile(req, fileData))
+			return makeErrorResponse(400, vh);
+		std::string path = lc->upload_dir;
+		std::ofstream ofs(path.c_str(), std::ios::binary);
+		ofs.write(fileData.data(), fileData.size());
+		ofs.close();
+	}
+	return HttpResponse("HTTP/1.1", 201, "Created", "", std::map<std::string, std::string>(), httpUtils::shouldKeepAlive(req), true);
+}
+// HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::ServerConfig* vh){
+//    // Server receives POST /submit-data.
+//    std::string uri = req.getPath();
+
+//    // Determines the target resource:Typically a CGI script, an upload handler, or a location block.
+//    // Example: /var/www/html/submit-data (or routed to CGI)
+//    const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
+//    if (!lc)
+//       return makeErrorResponse(404, vh);
+//    if (!httpUtils::isMethodAllowed(lc, "POST"))
+//       return makeErrorResponse(405, vh);
+//    CGI cgi(req, *lc);
+//    if (cgi.isAllowedCgi()) {
+//       std::string cgi_output = cgi.execute();
+//       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+//          return makeErrorResponse(500, vh);
+//       return parseCGIOutput(cgi_output, req, vh);
+//    }
+
+//    //  If not CGI, assume static file upload handler:
+//    // yuxin need to check, should the upload_dir be in root?
+//    std::string uploadDir = lc->upload_dir; // NOTE FROM LIN date:10/12 change this to lc->upload_dir
+//    std::cout << "upload filder: " << lc->upload_dir << std::endl;
+//    if (uploadDir.empty())
+//        return makeErrorResponse(500, vh);
+//    // std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000) + ".dat";
+//    std::string filename = "upload_" + std::to_string(time(NULL)) + "_" + std::to_string(rand() % 1000);
+//    std::string savepath = uploadDir + "/" + filename;
+
+//    //  Ensures upload directory exists
+//    struct stat st;
+//    if (stat(uploadDir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)){
+//       if (mkdir(uploadDir.c_str(), 0755) != 0)
+//          return makeErrorResponse(500, vh);
+//    }
+
+//    // Reads request body:
+//    // - Content-Length = 27 → read exactly 27 bytes.
+//    // - Body = {"name":"Alice","age":30}
+//    std::string body = req.getBody();
+
+//    // Validates:
+//    // - Validate Content-Type if necessary.
+
+//    // Processes the data:
+//    // - Example: store in a database, write to a file, pass to CGI, etc.
+//    std::ofstream ofs(savepath.c_str(), std::ios::binary);
+//    if (!ofs.is_open())
+//       return makeErrorResponse(500, vh);
+//    ofs.write(body.c_str(), body.size());
+//    ofs.close();
+
+//    // Generates response: Set headers (Content-Type, Content-Length, Date, Server)
+//    std::map<std::string, std::string> headers;
+//    std::string responseBody = "{\"status\":\"success\"}";
+//    headers["Content-Length"] = std::to_string(responseBody.size());
+//    headers["Content-Type"] = "application/json";
+
+//    return HttpResponse("HTTP/1.1", 201, "Created", responseBody, std::map<std::string, std::string>(), httpUtils::shouldKeepAlive(req), true);
+// }
+
+/**
+ * @brief   Handles an HTTP DELETE request and generates the appropriate HttpResponse
+ *
+ * @param   req the HttpRequest object representing the client's GET request
+ * @param   vh pointer to the ServerConfig (virtual host)
+ * @return  HttpResponse object representing the server's response to the DELETE request
+ *
+ * @note    need to check CGI first, it has priority over static files
+ *
+ * @example request:
+   * DELETE /files/file1.txt HTTP/1.1
+   * Host: example.com
+   * User-Agent: curl/7.81.0
+ * @example response:
+   * HTTP/1.1 204 No Content
+   * Date: Thu, 21 Nov 2025 11:00:00 GMT
+   * Server: ExampleServer/1.0
+   *
+   * {"status":"success"}
+ */
+HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::ServerConfig* vh){
+   // Server receives DELETE /files/file1.txt.
+   std::string uri = req.getPath();
+
+   // first check CGI, below are fake code
+   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "DELETE");
+   if (!lc)
+      return makeErrorResponse(404, vh);
+   if (!httpUtils::isMethodAllowed(lc, "DELETE"))
+      return makeErrorResponse(405, vh);
+   CGI cgi(req, *lc);
+   if (cgi.isAllowedCgi()) {
+         std::string cgi_output = cgi.execute();
+         if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
+            return makeErrorResponse(500, vh);
+         return parseCGIOutput(cgi_output, req, vh);
+   }
+
+   // otherwie, it is a static delete. Maps path: /files/file1.txt → /var/www/html/files/file1.txt
+   std::string fullpath = httpUtils::mapUriToPath(lc, uri);
+
+   // Validates:
+   // Does file exist?
+   // Is it allowed to delete this path? (check directory permissions)?
+   //  Is DELETE method allowed in this location?
+   struct stat st;
+   if (stat(fullpath.c_str(), &st) < 0)
+      return makeErrorResponse(404, vh);
+   if (!S_ISREG(st.st_mode))
+      return makeErrorResponse(403, vh);
+   if (access(fullpath.c_str(), W_OK) < 0)
+      return makeErrorResponse(403, vh);
+
+   // Attempts deletion: - unlink("/var/www/html/files/file1.txt") //sth worng: (io err, permission)
+   if (unlink(fullpath.c_str()) < 0)
+      return makeErrorResponse(500, vh);
+
+   // Generates response:
+   std::map<std::string, std::string> headers;
+   headers["Content-Length"] = "0";  // No response body
+
+   // - If success → 204 No Content (most common) - Or 200 OK with optional message
+   return HttpResponse("HTTP/1.1", 204, "No Content", "", std::map<std::string, std::string>(), httpUtils::shouldKeepAlive(req), true);
+}
+
+// --------------------
+//   Public Handler Methods
+// --------------------
+/**
+ * @brief  Handles the HTTP request and generates the appropriate response
+ *
+ * @param  req HttpRequest object representing the client's request
+ * @param  vh pointer to the ServerConfig for the virtual host
+ * @return HttpResponse object representing the server's response
+
+ * @note for the server to handle the request based on method type
+ */
+HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::ServerConfig* vh){
+   if (!vh)
+      return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "", {}, false, false);
+   if (req.getMethod() == "GET")
+     return handleGET(req, vh);
+   else if (req.getMethod() == "POST")
+      return handlePOST(req, vh);
+   else if (req.getMethod() == "DELETE")
+      return handleDELETE(req, vh);
+   // not supposed to reach here, already filtered in parser validation
+   return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false, false);
+}

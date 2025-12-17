@@ -29,7 +29,7 @@ namespace config
 		std::string cgiPass;
 		std::string cgiExt;
 		std::string upload_dir;
-		long clientMaxBodySize;//inherit
+		unsigned long clientMaxBodySize;//inherit
 		bool autoindex;
 		std::vector<std::string> methods; //cannot be empty
 	};

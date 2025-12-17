@@ -157,6 +157,10 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
       headersMap["Content-Type"] = "text/html; charset=UTF-8";
    }
 
+   // Disable keep-alive for POST requests to prevent chunked encoding issues
+   // on subsequent requests over the same connection
+  // BIG MAYBE IF DO THIS OR NOT: bool keepAlive = (req.getMethod() == "POST") ? false : httpUtils::shouldKeepAlive(req);
+
    return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
 }
 
@@ -357,30 +361,52 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 	if (queryPos != std::string::npos) {
 		uri = fullUri.substr(0, queryPos);
 	}
+   const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
+   if (!lc){
+      std::cout << "DEBUG handlePOST: No location found for uri=" << uri << std::endl;
+      return makeErrorResponse(403, vh);
+   }
+   std::cout << "DEBUG handlePOST: Found location=" << lc->path << " clientMaxBodySize=" << lc->clientMaxBodySize << std::endl;
+   if (req.getBody().size() > lc->clientMaxBodySize){
+     // std::cout << lc->clientMaxBodySize << '\n';
+      return makeErrorResponse(413, vh);
+   }
+
 	if (httpUtils::isCgiRequest(req, *vh)){
-			const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
+      std::cout << "DEBUG: Entered CGI block" << std::endl;
+		const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
 		if (!lc){
+         std::cout << "DEBUG: No location found for CGI" << std::endl;
 			return makeErrorResponse(403, vh);
 		}
-      if (!httpUtils::isMethodAllowed(lc, "POST"))
+      std::cout << "DEBUG: CGI location found: " << lc->path << std::endl;
+      if (!httpUtils::isMethodAllowed(lc, "POST")){
+         std::cout << "DEBUG: POST not allowed in CGI location" << std::endl;
          return makeErrorResponse(405, vh);
+      }
+      std::cout << "DEBUG: Creating CGI object" << std::endl;
 		CGI cgi(req, *lc);
 		if (!cgi.isAllowedCgi()){
-		return makeErrorResponse(403, vh);
+         std::cout << "DEBUG: CGI not allowed by isAllowedCgi()" << std::endl;
+		   return makeErrorResponse(403, vh);
 		}
+      std::cout << "DEBUG: Executing CGI" << std::endl;
 		std::string cgi_output = cgi.execute();
 		std::cout << cgi_output ;
 		if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
 			return makeErrorResponse(500, vh);
 		return parseCGIOutput(cgi_output, req, vh);
 	}
+
 	//Non-CGI POST handling (raw body only)
-	const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
-   if (!lc){
-      return makeErrorResponse(404, vh);
-   }
-   if (!httpUtils::isMethodAllowed(lc, "POST"))
+	// const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
+   // if (!lc){
+   //    return makeErrorResponse(404, vh);
+   // }
+   if (!httpUtils::isMethodAllowed(lc, "POST")){
       return makeErrorResponse(405, vh);
+   }
+      
 	std::string ct;
 	if (req.getHeaders().count("content-type"))
 		ct = req.getHeaders().at("content-type");
