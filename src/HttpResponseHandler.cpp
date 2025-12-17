@@ -1,3 +1,4 @@
+
 #include "HttpResponseHandler.hpp"
 #include <iostream>  //debug
 
@@ -37,7 +38,7 @@ static bool extractMultipartFile(const HttpRequest& req, std::string& outFileDat
     size_t headersEnd = body.find("\r\n\r\n", partStart);
     if (headersEnd == std::string::npos)
         return false;
-    
+
     // Extract headers section
     std::string headers = body.substr(partStart, headersEnd - partStart);
     size_t filenamePos = headers.find("filename=\"");
@@ -48,7 +49,7 @@ static bool extractMultipartFile(const HttpRequest& req, std::string& outFileDat
             outFileName = headers.substr(filenamePos, filenameEnd - filenamePos);
         }
     }
-    
+
     // If no filename found, use default
     if (outFileName.empty()) {
         outFileName = "upload_" + std::to_string(time(NULL)) + ".dat";
@@ -74,13 +75,13 @@ static bool extractMultipartFile(const HttpRequest& req, std::string& outFileDat
    //       if (markerPos == std::string::npos)
    //          return false;
    // }
-		
+
 	// size_t dataEnd = markerPos;
 	// if (dataEnd >= 2 && body.compare(dataEnd - 2, 2, "\r\n") == 0)
 	// 	dataEnd -= 2;
 	// Extract file bytes
 	outFileData.assign(body.data() + dataStart, dataEnd - dataStart);
-   std::cout << "Extracted file: " << outFileName 
+   std::cout << "Extracted file: " << outFileName
               << " (" << outFileData.size() << " bytes)" << std::endl;
 	return true;
 }
@@ -406,7 +407,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    if (!httpUtils::isMethodAllowed(lc, "POST")){
       return makeErrorResponse(405, vh);
    }
-      
+
 	std::string ct;
 	if (req.getHeaders().count("content-type"))
 		ct = req.getHeaders().at("content-type");
@@ -521,7 +522,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
       // file not existing
       if (errno == ENOENT)
          return makeErrorResponse(404, vh);
-      // not access   
+      // not access
       if (errno == EACCES || errno == EPERM)
          return makeErrorResponse(403, vh);
       // is dir or not empty dir
