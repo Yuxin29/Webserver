@@ -96,6 +96,7 @@ namespace config{
 		pages[431] = "sites/static/errors/431.html";
 		pages[500] = "sites/static/errors/500.html";
 		return pages;
+		
 	}
 
 	std::vector<std::string> ConfigBuilder::defaultMethods()
