@@ -85,7 +85,7 @@ int  Server::acceptConnection(void){
  *
  * @note This method reads data from the client socket, parses the HTTP request,
  *       matches the appropriate virtual host, generates an HTTP response, and sends it back to the client.
- *       It also manages connection persistence based on the response's keep-alive status.		
+ *       It also manages connection persistence based on the response's keep-alive status.
  */
 Server::ClientStatus Server::handleClient(int clientFd){
 	// listening
@@ -115,7 +115,7 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	}
 	if (parser.getState() != DONE)
 		return CLIENT_INCOMPLETE;
-	_requestCount[clientFd]++;	
+	_requestCount[clientFd]++;
 	std::map<std::string, std::string> headers = request.getHeaders();
 	auto it = headers.find("host");
 	if (it == headers.end()){
@@ -185,7 +185,7 @@ const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
 				return &_virtualHosts[i];
 			}
 		}
-	}	
+	}
 	if (!_virtualHosts.empty()){
 		return &_virtualHosts[0];
 	}
