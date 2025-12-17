@@ -1,3 +1,4 @@
+
 #include "Webserver.hpp"
 #include <fstream>
 #include <sstream>
@@ -65,16 +66,16 @@ int Webserver::createServers(const std::vector<ServerConfig>& config){
 		}
 		_listenFdToServerIndex[listenFd] = i;
 	}
-	
+
 	for (size_t i = 0; i < _servers.size(); i++){
-		std::cout << "Server successfully listening on port: " 
+		std::cout << "Server successfully listening on port: "
 				<< _servers[i].getPort() << std::endl;
 	}
 	return SUCCESS;
 }
 
 /* Main loop running during server execution. It handles Epoll events, manages server and client connections.*/
-int Webserver::runWebserver(){	
+int Webserver::runWebserver(){
 	_running = true;
 	const int MAX_EVENTS = 64;
 	struct epoll_event events[MAX_EVENTS];
@@ -121,11 +122,11 @@ void Webserver::stopWebserver(){
 	}
 }
 
-bool Webserver::isListeningSocket(int fd) const {	
+bool Webserver::isListeningSocket(int fd) const {
 	return _listenFdToServerIndex.find(fd) != _listenFdToServerIndex.end();
 }
 
-void Webserver::handleNewConnection(int listenFd){	
+void Webserver::handleNewConnection(int listenFd){
 	const auto& it = _listenFdToServerIndex.find(listenFd);
 	if (it == _listenFdToServerIndex.end()){
 		return;
@@ -149,7 +150,7 @@ void Webserver::handleClientRequest(int clientFd){
 
 	switch (status){
 	case Server::CLIENT_INCOMPLETE:
-		if (now - _lastActivity[clientFd] > CONNECTION_TIMEOUT){ 
+		if (now - _lastActivity[clientFd] > CONNECTION_TIMEOUT){
 			std::cerr << "Connection timedout on Fd: " << clientFd << std::endl;
 			sendTimeoutResponse(clientFd);
 			removeClientFd(clientFd);
@@ -282,7 +283,7 @@ bool Webserver::hasError(const epoll_event& event) const {
 void Webserver::sendTimeoutResponse(int clientFd){
 	std::string body;
 	std::ifstream file("sites/static/errors/408.html");
-		
+
 	if (file.is_open()){
 		std::stringstream buffer;
 		buffer << file.rdbuf();
@@ -297,7 +298,7 @@ void Webserver::sendTimeoutResponse(int clientFd){
 	response += "Connection: close\r\n";
 	response += "\r\n";
 	response += body;
-	
+
 	ssize_t sent = send(clientFd, response.c_str(), response.size(), 0);
 	if (sent <= 0){
 		return;

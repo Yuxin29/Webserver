@@ -13,7 +13,7 @@ int main(int argc, char **argv){
 			Parser parser(DEFAULT_CONFIG_PATH);
 			std::vector<ServerNode> servers = parser.parse();
 			configs = ConfigBuilder::build(servers);
-		} 
+		}
 		else if (argc == 2){
 			Parser parser(argv[1]);
 			std::vector<ServerNode> servers = parser.parse();

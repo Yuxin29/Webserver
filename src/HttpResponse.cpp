@@ -114,7 +114,7 @@ HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
     headers["Expires"] = "0";
     headers["Server"] = "webserv/1.0";
     headers["X-Content-Type-Options"] = "nosniff";
-    
+
     return HttpResponse("HTTP/1.1", status, reason, body, headers, false, false);
 }
 
@@ -129,6 +129,6 @@ HttpResponse makeRedirect301(const std::string& location, const config::ServerCo
    }
    std::map<std::string, std::string> headers;
    headers["Location"] = location;
-   
+
    return HttpResponse("HTTP/1.1", 301, "Moved Permanently", body, headers, false, true);
 }
