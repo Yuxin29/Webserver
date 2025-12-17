@@ -392,7 +392,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 		}
       std::cout << "DEBUG: Executing CGI" << std::endl;
 		std::string cgi_output = cgi.execute();
-		std::cout << cgi_output ;
+		//std::cout << cgi_output ;
 		if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
 			return makeErrorResponse(500, vh);
 		return parseCGIOutput(cgi_output, req, vh);
