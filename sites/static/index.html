@@ -114,7 +114,7 @@
 <body>
     <div class="container">
         <h1>🚀 Welcome to Webserver <span class="badge">Running</span></h1>
-        
+
         <div class="server-info">
             <strong>Server:</strong> Static File Server<br>
             <strong>Port:</strong> 8080<br>
@@ -122,7 +122,7 @@
         </div>
 
         <p>
-            This is a <strong>static file server</strong> built for the 42 Webserv project. 
+            This is a <strong>static file server</strong> built for the 42 Webserv project.
             It demonstrates clean architecture with separation of concerns and non-blocking I/O.
         </p>
 
@@ -156,7 +156,7 @@
                 <label for="uploadFile" style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">
                     Choose a file:
                 </label>
-                <input type="file" id="uploadFile" name="uploadedFile" required 
+                <input type="file" id="uploadFile" name="uploadedFile" required
                        style="display: block; margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
                 <button type="submit" style="background: #667eea; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold;">
                     Upload File
@@ -171,7 +171,7 @@
                 <label for="downloadPath" style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">
                     File path (e.g., /files/test1.txt):
                 </label>
-                <input type="text" id="downloadPath" placeholder="/files/test1.txt" 
+                <input type="text" id="downloadPath" placeholder="/files/test1.txt"
                        style="display: block; margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
                 <button onclick="downloadFile()" style="background: #2196F3; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold;">
                     Download File
@@ -189,7 +189,7 @@
                 <label for="deletePath" style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">
                     File path (e.g., /uploads/testfile.txt):
                 </label>
-                <input type="text" id="deletePath" placeholder="/uploads/testfile.txt" 
+                <input type="text" id="deletePath" placeholder="/uploads/testfile.txt"
                        style="display: block; margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
                 <button onclick="deleteFile()" style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold;">
                     Delete File
@@ -222,8 +222,8 @@
 
         <div class="feature-box">
             <h3>🏗️ Architecture</h3>
-            <p><strong>WebServer Manager</strong> → Creates multiple <strong>Server</strong> instances → 
-            Each uses <strong>Http</strong> handler → Processes <strong>Request</strong> objects → 
+            <p><strong>WebServer Manager</strong> → Creates multiple <strong>Server</strong> instances →
+            Each uses <strong>Http</strong> handler → Processes <strong>Request</strong> objects →
             Calls <strong>CGI</strong> when needed</p>
         </div>
 
@@ -241,13 +241,14 @@
             }
             // Add ?download parameter to trigger Content-Disposition header
             const downloadUrl = path + '?download';
+            // this is the  browser navigation: goes to this uri as a new page:
             window.location.href = downloadUrl;
         }
 
         function deleteFile() {
             const path = document.getElementById('deletePath').value.trim();
             const resultDiv = document.getElementById('deleteResult');
-            
+
             if (!path) {
                 alert('Please enter a file path');
                 return;
@@ -257,30 +258,19 @@
                 return;
             }
 
-            // Send DELETE request
-            fetch(path, {
-                method: 'DELETE'
-            })
-            .then(response => {
-                if (response.ok) {
-                    resultDiv.style.display = 'block';
-                    resultDiv.style.background = '#d4edda';
-                    resultDiv.style.color = '#155724';
-                    resultDiv.style.border = '1px solid #c3e6cb';
-                    resultDiv.textContent = `✓ Successfully deleted ${path}`;
-                } else {
-                    return response.text().then(text => {
-                        throw new Error(`HTTP ${response.status}: ${text}`);
-                    });
-                }
-            })
-            .catch(error => {
-                resultDiv.style.display = 'block';
-                resultDiv.style.background = '#f8d7da';
-                resultDiv.style.color = '#721c24';
-                resultDiv.style.border = '1px solid #f5c6cb';
-                resultDiv.textContent = `✗ Error: ${error.message}`;
-            });
+			fetch(path, { method: 'DELETE' })
+			.then(response => {
+				if (response.ok) {
+					resultDiv.style.display = 'block';
+					resultDiv.style.background = '#d4edda';
+					resultDiv.style.color = '#155724';
+					resultDiv.style.border = '1px solid #c3e6cb';
+					resultDiv.textContent = `✓ Successfully deleted ${path}`;
+				} else {
+					// Redirect to the correct error page
+					window.location.href = `/errors/${response.status}.html`;
+				}
+			});
         }
     </script>
 </body>
