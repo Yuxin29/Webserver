@@ -53,7 +53,6 @@ static void validateErrpages(const std::map<int, std::string>& error_pages)
 	}
 }
 
-
 namespace config{
 	long ConfigBuilder::defaultClientMaxBodySize()
 	{

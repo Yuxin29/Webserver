@@ -17,22 +17,24 @@ std::string HttpResponse::buildResponseString(){
     response << _version << " " << _status << " " << _reason << "\r\n";
 
     bool hasContentLength = false;
-    // iterates though the _responseHeaders map container and check if there is Content-Length
+
     for (const auto &header : _responseHeaders) {
         if (header.first == "Content-Length")
             hasContentLength = true;
         response << header.first << ": " << header.second << "\r\n";
     }
+
     if (!hasContentLength) {
         response << "Content-Length: " << _body.size() << "\r\n";
     }
-    // Add Connection header based on _keepConnectionAlive flag
+
     if (_responseHeaders.find("Connection") == _responseHeaders.end()) {
         if (_keepConnectionAlive)
             response << "Connection: keep-alive\r\n";
         else
             response << "Connection: close\r\n";
     }
+
     response << "\r\n";
     response << _body;
     return response.str();
@@ -55,8 +57,7 @@ std::string loadFile(const std::string& path)
 {
     std::ifstream file(path.c_str());
     if (!file.is_open())
-        return ""; // return empty so makeErrorResponse() can fallback
-
+        return "";
     std::stringstream buffer;
     buffer << file.rdbuf();
     return buffer.str();

@@ -9,38 +9,30 @@ namespace config{
 	Parser::Parser(const std::string& filename)
 	:_pos(0)
 	{
-		//does the file exist?
 		if(!std::filesystem::exists(filename))
 			throw std::runtime_error("Config file does not exist: " + filename);
-		// Is the path a directory?
+
 		if(std::filesystem::is_directory(filename))
 			throw std::runtime_error("Config path is a directory.");
-		//validate .conf extension
+
 		if(std::filesystem::path(filename).extension() != ".conf")
 			throw std::runtime_error("Config file should end with '.conf'.");
 
 		std::ifstream infile(filename);
 		if (!infile)
 			throw std::runtime_error("Failed to open config file " + filename);
+
 		std::stringstream buffer;
-		buffer << infile.rdbuf();//.rdbuf() gives access to its underlying stream buffer.
+		buffer << infile.rdbuf();
 		std::string content = buffer.str();
-		//if really empty(noting, no new line)
+		
 		if (content.empty())
 			throw std::runtime_error("Empty conf file: " + filename);
+			
 		Tokenizer tokenizer(content);
 		_tokens = tokenizer.tokenize();
-		//has new line or comment
 		if(_tokens.size() == 1 && _tokens[0].type == TK_EOF)
 			throw std::runtime_error("Empty conf file : " + filename);
-		// //debug, should delete later
-		// for (auto &tk : _tokens)
-		// {
-		// 	std::cout << "[" << tk.value << "] "
-		// 		<< tk.type
-		// 		<< " line " << tk.line
-		// 		<< " col " << tk.col << "\n";
-		// } //for print the token list, debug
 	}
 
 	Token Parser::peek() const
@@ -138,7 +130,6 @@ namespace config{
 	ServerNode Parser::parseServerBlock()
 	{
 		Token token = get();
-		//std::cout<< token.value << std::endl;
 		if (token.value != "server")
 			throw std::runtime_error(makeError("Expect server ", token.line, token.col));
 		expect(TK_LBRACE, "Expected '{' after location path");
@@ -177,12 +168,12 @@ namespace config{
 			}
 			else if (token.type == TK_IDENTIFIER && token.value == "server_name")
 			{
-				get(); // eat server_name
+				get();
 				server.serverNames = parseVectorStringDirective("server_name");
 			}
 			else if(token.type == TK_IDENTIFIER && token.value == "error_page")
 			{
-				get();//eat error_page
+				get();
 				Token codeTok = get();
 				if (codeTok.type != TK_NUMBER)
 					throw std::runtime_error(makeError("Expect error code ", codeTok.line, codeTok.col));
@@ -198,7 +189,7 @@ namespace config{
 				server.root = parseSimpleDirective("root");
 			else if(token.type==TK_IDENTIFIER && token.value == "index")
 			{
-				get(); //eat index
+				get();
 				server.index = parseVectorStringDirective("index");
 			}
 			else if (token.type == TK_IDENTIFIER && token.value == "location")
@@ -244,7 +235,7 @@ namespace config{
 				location.clientMaxBodySize = parseSimpleDirective("client_max_body_size");
 			else if(token.type==TK_IDENTIFIER && token.value == "index")
 			{
-				get(); //eat index
+				get();
 				location.index = parseVectorStringDirective("index");
 			}
 			else if(token.type==TK_IDENTIFIER && token.value == "autoindex")

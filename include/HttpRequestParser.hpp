@@ -5,7 +5,7 @@
 #include <set>
 #include <vector>
 
-#include "HttpRequest.hpp"  // map, string here
+#include "HttpRequest.hpp"
 #include "httpUtils.hpp"
 
 using namespace httpUtils;

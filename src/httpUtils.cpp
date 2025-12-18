@@ -1,6 +1,6 @@
 #include "httpUtils.hpp"
 
-namespace fs = std::filesystem; // Alias for filesystem
+namespace fs = std::filesystem;
 
 namespace httpUtils{
 
@@ -237,9 +237,9 @@ std::string getIndexFile(const std::string& dirPath, const config::LocationConfi
     {
         std::string candidate = dirPath + "/" + lc->index[i];
         if (stat(candidate.c_str(), &st) == 0 && S_ISREG(st.st_mode))
-            return lc->index[i]; // return filename only
+            return lc->index[i];
     }
-    return ""; // no index file found
+    return "";
 }
 
 /**
@@ -266,13 +266,10 @@ const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh,
 
    for (size_t i = 0; i < vh->locations.size(); i++) {
       const config::LocationConfig& loc = vh->locations[i];
-
-      // Check for extension-based match (location starts with .)
+      
       if (!loc.path.empty() && loc.path[0] == '.') {
-         // Extension match: URI must end with the extension
          if (uri.length() >= loc.path.length() &&
              uri.substr(uri.length() - loc.path.length()) == loc.path) {
-            // Only use extension match if method is allowed (or method not specified)
             if (method.empty()) {
                extMatch = &loc;
                break;
@@ -291,15 +288,12 @@ const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh,
             }
          }
       }
-      // Check exact prefix match
       else if (uri.rfind(loc.path, 0) == 0){
          if (loc.path.length() > bestLen) {
             best = &loc;
             bestLen = loc.path.length();
          }
       }
-      // Also check if location ends with / and uri matches without the trailing /
-      // e.g., uri="/directory" should match location="/directory/"
       else if (loc.path.length() > 1 && loc.path.back() == '/') {
          std::string locWithoutSlash = loc.path.substr(0, loc.path.length() - 1);
          if (uri == locWithoutSlash) {
@@ -310,7 +304,6 @@ const config::LocationConfig* findLocationConfig(const config::ServerConfig* vh,
          }
       }
    }
-   // Extension match has priority over prefix match
    return extMatch ? extMatch : best;
 }
 }

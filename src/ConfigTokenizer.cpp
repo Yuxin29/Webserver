@@ -1,8 +1,8 @@
 #include "ConfigTokenizer.hpp"
 #include "utils.hpp"
-#include <cctype> //std::isspace, std::isdigit
+#include <cctype>
 #include <stdexcept>
-#include <iostream> //debug
+#include <iostream>
 
 namespace config{
 	Tokenizer::Tokenizer(std::string& source)
@@ -56,8 +56,8 @@ namespace config{
 		int start_col = _col;
 		if (eof())
 			return Token{TK_EOF, "", start_line, start_col};
-		char c = peek(); //aviding go over the boundary
-		if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-' || c == ':' || c == '*') //identifier or path
+		char c = peek();
+		if (isalnum(c) || c == '/'|| c == '.' || c == '_'|| c == '-' || c == ':' || c == '*')
 			return tokenizeIdentifier();
 		if (c == '{' || c == '}' || c == ';')
 			return tokenizeSymbol();
@@ -98,7 +98,7 @@ namespace config{
 		int start_line = _line;
 		int start_col = _col;
 		std::string value;
-		get(); //eat the first "
+		get();
 		while(!eof())
 		{
 			char c = get();
