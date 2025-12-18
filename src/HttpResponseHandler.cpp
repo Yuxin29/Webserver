@@ -332,7 +332,6 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 		}
 
 		std::string cgi_output = cgi.execute();
-		std::cout << cgi_output ;
 		if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
 			return makeErrorResponse(500, vh);
 		return parseCGIOutput(cgi_output, req, vh);
@@ -358,7 +357,6 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
          fullPath += "/";
       }
       fullPath += fileName;
-      std::cout << "Uploading to: " << fullPath << std::endl;
 		std::ofstream ofs(fullPath.c_str(), std::ios::binary);
 		ofs.write(fileData.data(), fileData.size());
 		ofs.close();
