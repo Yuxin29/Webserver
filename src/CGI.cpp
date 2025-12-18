@@ -106,6 +106,13 @@ std::string CGI::execute()
 		// close all pipe ends not used
 		close(stdin_pipe[1]);
 		close(stdout_pipe[0]);
+		
+		// Close all inherited file descriptors (listening sockets, epoll, etc.)
+		// This prevents the child from holding ports/connections
+		for(int fd = 3; fd < 1024; fd++){
+			if(fd != STDIN_FILENO && fd != STDOUT_FILENO && fd != STDERR_FILENO)
+				close(fd);
+		}
 		// execve(cgiPass, argv, envp)
 		std::vector<std::string> envStrings;
 		std::vector<char*> env;

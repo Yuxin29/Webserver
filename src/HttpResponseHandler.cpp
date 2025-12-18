@@ -433,7 +433,10 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
       return HttpResponse("HTTP/1.1", 200, "Created", responseBody, headers, httpUtils::shouldKeepAlive(req), true);
 
 	}
-	return HttpResponse("HTTP/1.1", 201, "Created", "hello", std::map<std::string, std::string>(), httpUtils::shouldKeepAlive(req), true);
+	
+	// Default POST response - just echo back received body size
+	std::string responseBody = "Received " + std::to_string(req.getBody().size()) + " bytes";
+	return HttpResponse("HTTP/1.1", 201, "Created", responseBody, std::map<std::string, std::string>(), httpUtils::shouldKeepAlive(req), true);
 }
 
 /**

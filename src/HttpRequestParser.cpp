@@ -197,7 +197,8 @@ bool HttpParser::validateBody(){
         //     return false;
         // }
         // body lenth can not be too long: in theory it should not happen
-        if (_req.getBody().size() > _bodyLength){
+        // Skip this check for chunked encoding (no Content-Length)
+        if (!_isChunked && _req.getBody().size() > _bodyLength){
             _errStatus = 400;
             std::cout << "POST request body length exceeds Content-Length." << std::endl; //here
             return false;
@@ -244,11 +245,24 @@ void HttpParser::parseStartLine(const std::string& startline){
 void HttpParser::parseHeaderLine(const std::string& headerline){
     if (headerline.empty())
     {
-        // try to find content length in map to see it there is body
+        // try to find content length or transfer-encoding in headers
         const std::map<std::string, std::string>& headers = _req.getHeaders();
+        
+        // Check for Transfer-Encoding: chunked
+        std::map<std::string, std::string>::const_iterator teIt = headers.find("transfer-encoding");
+        if (teIt != headers.end() && teIt->second.find("chunked") != std::string::npos){
+            _isChunked = true;
+            _currentChunkSize = 0;
+            _currentChunkRead = 0;
+            _state = BODY;
+            return;
+        }
+        
+        // Check for Content-Length
         std::map<std::string, std::string>::const_iterator it = headers.find("content-length");
         if (it != headers.end()){
             _bodyLength = std::stoi(it->second);
+            _isChunked = false;
             _state = BODY;
         }
         else
@@ -264,6 +278,81 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
     value = trim_space(value);
     key = normalizeHeaderKey(key);
     _req.addHeader(key, value);
+}
+
+/**
+ * @brief parse chunked body of an HTTP request
+ *
+ * @param pos current position in buffer
+ * @return void
+ *
+ * @note Parses Transfer-Encoding: chunked format
+ */
+void HttpParser::parseChunkedBody(size_t& pos)
+{
+    while (pos < _buffer.size())
+    {
+        // Reading chunk size
+        if (_currentChunkSize == 0)
+        {
+            size_t lineEnd = _buffer.find("\r\n", pos);
+            if (lineEnd == std::string::npos)
+                return; // Need more data for chunk size line
+            
+            std::string chunkSizeLine = _buffer.substr(pos, lineEnd - pos);
+            pos = lineEnd + 2;
+            
+            // Parse hex chunk size
+            _currentChunkSize = std::strtoul(chunkSizeLine.c_str(), NULL, 16);
+            _currentChunkRead = 0;
+            
+            // If chunk size is 0, we're done
+            if (_currentChunkSize == 0)
+            {
+                // Skip final \r\n if present
+                if (pos + 1 < _buffer.size() && _buffer.substr(pos, 2) == "\r\n")
+                    pos += 2;
+                _state = DONE;
+                return;
+            }
+        }
+        
+        // Reading chunk data
+        if (_currentChunkRead < _currentChunkSize)
+        {
+            size_t available = _buffer.size() - pos;
+            size_t toRead = std::min(available, _currentChunkSize - _currentChunkRead);
+            
+            std::string newBody = _req.getBody();
+            newBody += _buffer.substr(pos, toRead);
+            _req.setBody(newBody);
+            
+            pos += toRead;
+            _currentChunkRead += toRead;
+            
+            if (_currentChunkRead < _currentChunkSize)
+                return; // Need more data for this chunk
+        }
+        
+        // Reading trailing \r\n after chunk data
+        if (_currentChunkRead == _currentChunkSize)
+        {
+            if (pos + 1 >= _buffer.size())
+                return; // Need more data for trailing \r\n
+            
+            if (_buffer.substr(pos, 2) == "\r\n")
+            {
+                pos += 2;
+                _currentChunkSize = 0; // Ready for next chunk
+                _currentChunkRead = 0;
+            }
+            else
+            {
+                _state = ERROR;
+                return;
+            }
+        }
+    }
 }
 
 /**
@@ -322,7 +411,10 @@ HttpRequest HttpParser::parseHttpRequest(const std::string& rawLine)
                 parseHeaderLine(line);
         }
         if (_state == BODY){
-            parseBody(pos);
+            if (_isChunked)
+                parseChunkedBody(pos);
+            else
+                parseBody(pos);
             break;
         }
     }
