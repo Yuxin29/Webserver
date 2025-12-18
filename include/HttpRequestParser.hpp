@@ -48,6 +48,9 @@ private:
 
     std::string             _buffer;                ///< The resulting parsed HttpRequest object
     size_t                  _bodyLength;            ///< Expected length of the message body (from Content-Length header)
+    bool                    _isChunked;             ///< Whether request uses chunked transfer encoding
+    size_t                  _currentChunkSize;      ///< Size of current chunk being read
+    size_t                  _currentChunkRead;      ///< Bytes read of current chunk
 
     // --------------------
     //  Internal Validation Methods
@@ -62,6 +65,7 @@ private:
     void                    parseStartLine(const std::string& startline);
     void                    parseHeaderLine(const std::string& headerline);
     void                    parseBody(size_t& pos);
+    void                    parseChunkedBody(size_t& pos);
 
 public:
     // --------------------

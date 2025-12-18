@@ -9,7 +9,7 @@
 
 class Webserver {
 	private:
-	    static constexpr int CONNECTION_TIMEOUT = 10;
+	    static constexpr int CONNECTION_TIMEOUT = 60;
 
 		int 					_epollFd;
 		std::vector<Server> 	_servers;
