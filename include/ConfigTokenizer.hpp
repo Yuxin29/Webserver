@@ -7,21 +7,21 @@
 namespace config{
 	enum TokenType
 	{
-		TK_IDENTIFIER, //server, root, error_page
-		TK_NUMBER, // 8080, 404, 10240
-		TK_LBRACE, //{
-		TK_RBRACE,//}
+		TK_IDENTIFIER,
+		TK_NUMBER,
+		TK_LBRACE,
+		TK_RBRACE,
 		TK_SEMICOLON,
 		TK_EOF,
-		TK_STRING, //"/var/www/html"
+		TK_STRING,
 	};
 
 	struct Token
 	{
-		TokenType type;
+		TokenType 	type;
 		std::string value;
-		int	line;
-		int	col;
+		int			line;
+		int			col;
 	};
 
 	class Tokenizer
@@ -29,11 +29,12 @@ namespace config{
 	public:
 		Tokenizer(std::string& source);
 		std::vector<Token> tokenize();
+
 	private:
 		const std::string& _source;
 		std::size_t _pos;
-		int _line;
-		int _col;
+		int 		_line;
+		int 		_col;
 
 		char peek() const;
 		char get();
@@ -41,9 +42,8 @@ namespace config{
 		void skipWhitespaceAndComments();
 		Token nextToken();
 		Token tokenizeIdentifier();
-		Token tokenizeSymbol(); //{}
+		Token tokenizeSymbol();
 		Token tokenizeString();
-		//error()?
 	};
 }
 

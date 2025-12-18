@@ -8,18 +8,15 @@
 class CGI
 {
 private:
-	//from server.locConfig
-	std::string _cgiPass;
-	std::string _cgiExt;
-
-	//request
-	std::string _scriptPath;  //real CGI path
-	std::string _method;      //GET/POST
-	std::string _query;       //QUERY_STRING
-	std::string _body;        //POST body
-	std::map<std::string, std::string> _header;
-	std::string _contentType;
-	std::string _serverName;
+	std::string 						_cgiPass;
+	std::string							_cgiExt;
+	std::string 						_scriptPath;
+	std::string 						_method; 
+	std::string 						_query;       
+	std::string 						_body;
+	std::map<std::string, std::string> 	_header;
+	std::string 						_contentType;
+	std::string 						_serverName;
 
 public:
 	CGI(const HttpRequest& req, const config::LocationConfig& lc);

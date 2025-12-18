@@ -1,12 +1,11 @@
 #include "HttpResponseHandler.hpp"
-#include <iostream>  //debug
+#include <iostream>
 
-namespace fs = std::filesystem; // Alias for filesystem
+namespace fs = std::filesystem;
 
 
 static bool extractMultipartFile(const HttpRequest& req, std::string& outFileData, std::string& outFileName)
 {
-	// Get Content-Type
 	if (!req.getHeaders().count("content-type"))
 		return false;
 
@@ -20,12 +19,11 @@ static bool extractMultipartFile(const HttpRequest& req, std::string& outFileDat
    if (semiPos != std::string::npos){
       boundary = boundary.substr(0, semiPos);
    }
-   boundary = httpUtils::trim_space(boundary);
 
+   boundary = httpUtils::trim_space(boundary);
    std::string marker = "--" + boundary;
 	const std::string& body = req.getBody();
 
-	// Find first boundary
 	size_t partStart = body.find(marker);
 	if (partStart == std::string::npos)
 		return false;
@@ -33,55 +31,38 @@ static bool extractMultipartFile(const HttpRequest& req, std::string& outFileDat
 	if (body.compare(partStart, 2, "\r\n") == 0)
 		partStart += 2;
 
-	/// Find header end
-    size_t headersEnd = body.find("\r\n\r\n", partStart);
-    if (headersEnd == std::string::npos)
-        return false;
+   size_t headersEnd = body.find("\r\n\r\n", partStart);
+   if (headersEnd == std::string::npos)
+      return false;
     
-    // Extract headers section
-    std::string headers = body.substr(partStart, headersEnd - partStart);
-    size_t filenamePos = headers.find("filename=\"");
-    if (filenamePos != std::string::npos) {
-        filenamePos += 10;  // Skip 'filename="'
-        size_t filenameEnd = headers.find("\"", filenamePos);
-        if (filenameEnd != std::string::npos) {
-            outFileName = headers.substr(filenamePos, filenameEnd - filenamePos);
-        }
-    }
+   std::string headers = body.substr(partStart, headersEnd - partStart);
+   size_t filenamePos = headers.find("filename=\"");
+   if (filenamePos != std::string::npos) {
+      filenamePos += 10;
+      size_t filenameEnd = headers.find("\"", filenamePos);
+      if (filenameEnd != std::string::npos) {
+         outFileName = headers.substr(filenamePos, filenameEnd - filenamePos);
+      }
+   }
     
-    // If no filename found, use default
-    if (outFileName.empty()) {
-        outFileName = "upload_" + std::to_string(time(NULL)) + ".dat";
-    }
+   if (outFileName.empty()) {
+      outFileName = "upload_" + std::to_string(time(NULL)) + ".dat";
+   }
 
-
-	size_t dataStart = headersEnd + 4; // skip CRLF CRLF
-
+	size_t dataStart = headersEnd + 4;
    size_t markerPos = body.find( marker, dataStart);
 	if (markerPos == std::string::npos)
 	{
 		std::cout << "5\n";
 		return false;
 	}
+
 	size_t dataEnd = markerPos;
 	if (dataEnd >= 2 && body.compare(dataEnd - 2, 2, "\r\n") == 0)
 		dataEnd -= 2;
-	// std::string boundaryWithCRLF = "\r\n" + marker;
-	// size_t markerPos = body.find(boundaryWithCRLF, dataStart);
-	// if (markerPos == std::string::npos){
-   //       std::string boundaryWithCRLF = "\n" + marker;
-   //       markerPos = body.find(boundaryWithCRLF, dataStart);
-   //       if (markerPos == std::string::npos)
-   //          return false;
-   // }
-		
-	// size_t dataEnd = markerPos;
-	// if (dataEnd >= 2 && body.compare(dataEnd - 2, 2, "\r\n") == 0)
-	// 	dataEnd -= 2;
-	// Extract file bytes
+
 	outFileData.assign(body.data() + dataStart, dataEnd - dataStart);
-   std::cout << "Extracted file: " << outFileName 
-              << " (" << outFileData.size() << " bytes)" << std::endl;
+
 	return true;
 }
 
@@ -106,60 +87,46 @@ static bool extractMultipartFile(const HttpRequest& req, std::string& outFileDat
  * <html>...</html>
  */
 HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const HttpRequest& req, const config::ServerConfig* vh){
-   //it is after last header valuse and then the empty line
-   //Note from lucio, should check both "\r\n\r\n"(for python) and "\n\n" (for php and bash)
    size_t pos = out.find("\r\n\r\n");
-   size_t sepLen = 4; // NOTE 15.12, when \r\n\r\n, it the length should be 4
+   size_t sepLen = 4;
    if (pos == std::string::npos){
       pos = out.find("\n\n");
-      sepLen = 2; // NOTE 15.12, when \n\n, it the length should be 2
+      sepLen = 2;
       if (pos == std::string::npos){
          return makeErrorResponse(500, vh);
       }
    }
-
    std::string headersString = out.substr(0, pos);
-   std::string bodyString = out.substr(pos + sepLen); // NOTE 15.12
-
+   std::string bodyString = out.substr(pos + sepLen);
    std::string statusCode = "200";
    std::string statusMsg = "OK";
-
    std::map<std::string, std::string>  headersMap;
-
    std::istringstream ss(headersString);
    std::string       line;
 
-   while (std::getline(ss, line))
-   {
-      if (!line.empty() && line.back() == '\r') //getline removes \n but not \related
+   while (std::getline(ss, line)) {
+      if (!line.empty() && line.back() == '\r')
          line.pop_back();
+
       size_t dd = line.find(":");
       std::string key = line.substr(0, dd);
       std::string val = line.substr(dd + 1);
       key = httpUtils::trim_space(key);
       val = httpUtils::trim_space(val);
-
-      // check if it is special status code in headerlines
-      // eg: Status: 404 Not Found
       if (key == "Status") {
          size_t space = val.find(" ");
          statusCode = val.substr(0, space);
          statusMsg  = val.substr(space + 1);
       }
-      else
+      else {
          headersMap[key] = val;
+      }
    }
-   // manually setup this one
-   headersMap["Content-Length"] = std::to_string(bodyString.size());
 
-   // Check if CGI already set Content-Type, otherwise use default
+   headersMap["Content-Length"] = std::to_string(bodyString.size());
    if (headersMap.find("Content-Type") == headersMap.end()) {
       headersMap["Content-Type"] = "text/html; charset=UTF-8";
    }
-
-   // Disable keep-alive for POST requests to prevent chunked encoding issues
-   // on subsequent requests over the same connection
-  // BIG MAYBE IF DO THIS OR NOT: bool keepAlive = (req.getMethod() == "POST") ? false : httpUtils::shouldKeepAlive(req);
 
    return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
 }
@@ -204,15 +171,13 @@ HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, 
 // --------------------
 HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::ServerConfig* vh)
 {
-   // get the request URI: uniform Resource Identifier, _path in the request
-   std::string fullUri = req.getPath();  // Full URI including query string
-
-   // Split URI from query parameters
+   std::string fullUri = req.getPath();
    std::string uri = fullUri;
    size_t queryPos = fullUri.find('?');
    if (queryPos != std::string::npos) {
       uri = fullUri.substr(0, queryPos);
    }
+
    if (httpUtils::isCgiRequest(req, *vh)){
       const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "GET");
       if (!lc){
@@ -228,41 +193,33 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       return parseCGIOutput(cgi_output, req, vh);
    }
 
-    // First find LocationConfig check if it is cgi
    const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "GET");
    if (!lc)
       return makeErrorResponse(404, vh);
 
-   // If location path ends with / but uri doesn't, normalize uri for path mapping
    if (lc->path.length() > 1 && lc->path.back() == '/' && !uri.empty() && uri.back() != '/') {
-      // Check if uri matches location without trailing slash
       std::string locWithoutSlash = lc->path.substr(0, lc->path.length() - 1);
       if (uri == locWithoutSlash) {
-         uri += "/";  // Add trailing slash for consistent path mapping
+         uri += "/";
       }
    }
-   // Check for configured redirect
+
    if (!lc->redirect.empty()) {
       return makeRedirect301(lc->redirect, vh);
    }
-   // map URI to path. for example: /hello → filesystem path (e.g., /var/www/html/hello).
-   std::string fullpath = httpUtils::mapUriToPath(lc, uri);
 
-   // Checked if the file exists, is readable, and is a regular file: exits(), is_regular_file, access(R_OK)
+   std::string fullpath = httpUtils::mapUriToPath(lc, uri);
    struct stat st;
    if (stat(fullpath.c_str(), &st) == 0)
    {
       if (S_ISDIR(st.st_mode))
       {
-         // URI does NOT end with '/'
          if (uri.empty() || uri.back() != '/')
             return makeRedirect301(uri + "/", vh);
 
-         // Now check method after redirect handled
          if (!httpUtils::isMethodAllowed(lc, "GET"))
             return makeErrorResponse(405, vh);
 
-         //try index files
          std::string index_file = httpUtils::getIndexFile(fullpath, lc);
          if (!index_file.empty()) {
             fullpath += "/" + index_file;
@@ -272,12 +229,10 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
          else
          {
             if (!lc->autoindex)
-               return makeErrorResponse(404, vh); // No index file and autoindex disabled
-            // autoindex enabled → return HTML directory listing
+               return makeErrorResponse(404, vh);
             return generateAutoIndex(fullpath, req);
          }
       }
-      // Not a directory - check method for regular files
       else if (!httpUtils::isMethodAllowed(lc, "GET"))
          return makeErrorResponse(405, vh);
    }
@@ -288,14 +243,9 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
       return makeErrorResponse(403, vh);
 
-   // Determined MIME type (text/plain for .txt or plain text).
    std::string mime_type = httpUtils::getMimeType(fullpath);
-
-   // Check if download should be forced (via ?download query parameter)
    bool forceDownload = (fullUri.find("?download") != std::string::npos);
 
-   // Read file content → sent as response body.
-   // using: std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    std::ifstream ifs(fullpath.c_str(), std::ios::binary);
    if (!ifs.is_open())
       return makeErrorResponse(500, vh);
@@ -309,7 +259,6 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    ifs.read(&body[0], size);
    ifs.close();
 
-   // Filled headers like Date and Server. maybe more headers
    std::map<std::string, std::string> headers;
    headers["Content-Type"] = mime_type;
    headers["Content-Length"] = std::to_string(body.size());
@@ -319,7 +268,6 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
    headers["Pragma"] = "no-cache";
    headers["Expires"] = "0";
-   // Add Content-Disposition for forced downloads
    if (forceDownload) {
       size_t lastSlash = fullpath.find_last_of('/');
       std::string filename = (lastSlash != std::string::npos)
@@ -353,8 +301,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
  */
 HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::ServerConfig* vh)
 {
-	std::string fullUri = req.getPath();  // Full URI including query string
-	// Split URI from query parameters
+	std::string fullUri = req.getPath();
 	std::string uri = fullUri;
 	size_t queryPos = fullUri.find('?');
 	if (queryPos != std::string::npos) {
@@ -362,34 +309,28 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 	}
    const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
    if (!lc){
-      std::cout << "DEBUG handlePOST: No location found for uri=" << uri << std::endl;
       return makeErrorResponse(403, vh);
    }
-   std::cout << "DEBUG handlePOST: Found location=" << lc->path << " clientMaxBodySize=" << lc->clientMaxBodySize << std::endl;
+
    if (req.getBody().size() > lc->clientMaxBodySize){
-     // std::cout << lc->clientMaxBodySize << '\n';
       return makeErrorResponse(413, vh);
    }
 
 	if (httpUtils::isCgiRequest(req, *vh)){
-      std::cout << "DEBUG: Entered CGI block" << std::endl;
 		const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
 		if (!lc){
-         std::cout << "DEBUG: No location found for CGI" << std::endl;
 			return makeErrorResponse(403, vh);
 		}
-      std::cout << "DEBUG: CGI location found: " << lc->path << std::endl;
+
       if (!httpUtils::isMethodAllowed(lc, "POST")){
-         std::cout << "DEBUG: POST not allowed in CGI location" << std::endl;
          return makeErrorResponse(405, vh);
       }
-      std::cout << "DEBUG: Creating CGI object" << std::endl;
+
 		CGI cgi(req, *lc);
 		if (!cgi.isAllowedCgi()){
-         std::cout << "DEBUG: CGI not allowed by isAllowedCgi()" << std::endl;
 		   return makeErrorResponse(403, vh);
 		}
-      std::cout << "DEBUG: Executing CGI" << std::endl;
+
 		std::string cgi_output = cgi.execute();
 		std::cout << cgi_output ;
 		if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
@@ -397,11 +338,6 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 		return parseCGIOutput(cgi_output, req, vh);
 	}
 
-	//Non-CGI POST handling (raw body only)
-	// const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
-   // if (!lc){
-   //    return makeErrorResponse(404, vh);
-   // }
    if (!httpUtils::isMethodAllowed(lc, "POST")){
       return makeErrorResponse(405, vh);
    }
@@ -433,8 +369,6 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
       return HttpResponse("HTTP/1.1", 200, "Created", responseBody, headers, httpUtils::shouldKeepAlive(req), true);
 
 	}
-	
-	// Default POST response - just echo back received body size
 	std::string responseBody = "Received " + std::to_string(req.getBody().size()) + " bytes";
 	return HttpResponse("HTTP/1.1", 201, "Created", responseBody, std::map<std::string, std::string>(), httpUtils::shouldKeepAlive(req), true);
 }
@@ -460,28 +394,15 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    * {"status":"success"}
  */
 HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::ServerConfig* vh){
-   // Server receives DELETE /files/file1.txt.
    std::string uri = req.getPath();
-
-   // first check CGI, below are fake code
    const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "DELETE");
    if (!lc)
       return makeErrorResponse(404, vh);
+
    if (!httpUtils::isMethodAllowed(lc, "DELETE"))
       return makeErrorResponse(405, vh);
-   // CGI cgi(req, *lc);
-   // if (cgi.isAllowedCgi()) {
-   //       std::string cgi_output = cgi.execute();
-   //       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
-   //          return makeErrorResponse(500, vh);
-   //       return parseCGIOutput(cgi_output, req, vh);
-   // }
-   // otherwie, it is a static delete. Maps fullPath: /files/file1.txt → /var/www/html/files/file1.txt
+
    std::string fullpath = httpUtils::mapUriToPath(lc, uri);
-   // Validates:
-   // Does file exist?
-   // Is it allowed to delete this path? (check directory permissions)?
-   //  Is DELETE method allowed in this location?
    struct stat st;
    if (stat(fullpath.c_str(), &st) < 0)
       return makeErrorResponse(404, vh);
@@ -489,15 +410,12 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
       return makeErrorResponse(403, vh);
    if (access(fullpath.c_str(), W_OK) < 0)
       return makeErrorResponse(403, vh);
-   // Attempts deletion: - unlink("/var/www/html/files/file1.txt") //sth worng: (io err, permission)
    if (unlink(fullpath.c_str()) < 0)
       return makeErrorResponse(500, vh);
 
-   // Generates response:
    std::map<std::string, std::string> headers;
-   headers["Content-Length"] = "0";  // No response body
+   headers["Content-Length"] = "0";
 
-   // - If success → 204 No Content (most common) - Or 200 OK with optional message
    return HttpResponse("HTTP/1.1", 204, "No Content", "", std::map<std::string, std::string>(), httpUtils::shouldKeepAlive(req), true);
 }
 
@@ -522,6 +440,5 @@ HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::
       return handlePOST(req, vh);
    else if (req.getMethod() == "DELETE")
       return handleDELETE(req, vh);
-   // not supposed to reach here, already filtered in parser validation
    return HttpResponse("HTTP/1.1", 405, "Method Not Allowed", "", {}, false, false);
 }

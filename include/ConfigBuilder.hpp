@@ -1,15 +1,3 @@
-/*
-Why cannot use ServerNode / LocationNode directly (AST is not enough):
-AST nodes (ServerNode, LocationNode) represent syntax, not semantics.
-in AST:
-They do not include inherited values
-They do not include default values
-They do not validate semantic correctness
-
-AST = “What the config text looks like”
-Runtime config = “How the server should behave”
-*/
-
 #ifndef CONFIGBUILDER_HPP
 #define CONFIGBUILDER_HPP
 
@@ -22,42 +10,37 @@ namespace config
 {
 	struct LocationConfig
 	{
-		std::string path;
-		std::string root; //inherit
-		std::string redirect;
-		std::vector<std::string> index;//inherit
-		std::string cgiPass;
-		std::string cgiExt;
-		std::string upload_dir;
-		unsigned long clientMaxBodySize;//inherit
-		bool autoindex;
-		std::vector<std::string> methods; //cannot be empty
+		std::string 			path;
+		std::string 			root;
+		std::string 			redirect;
+		std::vector<std::string>index;
+		std::string 			cgiPass;
+		std::string 			cgiExt;
+		std::string 			upload_dir;
+		unsigned long 			clientMaxBodySize;
+		bool 					autoindex;
+		std::vector<std::string>methods;
 	};
 
 	struct ServerConfig
 	{
-		std::string host;
-		int port;
-		std::vector<std::string> serverNames;
-		std::map<int, std::string> errorPages;//cannot be empty
-		long clientMaxBodySize; //bytes
-		std::string root;//cannot be empty
-		std::vector<std::string> index;//cannot be empty
+		std::string 				host;
+		int 						port;
+		std::vector<std::string> 	serverNames;
+		std::map<int, std::string> 	errorPages;
+		long 						clientMaxBodySize;
+		std::string 				root;
+		std::vector<std::string> 	index;
 		std::vector<LocationConfig> locations;
 	};
 
 	class ConfigBuilder
 	{
-	//static means it does NOT belong to an object, it belongs to the class
 	public:
-	//convert AST → final runtime configs
 		static std::vector<ServerConfig> build(const std::vector<ServerNode>& ast);
 	private:
-	//Build one server from server AST
 		static ServerConfig buildServerConfig(const ServerNode& node);
-	//Build one location with inheritance
 		static LocationConfig buildLocationConfig(const LocationNode& node, const ServerConfig& parent);
-	//helper
 		static std::vector<std::string> defaultIndex();
 		static std::vector<std::string> defaultMethods();
 		static long defaultClientMaxBodySize();
@@ -67,11 +50,3 @@ namespace config
 }
 
 #endif
-
-
-/*
-1 KB = 1024 bytes
-1 MB = 1024 KB
-     = 1024 × 1024 bytes
-     = 1,048,576 bytes
-*/

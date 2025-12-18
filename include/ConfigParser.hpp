@@ -8,27 +8,27 @@
 namespace config{
 	struct LocationNode
 	{
-		std::string path;
-		std::string root;
-		std::string redirect;
-		std::vector<std::string> index;//
-		std::string cgiPass;
-		std::string cgiExt;
-		std::string uploadDir;
-		std::string clientMaxBodySize;
-		bool autoindex;
+		std::string 			path;
+		std::string 			root;
+		std::string 			redirect;
+		std::vector<std::string> index;
+		std::string 			cgiPass;
+		std::string 			cgiExt;
+		std::string 			uploadDir;
+		std::string 			clientMaxBodySize;
+		bool 					autoindex;
 		std::vector<std::string> methods;
 	};
 
 	struct ServerNode
 	{
-		std::vector<std::string> serverNames;
-		std::pair<std::string, int> listen; //might 127.0.0.1:8080 or just 8080; 127.0.0.1 is string
-		std::map<int, std::string> errorPages; //int: error code; string:path to html file
-		std::string clientMaxBodySize;
-		std::string root;
-		std::vector<std::string> index;
-		std::vector<LocationNode> locations;
+		std::vector<std::string> 	serverNames;
+		std::pair<std::string, int> listen;
+		std::map<int, std::string> 	errorPages;
+		std::string 				clientMaxBodySize;
+		std::string 				root;
+		std::vector<std::string> 	index;
+		std::vector<LocationNode> 	locations;
 	};
 
 	class Parser
@@ -40,7 +40,7 @@ namespace config{
 	private:
 		std::vector<Token> _tokens;
 		std::size_t _pos;
-
+		
 		Token peek() const;
 		Token get();
 		bool eof();
