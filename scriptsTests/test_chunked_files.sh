@@ -5,6 +5,7 @@
     echo -ne "POST /files HTTP/1.1\r\n"
     echo -ne "Host: localhost:8080\r\n"
     echo -ne "Transfer-Encoding: chunked\r\n"
+    echo -ne "Connection: close\r\n"
     echo -ne "\r\n"
     
     # Send chunk 1: 1000 bytes
