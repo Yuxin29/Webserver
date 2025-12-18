@@ -125,7 +125,7 @@ std::string CGI::execute()
 		argv.push_back(const_cast<char *>(_cgiPass.c_str()));
 		argv.push_back(const_cast<char *>(_scriptPath.c_str()));
 		argv.push_back(NULL);
-		execve(_cgiPass.c_str(), argv.data(), env.data()); //argv.data() returns: char** (pointer to first element of vector)
+		execve(_cgiPass.c_str(), argv.data(), env.data());
 		std::cerr << "[CGI] execve failed: " << strerror(errno) << std::endl;
 		_exit(42);
 	}
