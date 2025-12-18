@@ -53,7 +53,6 @@ static bool extractMultipartFile(const HttpRequest& req, std::string& outFileDat
    size_t markerPos = body.find( marker, dataStart);
 	if (markerPos == std::string::npos)
 	{
-		std::cout << "5\n";
 		return false;
 	}
 
