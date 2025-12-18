@@ -1,3 +1,4 @@
+
 #include "HttpResponseHandler.hpp"
 #include <iostream>
 
@@ -157,10 +158,10 @@ HttpResponse HttpResponseHandler::generateAutoIndex(const std::string& dirPath, 
     body += "</ul></body></html>";
 
     std::map<std::string, std::string> headers;
-    headers["Content-Type"] = "text/html";
-    headers["Content-Length"] = std::to_string(body.size());
-    headers["Server"] = "MiniWebserv/1.0";
-    headers["Date"] = httpUtils::formatTime(time(NULL));
+    headers["content-type"] = "text/html";
+    headers["content-length"] = std::to_string(body.size());
+    headers["server"] = "MiniWebserv/1.0";
+    headers["date"] = httpUtils::formatTime(time(NULL));
 
     return HttpResponse("HTTP/1.1", 200, "OK", body, headers, httpUtils::shouldKeepAlive(req), true);
 }
@@ -272,7 +273,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       std::string filename = (lastSlash != std::string::npos)
          ? fullpath.substr(lastSlash + 1)
          : "download";
-      headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+      headers["content-disposition"] = "attachment; filename=\"" + filename + "\"";
    }
    return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
 }
@@ -339,7 +340,7 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
    if (!httpUtils::isMethodAllowed(lc, "POST")){
       return makeErrorResponse(405, vh);
    }
-      
+
 	std::string ct;
 	if (req.getHeaders().count("content-type"))
 		ct = req.getHeaders().at("content-type");
@@ -348,8 +349,11 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 		std::string fileData;
       std::string fileName;
 
-		if (!extractMultipartFile(req, fileData, fileName))
-			return makeErrorResponse(400, vh);
+		if (!extractMultipartFile(req, fileData, fileName)){
+         std::cout << "debug POST" << std::endl;
+         return makeErrorResponse(400, vh);
+      }
+			//return makeErrorResponse(400, vh);
 
 		std::string fullPath = lc->upload_dir;
       if (!fullPath.empty() && fullPath.back() != '/') {
@@ -401,14 +405,25 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
 
    std::string fullpath = httpUtils::mapUriToPath(lc, uri);
    struct stat st;
-   if (stat(fullpath.c_str(), &st) < 0)
+   if (lstat(fullpath.c_str(), &st) < 0)
       return makeErrorResponse(404, vh);
+   if (S_ISLNK(st.st_mode))
+      return makeErrorResponse(403, vh);
    if (!S_ISREG(st.st_mode))
       return makeErrorResponse(403, vh);
-   if (access(fullpath.c_str(), W_OK) < 0)
-      return makeErrorResponse(403, vh);
    if (unlink(fullpath.c_str()) < 0)
+   {
+      // file not existing
+      if (errno == ENOENT)
+         return makeErrorResponse(404, vh);
+      // not access
+      if (errno == EACCES || errno == EPERM)
+         return makeErrorResponse(403, vh);
+      // is dir or not empty dir
+      if (errno == EISDIR || errno == ENOTEMPTY)
+         return makeErrorResponse(409, vh);
       return makeErrorResponse(500, vh);
+   }
 
    std::map<std::string, std::string> headers;
    headers["Content-Length"] = "0";
@@ -428,7 +443,7 @@ HttpResponse HttpResponseHandler::handleDELETE(HttpRequest& req, const config::S
 
  * @note for the server to handle the request based on method type
  */
-HttpResponse HttpResponseHandler::handleRequest(HttpRequest& req, const config::ServerConfig* vh){
+HttpResponse   HttpResponseHandler::handleRequest(HttpRequest& req, const config::ServerConfig* vh) {
    if (!vh)
       return HttpResponse("HTTP/1.1", 500, "Internal Server Error", "", {}, false, false);
    if (req.getMethod() == "GET")

@@ -7,7 +7,7 @@ namespace httpUtils{
    // Helper: Check if path has common CGI extension
    static bool isCgiExtension(const std::string& path) {
       std::string ext = fs::path(path).extension().string();
-      return ext == ".php" || ext == ".py" || ext == ".sh" || 
+      return ext == ".php" || ext == ".py" || ext == ".sh" ||
              ext == ".cgi" || ext == ".pl" || ext == ".rb";
    }
 
@@ -32,11 +32,11 @@ namespace httpUtils{
    static bool matchesDirectoryLocation(const std::string& path, const config::LocationConfig& loc) {
       if (loc.path.empty() || loc.path[0] == '.'){
          return false;
-      } 
+      }
       if (path.rfind(loc.path, 0) != 0){
          return false;
       }
-      return path.length() == loc.path.length() || 
+      return path.length() == loc.path.length() ||
              (path.length() > loc.path.length() && path[loc.path.length()] == '/') ||
              loc.path.back() == '/';
    }
@@ -53,7 +53,7 @@ namespace httpUtils{
          if (loc.cgiPass.empty() && loc.cgiExt.empty()){
             continue;
          }
-         if (matchesExtensionLocation(path, loc) 
+         if (matchesExtensionLocation(path, loc)
             || matchesDirectoryLocation(path, loc)) {
             bool methodAllowed = false;
             for (size_t j = 0; j < loc.methods.size(); j++){
