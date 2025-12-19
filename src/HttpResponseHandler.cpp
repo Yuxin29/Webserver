@@ -356,7 +356,9 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
       if (!fullPath.empty() && fullPath.back() != '/') {
          fullPath += "/";
       }
-
+      if (access(fullPath.c_str(), W_OK) != 0){
+         return makeErrorResponse(403, vh);
+      }
       fullPath += fileName;
 		std::ofstream ofs(fullPath.c_str(), std::ios::binary);
 		ofs.write(fileData.data(), fileData.size());

@@ -3,56 +3,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-static void validateRoot(const std::string& root)
-{
-	struct stat st;
-	if (stat(root.c_str(), &st) < 0 || !S_ISDIR(st.st_mode))
-		throw std::runtime_error("Invalid root: '" + root + "' must be an existing directory");
-}
-
-static void validateindex(const std::vector<std::string>& index)
-{
-	for(size_t i = 0; i < index.size(); i++){
-		if(index[i][0] == '/' || index[i].empty())
-			throw std::runtime_error("Invalidated index file : " + index[i]);
-	}
-}
-
-static void validateCgiext(const std::string& ext)
-{
-	if(!ext.empty()){
-		if(ext[0] != '.')
-			throw std::runtime_error("cgi_ext should start with '.'");
-	}
-}
-
-static void validateCgipass(const std::string& pass)
-{
-	if(!pass.empty()){
-		if(access(pass.c_str(), X_OK) != 0)
-			throw std::runtime_error("cgi_pass is not executable : "+ pass);
-		}
-}
-
-static void validateUploaddir(const std::string& upload)
-{
-	struct stat st;
-	if (stat(upload.c_str(), &st) < 0 || !S_ISDIR(st.st_mode) || access(upload.c_str(), W_OK) != 0)
-		throw std::runtime_error("Invalid upload_dir : "+upload);
-}
-
-static void validateErrpages(const std::map<int, std::string>& error_pages)
-{
-	for (std::map<int, std::string>::const_iterator it = error_pages.begin();
-			it != error_pages.end(); ++it)
-	{
-		const std::string& uri = it->second;
-		struct stat st;
-		if (stat(uri.c_str(), &st) != 0 || !S_ISREG(st.st_mode) ||access(uri.c_str(), R_OK) != 0)
-			throw std::runtime_error("Invalid error_page path : " + uri);
-	}
-}
-
 namespace config{
 	long ConfigBuilder::defaultClientMaxBodySize()
 	{
@@ -111,21 +61,15 @@ namespace config{
 	{
 		LocationConfig lc;
 		lc.path = node.path.empty() ? "/" : node.path;
-		//validatePath(lc.path);
 		lc.root = node.root.empty() ? parent.root : node.root;
-		validateRoot(lc.root);
 		lc.index = node.index.empty() ? parent.index : node.index;
-		validateindex(lc.index);
 		lc.clientMaxBodySize = node.clientMaxBodySize.empty()
 									? parent.clientMaxBodySize
 									: parseSizeLiteral(node.clientMaxBodySize);
 		lc.redirect = node.redirect;
 		lc.cgiPass = node.cgiPass;
-		validateCgipass(lc.cgiPass);
 		lc.cgiExt = node.cgiExt;
-		validateCgiext(lc.cgiExt);
 		lc.upload_dir = node.uploadDir.empty() ? "./sites/static/uploads":node.uploadDir;
-		validateUploaddir(lc.upload_dir);
 		lc.autoindex = node.autoindex;
 		lc.methods = node.methods.empty() ? defaultMethods() : node.methods;
 		return lc;
@@ -138,11 +82,8 @@ namespace config{
 		cfg.port = node.listen.second;
 		cfg.serverNames = node.serverNames;
 		cfg.errorPages = node.errorPages.empty() ? defaultErrorPages() : node.errorPages;
-		validateErrpages(cfg.errorPages);
 		cfg.root = node.root.empty() ? "." : node.root;
-		validateRoot(cfg.root);
 		cfg.index = node.index;
-		validateindex(cfg.index);
 		cfg.clientMaxBodySize = node.clientMaxBodySize.empty()
 									? defaultClientMaxBodySize()
 									: parseSizeLiteral(node.clientMaxBodySize);
