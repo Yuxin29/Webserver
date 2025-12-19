@@ -88,7 +88,6 @@ int  Server::acceptConnection(void){
  *       It also manages connection persistence based on the response's keep-alive status.
  */
 Server::ClientStatus Server::handleClient(int clientFd){
-	// listening
 	char buffer[8192];
 	ssize_t nBytes = recv(clientFd, buffer, sizeof(buffer), 0);
 	if (nBytes < 0){
@@ -109,7 +108,11 @@ Server::ClientStatus Server::handleClient(int clientFd){
 
 		HttpResponse error_res = makeErrorResponse(parser.getErrStatus(), getDefaultVhost());
 		std::string error_res_string = error_res.buildResponseString();
-		send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
+		ssize_t sent = send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
+		if (sent <= 0){
+			cleanMaps(clientFd);
+			return CLIENT_ERROR;
+		}
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
 	}
