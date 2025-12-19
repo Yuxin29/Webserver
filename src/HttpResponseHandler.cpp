@@ -348,17 +348,15 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 	{
 		std::string fileData;
       std::string fileName;
-
 		if (!extractMultipartFile(req, fileData, fileName)){
-         std::cout << "debug POST" << std::endl;
          return makeErrorResponse(400, vh);
       }
-			//return makeErrorResponse(400, vh);
 
 		std::string fullPath = lc->upload_dir;
       if (!fullPath.empty() && fullPath.back() != '/') {
          fullPath += "/";
       }
+
       fullPath += fileName;
 		std::ofstream ofs(fullPath.c_str(), std::ios::binary);
 		ofs.write(fileData.data(), fileData.size());
