@@ -1,20 +1,14 @@
 #include "ConfigBuilder.hpp"
 
-/**
- * @brief 
- * 
- * 
- * 
- */
 namespace config{
-	long ConfigBuilder::defaultClientMaxBodySize()
-	{
+	///< Return default maximum client body size
+	long ConfigBuilder::defaultClientMaxBodySize(){
 		long size = 1*1024*1024;
 		return size;
 	}
 
-	long ConfigBuilder::parseSizeLiteral(const std::string& sizeStr)
-	{
+	///< Parse size literal like "10M", "500K", or "1048576"
+	long ConfigBuilder::parseSizeLiteral(const std::string& sizeStr){
 		std::string numberStr;
 		long num ;
 		size_t last = sizeStr.size() - 1;
@@ -34,6 +28,7 @@ namespace config{
 		return num;
 	}
 
+	///< Return default error pages mapping
 	std::map<int, std::string> ConfigBuilder::defaultErrorPages()
 	{
 		std::map<int, std::string> pages;
@@ -51,6 +46,7 @@ namespace config{
 		
 	}
 
+	///< Return default allowed methods
 	std::vector<std::string> ConfigBuilder::defaultMethods()
 	{
 		std::vector<std::string> methods;
@@ -60,6 +56,7 @@ namespace config{
 		return methods;
 	}
 
+	/// Build a LocationConfig from a LocationNode, applying inheritance from the parent ServerConfig.
 	LocationConfig ConfigBuilder::buildLocationConfig(const LocationNode& node, const ServerConfig& parent)
 	{
 		LocationConfig lc;
@@ -78,6 +75,7 @@ namespace config{
 		return lc;
 	}
 
+	/// Build a ServerConfig from a ServerNode.
 	ServerConfig ConfigBuilder::buildServerConfig(const ServerNode& node)
 	{
 		ServerConfig cfg;
@@ -97,11 +95,11 @@ namespace config{
 		return cfg;
 	}
 
+	/// Build a vector of ServerConfig from a vector of ServerNode.
 	std::vector<ServerConfig> ConfigBuilder::build(const std::vector<ServerNode>& servers)
 	{
 		std::vector<ServerConfig> cfgs;
-		for(size_t i = 0; i < servers.size(); i++)
-		{
+		for(size_t i = 0; i < servers.size(); i++){
 			ServerConfig cfg = buildServerConfig(servers[i]);
 			cfgs.push_back(cfg);
 		}

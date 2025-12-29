@@ -19,24 +19,24 @@
  * (Lexing)      (Syntax)    (Runtime config)
  * 
  *  @example input
-server {
-    listen 8080;
-    root /var/www/html;
-}
-*  @example output
-IDENTIFIER("server")
-LBRACE("{")
-
-IDENTIFIER("listen")
-NUMBER("8080")
-SEMICOLON(";")
-
-IDENTIFIER("root")
-IDENTIFIER("/var/www/html")
-SEMICOLON(";")
-
-RBRACE("}")
-EOF
+ * server {
+ *   listen 8080;
+ *   root /var/www/html;
+ * }
+ *  @example output
+ * IDENTIFIER("server")
+ * LBRACE("{")
+ *
+ * IDENTIFIER("listen")
+ * NUMBER("8080")
+ * SEMICOLON(";")
+ *
+ * IDENTIFIER("root")
+ * IDENTIFIER("/var/www/html")
+ * SEMICOLON(";")
+ *
+ * RBRACE("}")
+ * EOF
  */
 namespace config{
 	// All supported token types in the configuration language.

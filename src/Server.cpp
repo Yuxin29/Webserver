@@ -2,6 +2,51 @@
 
 using namespace config;
 
+/* ========================================== */
+/*  2 public helper methods for  WriteBuffer  */
+/* ========================================== */
+inline bool Server::WriteBuffer::isComplete() const {
+	return sent >= data.size();
+}
+inline size_t Server::WriteBuffer::remainingToSend() const {
+	return data.size() - sent;
+}
+
+/* ========================================== */
+/*  private helpers							  */
+/* ========================================== */
+const config::ServerConfig* Server::getDefaultVhost() const {
+	if (_virtualHosts.empty()){
+		return nullptr;
+	}
+	return &_virtualHosts[0];
+}
+/**
+ * @brief Match the appropriate virtual host based on the Host header
+ * 
+ * @param hostHeader The value of the Host header from the HTTP request
+ * @return const ServerConfig* Pointer to the matched ServerConfig, or nullptr if no match is found
+ * 
+ * @note This method searches through the configured virtual hosts to find one that matches
+ *       the provided Host header. If no match is found, it returns the default virtual host if available.
+ */
+const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
+	for(size_t i = 0; i < _virtualHosts.size(); i++){
+		for (size_t j = 0; j < _virtualHosts[i].serverNames.size(); j++){
+			if (_virtualHosts[i].serverNames[j] == hostHeader){
+				return &_virtualHosts[i];
+			}
+		}
+	}
+	if (!_virtualHosts.empty()){
+		return &_virtualHosts[0];
+	}
+	return nullptr;
+}
+
+/* ==================================== */
+/*  lifecycle management of the server  */
+/* ==================================== */
 /**
  * @brief Construct a new Server:: Server object
  * 
@@ -9,22 +54,14 @@ using namespace config;
  * @param port 
  * @param serverBlocks 
  */
-Server::Server(const std::string& host, int port,
-	const std::vector<ServerConfig>& serverBlocks)
-	: _host(host), _listenFd(NOT_VALID_FD), _port(port), _virtualHosts(serverBlocks), _addr(){
+Server::Server(const std::string& host, int port, const std::vector<ServerConfig>& serverBlocks)
+: _host(host), _listenFd(NOT_VALID_FD), _port(port), _virtualHosts(serverBlocks), _addr()
+{
 		_addr.sin_family = AF_INET;
 		if (inet_pton(AF_INET, _host.c_str(), &_addr.sin_addr) <= 0){
 			throw std::runtime_error("Invalid Ip address: " + _host);
 		}
 		_addr.sin_port = htons(_port);
-}
-
-/**
- * @brief Destroy the Server:: Server object
- * 
- */
-Server::~Server(){
-	shutdown();
 }
 
 /**
@@ -40,6 +77,17 @@ Server::Server(Server&& other) noexcept
 		other._listenFd = NOT_VALID_FD;
 }
 
+/**
+ * @brief Destroy the Server:: Server object
+ * 
+ */
+Server::~Server(){
+	shutdown();
+}
+
+/* ==================================== */
+/*  startup and shutdown of the server  */
+/* ==================================== */
 /**
  * @brief 
  * 
@@ -71,6 +119,10 @@ Server::StartResult Server::start(){
 	return Server::START_SUCCESS;
 }
 
+/**
+ * @brief Shutdown the server and close the listening socket
+ * 
+ */
 void Server::shutdown(){
 	if (_listenFd != NOT_VALID_FD){
 		std::cout << "Stopping servers listening on port: " << _port << std::endl;
@@ -79,6 +131,14 @@ void Server::shutdown(){
 	}
 }
 
+/* ==================================== */
+/*  client connection handling		    */
+/* ==================================== */
+/**
+ * @brief Accept a new client connection
+ * 
+ * @return int the file descriptor of the accepted client socket, or NOT_VALID_FD on error
+ */
 int  Server::acceptConnection(void){
 	struct sockaddr_in clientAddr;
 	socklen_t clientLen = sizeof(clientAddr);
@@ -175,6 +235,15 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	}
 }
 
+/**
+ * @brief Handle writing data to a client socket
+ * 
+ * @param clientFd The file descriptor of the client socket
+ * @return Server::ClientStatus indicating the status of the write operation
+ * 
+ * @note This method attempts to send any remaining data in the write buffer to the client.
+ *       It manages connection persistence based on whether all data has been sent and the keep-alive status.
+ */
 Server::ClientStatus Server::handleClientWrite(int clientFd) {
 	auto it = _writeBuffers.find(clientFd);
 	if (it == _writeBuffers.end()){
@@ -202,49 +271,16 @@ Server::ClientStatus Server::handleClientWrite(int clientFd) {
 	return CLIENT_WRITING;
 }
 
-const ServerConfig* Server::matchVirtualHost(const std::string& hostHeader){
-	for(size_t i = 0; i < _virtualHosts.size(); i++){
-		for (size_t j = 0; j < _virtualHosts[i].serverNames.size(); j++){
-			if (_virtualHosts[i].serverNames[j] == hostHeader){
-				return &_virtualHosts[i];
-			}
-		}
-	}
-	if (!_virtualHosts.empty()){
-		return &_virtualHosts[0];
-	}
-	return nullptr;
-}
-
+/* ==================================== */
+/*  client connection handling		    */
+/* ==================================== */
 void  Server::cleanMaps(int clientFd){
 	_parsers.erase(clientFd);
 	_requestCount.erase(clientFd);
 	_writeBuffers.erase(clientFd);
 }
 
-int Server::getListenFd() const {
-	return _listenFd;
-}
-
-int Server::getPort() const {
-	return _port;
-}
-
-inline bool Server::WriteBuffer::isComplete() const {
-	return sent >= data.size();
-}
-
-inline size_t Server::WriteBuffer::remainingToSend() const {
-	return data.size() - sent;
-}
 
 bool Server::hasWriteBuffer(int clientFd) const {
     return _writeBuffers.find(clientFd) != _writeBuffers.end();
-}
-
-const config::ServerConfig* Server::getDefaultVhost() const {
-	if (_virtualHosts.empty()){
-		return nullptr;
-	}
-	return &_virtualHosts[0];
 }

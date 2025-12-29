@@ -1,184 +1,48 @@
 
 #include "Webserver.hpp"
-#include <fstream>
-#include <sstream>
 
 using namespace config;
 using namespace utils;
 
 static volatile sig_atomic_t signalRunning = 1;
 
-/**
- * @brief 
- * 
- * @param sig 
- */
-static void signalHandler(int sig){
-	(void)sig;
-	signalRunning = 0;
-}
-
-/**
- * @brief Construct a new Webserver:: Webserver object
- * 
- */
-Webserver::Webserver() : _running(false){
-	signal(SIGINT, signalHandler);
-	signal(SIGTERM, signalHandler);
-	signal(SIGPIPE, SIG_IGN);
-	_epollFd = epoll_create1(0);
-	if (_epollFd < 0){
-		throw std::runtime_error("Failed to create epoll instance");
-	}
-}
-
-/**
- * @brief Destroy the Webserver:: Webserver object
- * 
- */
-Webserver::~Webserver(){
-	stopWebserver();
-	if (_epollFd >= 0){
-		close(_epollFd);
-	}
-}
-
-/**
- * @brief This creates the necessary servers, grouping them by host:port. Call Server::Start to bind ips and create listening sockets.
- * 
- */
-int Webserver::createServers(const std::vector<ServerConfig>& config){
-	std::map<std::string, std::vector<config::ServerConfig>> bindGroups;
-	for (size_t i = 0; i < config.size(); i++){
-		const auto& block = config[i];
-		std::string host = block.host;
-		if (host.empty() || host == "*"){
-			host = "0.0.0.0";
-		}
-		if (host == "255.255.255.255"){
-			std::cout << "Binding to special 255.255.255.255, No connection expected" << std::endl;
-		}
-		std::string bindKey = host + ":" + std::to_string(block.port);
-		bindGroups[bindKey].push_back(block);
-	}
-
-	for (const auto& [bindKey, blocks] : bindGroups){
-		size_t colonPos = bindKey.find(":");
-		std::string host = bindKey.substr(0, colonPos);
-		int port = stoi(bindKey.substr(colonPos + 1));
-		_servers.emplace_back(host, port, blocks);
-	}
-
-	for (size_t i = 0; i < _servers.size(); i++){
-		if (_servers[i].start() != Server::START_SUCCESS){
-			return FAILURE;
-		}
-		int listenFd = _servers[i].getListenFd();
-		struct epoll_event ev;
-		ev.events = EPOLLIN;
-		ev.data.fd = listenFd;
-		if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, listenFd, &ev) < 0){
-			return FAILURE;
-		}
-		_listenFdToServerIndex[listenFd] = i;
-	}
-
-	for (size_t i = 0; i < _servers.size(); i++){
-		std::cout << "Server successfully listening on port: "
-				<< _servers[i].getPort() << std::endl;
-	}
-	return SUCCESS;
-}
-
-/**
- * @brief Main loop running during server execution. It handles Epoll events, manages server and client connections
- * 
- */
-int Webserver::runWebserver(){
-	_running = true;
-	const int MAX_EVENTS = 64;
-	struct epoll_event events[MAX_EVENTS];
-	while(_running && signalRunning){
-		int nfds = epoll_wait(_epollFd, events, MAX_EVENTS, 1000);
-		if (nfds < 0){
-			if (errno == EINTR){
-				continue;
-			}
-			return utils::FAILURE;
-		}
-		if (nfds == 0){
-			checkIdleConnections();
-			continue;
-		}
-		for (int i = 0; i < nfds; i++){
-			int fd = events[i].data.fd;
-			if (hasError(events[i])){
-				removeClientFd(fd);
-				continue;
-			}
-
-			if (events[i].events & EPOLLIN){
-				if (isListeningSocket(fd)){
-					handleNewConnection(fd);
-				} else if (!isFdWriting(fd)) {
-					handleClientRequest(fd);
-				}
-			}
-
-			if (events[i].events & EPOLLOUT){
-				handleClientWrite(fd);
-			}
-		}
-	}
-	return SUCCESS;
-}
-
-/**
- * @brief 
- * 
- */
-void Webserver::stopWebserver(){
-	_running = false;
-	closeAllClients();
-	for (size_t i = 0; i < _servers.size(); i++){
-		_servers[i].shutdown();
-	}
-}
-
-/**
- * @brief 
- * 
- * @param fd 
- * @return true 
- * @return false 
- */
+// ==========================================================
+// epoll and event handling helpers
+// ==========================================================
 bool Webserver::isListeningSocket(int fd) const {
 	return _listenFdToServerIndex.find(fd) != _listenFdToServerIndex.end();
 }
 
-/**
- * @brief 
- * 
- * @param listenFd 
- */
+bool Webserver::isFdWriting(int clientFd) const {
+	auto it = _clientFdToServerIndex.find(clientFd);
+	if (it == _clientFdToServerIndex.end())
+		return false;
+	return _servers[it->second].hasWriteBuffer(clientFd);
+}
+
+bool Webserver::hasError(const epoll_event& event) const {
+	return (event.events & EPOLLHUP) ||
+		   (event.events & EPOLLERR) ||
+		   (event.events & EPOLLRDHUP);
+}
+
+// ==========================================================
+// new connection handling
+// ==========================================================
 void Webserver::handleNewConnection(int listenFd){
 	const auto& it = _listenFdToServerIndex.find(listenFd);
-	if (it == _listenFdToServerIndex.end()){
+	if (it == _listenFdToServerIndex.end())
 		return;
-	}
 	size_t serverIndex = it->second;
 	int clientFd = _servers[serverIndex].acceptConnection();
-	if (clientFd < 0){
+	if (clientFd < 0)
 		return;
-	}
 	addClientToPoll(clientFd, serverIndex);
 }
 
-/**
- * @brief 
- * 
- * @param clientFd 
- */
+// ==========================================================
+// client reading and writing
+// ==========================================================
 void Webserver::handleClientRequest(int clientFd){
 	auto it = _clientFdToServerIndex.find(clientFd);
 	if (it == _clientFdToServerIndex.end()){
@@ -212,16 +76,10 @@ void Webserver::handleClientRequest(int clientFd){
 	}
 }
 
-/**
- * @brief 
- * 
- * @param clientFd 
- */
 void Webserver::handleClientWrite(int clientFd){
 	auto it = _clientFdToServerIndex.find(clientFd);
-	if (it == _clientFdToServerIndex.end()){
+	if (it == _clientFdToServerIndex.end())
 		return ;
-	}
 	size_t serverIndex = it->second;
 	Server::ClientStatus status = _servers[serverIndex].handleClientWrite(clientFd);
 
@@ -242,12 +100,9 @@ void Webserver::handleClientWrite(int clientFd){
 	}
 }
 
-/**
- * @brief 
- * 
- * @param clientFd 
- * @param events 
- */
+// ==========================================================
+// epoll event modification
+// ==========================================================
 void Webserver::modifyClientEvents(int clientFd, uint32_t events){
 	struct epoll_event ev;
 	ev.events = events;
@@ -258,12 +113,9 @@ void Webserver::modifyClientEvents(int clientFd, uint32_t events){
 	}
 }
 
-/**
- * @brief 
- * 
- * @param clientFd 
- * @param serverIndex 
- */
+// ==========================================================
+// file descriptor management and cleanup
+// ==========================================================
 void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 	struct epoll_event ev;
 	ev.events = EPOLLIN;
@@ -277,25 +129,13 @@ void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 	_lastActivity[clientFd] = time(NULL);
 }
 
-/**
- * @brief 
- * 
- * @param fd 
- */
 void Webserver::removeFdFromPoll(int fd){
 	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) < 0){
-		if (errno != ENOENT && errno != EBADF){
-			std::cerr << "epoll_ctl_del failed on fd " << fd << ": "
-				 << strerror(errno) << std::endl;
-		}
+		if (errno != ENOENT && errno != EBADF)
+			std::cerr << "epoll_ctl_del failed on fd " << fd << ": " << strerror(errno) << std::endl;
 	}
 }
 
-/**
- * @brief 
- * 
- * @param clientFd 
- */
 void Webserver::removeClientFd(int clientFd){
 	_lastActivity.erase(clientFd);
 	const auto& it = _clientFdToServerIndex.find(clientFd);
@@ -308,10 +148,6 @@ void Webserver::removeClientFd(int clientFd){
 	close (clientFd);
 }
 
-/**
- * @brief 
- * 
- */
 void Webserver::closeAllClients(void){
 	for (const auto& [fd, serverIndex] : _clientFdToServerIndex){
 		(void)serverIndex;
@@ -320,60 +156,24 @@ void Webserver::closeAllClients(void){
 	_clientFdToServerIndex.clear();
 }
 
-/**
- * @brief 
- * 
- */
+// ==========================================================
+// timeout management
+// ==========================================================
 void Webserver::checkIdleConnections(){
 	time_t now = time(NULL);
 	std::vector<int> toRemove;
 	for (const auto& [fd, lastTime] : _lastActivity){
-		if (now - lastTime > CONNECTION_TIMEOUT){
+		if (now - lastTime > CONNECTION_TIMEOUT)
 			toRemove.push_back(fd);
-		}
 	}
 	for (int fd : toRemove){
 		std::cerr << "Idle connection timeout on fd: " << fd << std::endl;
-		if (!isFdWriting(fd)){
+		if (!isFdWriting(fd))
 			sendTimeoutResponse(fd);
-		}
 		removeClientFd(fd);
 	}
 }
 
-/**
- * @brief 
- * 
- * @param clientFd 
- * @return true 
- * @return false 
- */
-bool Webserver::isFdWriting(int clientFd) const {
-	auto it = _clientFdToServerIndex.find(clientFd);
-	if (it == _clientFdToServerIndex.end()){
-		return false;
-	}
-	return _servers[it->second].hasWriteBuffer(clientFd);
-}
-
-/**
- * @brief 
- * 
- * @param event 
- * @return true 
- * @return false 
- */
-bool Webserver::hasError(const epoll_event& event) const {
-	return (event.events & EPOLLHUP) ||
-		   (event.events & EPOLLERR) ||
-		   (event.events & EPOLLRDHUP);
-}
-
-/**
- * @brief 
- * 
- * @param clientFd 
- */
 void Webserver::sendTimeoutResponse(int clientFd){
 	std::string body;
 	std::ifstream file("sites/static/errors/408.html");
@@ -394,7 +194,112 @@ void Webserver::sendTimeoutResponse(int clientFd){
 	response += body;
 
 	ssize_t sent = send(clientFd, response.c_str(), response.size(), 0);
-	if (sent <= 0){
+	if (sent <= 0)
 		return;
+}
+
+// ==========================================================
+// belows are public constructors
+// ==========================================================
+static void signalHandler(int sig){
+	(void)sig;
+	signalRunning = 0;
+}
+
+Webserver::Webserver() : _running(false){
+	signal(SIGINT, signalHandler);
+	signal(SIGTERM, signalHandler);
+	signal(SIGPIPE, SIG_IGN);
+	_epollFd = epoll_create1(0);
+	if (_epollFd < 0)
+		throw std::runtime_error("Failed to create epoll instance");
+}
+
+Webserver::~Webserver(){
+	stopWebserver();
+	if (_epollFd >= 0)
+		close(_epollFd);
+}
+
+// ==========================================================
+// belows are public APIs
+// ==========================================================
+int Webserver::createServers(const std::vector<ServerConfig>& config){
+	std::map<std::string, std::vector<config::ServerConfig>> bindGroups;
+	for (size_t i = 0; i < config.size(); i++){
+		const auto& block = config[i];
+		std::string host = block.host;
+		if (host.empty() || host == "*")
+			host = "0.0.0.0";
+		if (host == "255.255.255.255")
+			std::cout << "Binding to special 255.255.255.255, No connection expected" << std::endl;
+		std::string bindKey = host + ":" + std::to_string(block.port);
+		bindGroups[bindKey].push_back(block);
 	}
+
+	for (const auto& [bindKey, blocks] : bindGroups){
+		size_t colonPos = bindKey.find(":");
+		std::string host = bindKey.substr(0, colonPos);
+		int port = stoi(bindKey.substr(colonPos + 1));
+		_servers.emplace_back(host, port, blocks);
+	}
+
+	for (size_t i = 0; i < _servers.size(); i++){
+		if (_servers[i].start() != Server::START_SUCCESS)
+			return FAILURE;
+		int listenFd = _servers[i].getListenFd();
+		struct epoll_event ev;
+		ev.events = EPOLLIN;
+		ev.data.fd = listenFd;
+		if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, listenFd, &ev) < 0)
+			return FAILURE;
+		_listenFdToServerIndex[listenFd] = i;
+	}
+
+	for (size_t i = 0; i < _servers.size(); i++)
+		std::cout << "Server successfully listening on port: " << _servers[i].getPort() << std::endl;
+	return SUCCESS;
+}
+
+int Webserver::runWebserver(){
+	_running = true;
+	const int MAX_EVENTS = 64;
+	struct epoll_event events[MAX_EVENTS];
+	while(_running && signalRunning){
+		int nfds = epoll_wait(_epollFd, events, MAX_EVENTS, 1000);
+		if (nfds < 0){
+			if (errno == EINTR)
+				continue;
+			return utils::FAILURE;
+		}
+		if (nfds == 0){
+			checkIdleConnections();
+			continue;
+		}
+		for (int i = 0; i < nfds; i++){
+			int fd = events[i].data.fd;
+			if (hasError(events[i])){
+				removeClientFd(fd);
+				continue;
+			}
+
+			if (events[i].events & EPOLLIN){
+				if (isListeningSocket(fd))
+					handleNewConnection(fd);
+				else if (!isFdWriting(fd))
+					handleClientRequest(fd);
+			}
+
+			if (events[i].events & EPOLLOUT)
+				handleClientWrite(fd);
+		}
+	}
+	return SUCCESS;
+}
+
+void Webserver::stopWebserver(){
+	_running = false;
+	closeAllClients();
+	for (size_t i = 0; i < _servers.size(); i++)
+		_servers[i].shutdown();
 }

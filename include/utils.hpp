@@ -2,11 +2,6 @@
 #include <iostream>
 #include <sstream>
 
-/**
- * @brief 
- * 
- * 
- */
 namespace utils {
 
 	// General exit codes
