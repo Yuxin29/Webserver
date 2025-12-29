@@ -2,6 +2,9 @@
 
 #include <string>
 #include <vector>
+#include <cctype>
+#include <stdexcept>
+#include <iostream>
 
 /**
  * @file ConfigTokenizer.hpp
@@ -69,23 +72,23 @@ namespace config{
 	 */
 	class Tokenizer
 	{
+	private:
+		const std::string& _source;	 		///< Reference to the source string.
+		std::size_t 		_pos;			///< Current position in the source.
+		int 				_line;			///< Current line number.
+		int 				_col;			///< Current column number.
+
+		char 	peek() const;
+		char	get();
+		bool	eof() const;
+		void	skipWhitespaceAndComments();
+		Token	nextToken();
+		Token	tokenizeIdentifier();
+		Token	tokenizeSymbol();
+		Token	tokenizeString();
+
 	public:
 		Tokenizer(std::string& source);
 		std::vector<Token> tokenize();
-
-	private:
-		const std::string& _source;
-		std::size_t _pos;
-		int 		_line;
-		int 		_col;
-
-		char peek() const;
-		char get();
-		bool eof() const;
-		void skipWhitespaceAndComments();
-		Token nextToken();
-		Token tokenizeIdentifier();
-		Token tokenizeSymbol();
-		Token tokenizeString();
 	};
 }

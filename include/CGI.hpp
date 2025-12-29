@@ -1,9 +1,10 @@
-#ifndef CGI_HPP
-#define CGI_HPP
+#pragma once
 
-#include <string>
 #include "ConfigBuilder.hpp"
 #include "HttpRequest.hpp"
+
+#include <sys/wait.h>
+#include <cstring>
 
 /**
  * @brief		
@@ -27,5 +28,3 @@ public:
 	bool isAllowedCgi()const;
 	std::string execute();
 };
-
-#endif

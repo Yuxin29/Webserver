@@ -1,8 +1,10 @@
-#ifndef CONFIGPARSER_HPP
-#define CONFIGPARSER_HPP
+#pragma once
 
-#include <vector>
 #include <map>
+#include <fstream>
+#include <sstream> //std::stringstream
+#include <filesystem>
+
 #include "ConfigTokenizer.hpp"
 
 /**
@@ -60,5 +62,3 @@ namespace config{
 		bool isKeyword(std::string& s);
 	};
 }
-
-#endif

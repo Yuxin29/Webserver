@@ -1,10 +1,4 @@
 #include "CGI.hpp"
-#include <unistd.h>
-#include <string>
-#include <sys/wait.h>
-#include <cstring>
-#include "HttpRequest.hpp"
-#include <iostream>
 
 /**
  * @brief Construct a new CGI::CGI object
