@@ -19,7 +19,7 @@ This project implements a subset of Nginx-like behavior, including static file s
 - [Error Handling](#error-handling)
 - [Build & Run](#build--run)
 - [Testing](#testing)
-- [Notes for Evaluation](#notes-for-evaluation)
+- [Authors](#Authors)
 
 ---
 
@@ -29,7 +29,7 @@ This webserver is designed to:
 
 - Parse and validate HTTP/1.1 requests
 - Serve static files from configured roots
-- Execute CGI scripts (e.g. Python, PHP)
+- Execute CGI scripts (e.g. Python, PHP, .sh)
 - Handle multiple clients using non-blocking I/O
 - Load and validate Nginx-style configuration files
 
@@ -211,28 +211,33 @@ server {
 ### Error Handling
 
 Custom error pages per status code
-
 Standard HTTP error responses:
 
-400 Bad Request
-
-403 Forbidden
-
-404 Not Found
-
-405 Method Not Allowed
-
-413 Payload Too Large
-
-500 Internal Server Error
+- 301 Moved Permanently
+- 400 Bad Request
+- 403 Forbidden
+- 404 Not Found
+- 405 Method Not Allowed
+- 408 Request Timeout
+- 413 Payload Too Large
+- 414 URI Too Long
+- 431  Request Header Fields Too Large
+- 500 Internal Server Error
 
 Configuration and runtime errors are clearly separated.
 
 ## Build & Run
-make
-./webserv config.conf
 
+```
+make
+./webserv congiguration/config.conf
+```
 The server will start listening according to the configuration file.
+
+```
+./webserv
+```
+The server will start listening according to the default config file(congiguration/simple.conf).
 
 ## Testing
 
@@ -240,15 +245,15 @@ The server will start listening according to the configuration file.
 - Browser-based testing
 - Custom CGI scripts
 
-### Edge cases:
+### Someideas of testing cases:
 
-Invalid requests
-Unsupported methods
-Large request bodies
-Invalid configuration files
+- Invalid requests
+- Unsupported methods
+- Large request bodies
+- Invalid configuration files
 
 ## Authors
 
-- Server: Team member A
-- HTTP & response handling: Team member B
-- Configuration & CGI: Team member C
+- Server: [Team member A](https://github.com/lsurco-t)
+- HTTP & response handling: [Team member B](https://github.com/Yuxin29)
+- Configuration & CGI: [Team member C](https://github.com/Lin-0096)
