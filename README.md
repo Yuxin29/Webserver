@@ -1,6 +1,6 @@
 # Webserver
 
-A lightweight HTTP/1.1 web server written in C++ as part of the 42 school **webserv** project.  
+A lightweight HTTP/1.1 web server written in C++ as part of the 42 school **webserver** project.  
 This project implements a subset of Nginx-like behavior, including static file serving, CGI execution, configuration parsing, and proper HTTP error handling.
 
 ---
@@ -53,6 +53,8 @@ The implementation focuses on **clarity, correctness, and strict separation of r
 ---
 
 ## Project Structure
+
+```
 ├── include # Header files
 ├── src # Source files
 │ ├── CGI.cpp
