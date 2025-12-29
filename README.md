@@ -69,7 +69,7 @@ The implementation focuses on **clarity, correctness, and strict separation of r
 ├── sites # Static files and CGI scripts
 ├── tester # Test utilities
 └── README.md
-
+```
 
 ---
 
