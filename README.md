@@ -76,18 +76,52 @@ The implementation focuses on **clarity, correctness, and strict separation of r
 ## Architecture
 
 ### Request Flow
-Client
-↓
-Webserver (event loop)
-↓
-Server
-↓
-HttpRequestParser
-↓
-HttpResponseHandler
-├─ Static file response
-└─ CGI execution
 
+```
+             ┌────────────────────┐
+             │     Client         │
+             └─────────┬──────────┘
+                       │  HTTP request
+                       ▼
+         ┌───────────────────────────────────┐
+         │       A: Network & I/O Manager    │
+         │---------------------------------- │
+         │ - Accepts connections             │
+         │ - poll/select/epoll monitors FDs  │
+         │ - Non-blocking read/write         │
+         └───────────┬───────────────────────┘
+                     │ raw bytes
+                     ▼
+        ┌─────────────────────────────────────┐
+        │   B: HTTP Request/Response Handler  │
+        │-------------------------------------│
+        │ - Parse HTTP request                │
+        │ - Apply HTTP rules                  │
+        │ - Determines action (static/CGI/etc)│
+        └──────────┬───────────────┬──────────┘
+                   │               │
+       asks for config rules   needs CGI process
+                   │               │
+                   ▼               ▼
+ ┌──────────────────────────────────────────────┐
+ │        C: Configuration & CGI Manager        │
+ │----------------------------------------------│
+ │ - server.conf parser                         │
+ │ - location/root/index/error_pages            │
+ │ - CGI execution (execve)                     │
+ │ - file path resolution                       │
+ └──────────────────┬───────────────────────────┘
+                    │ response data (file/CGI output)
+                    ▼
+        ┌─────────────────────────────────────┐
+        │    B builds full HTTP response      │
+        └──────────────────┬──────────────────┘
+                           │ final bytes
+                           ▼
+         ┌────────────────────────────────────┐
+         │    A: Sends response to client     │
+         └────────────────────────────────────┘
+```
 
 Each step operates on well-defined data structures to avoid tight coupling.
 
@@ -172,7 +206,9 @@ server {
         cgi_ext .py;
     }
 }
-Error Handling
+```
+
+### Error Handling
 
 Custom error pages per status code
 
@@ -192,47 +228,27 @@ Standard HTTP error responses:
 
 Configuration and runtime errors are clearly separated.
 
-Build & Run
+## Build & Run
 make
 ./webserv config.conf
 
-
 The server will start listening according to the configuration file.
 
-Testing
+## Testing
 
-Manual testing with curl
+- Manual testing with curl
+- Browser-based testing
+- Custom CGI scripts
 
-Browser-based testing
-
-Custom CGI scripts
-
-Edge cases:
+### Edge cases:
 
 Invalid requests
-
 Unsupported methods
-
 Large request bodies
-
 Invalid configuration files
 
-Notes for Evaluation
+## Authors
 
-Clear separation between lexing, parsing, and execution
-
-No parsing performed at runtime
-
-Proper use of system calls (fork, execve, pipe, dup2)
-
-Robust error handling and cleanup
-
-Modular and maintainable codebase
-
-Authors
-
-HTTP & response handling: Team member A
-
-Server, configuration & CGI: Team member B
-
-42 School — Webserv Project
+- Server: Team member A
+- HTTP & response handling: Team member B
+- Configuration & CGI: Team member C
