@@ -1,8 +1,8 @@
 #include "Webserver.hpp"
 #include "ConfigBuilder.hpp"
-#include "utils.hpp"
 #include "Server.hpp"
 
+#include "utils.hpp"
 using namespace config;
 using namespace utils;
 

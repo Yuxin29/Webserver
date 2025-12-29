@@ -5,10 +5,12 @@
 #include <iostream>
 
 /**
- * @brief 
- * 
- * 
- * 
+ * @file ConfigTokenizer.hpp
+ * @brief Lexical analyzer for webserver configuration files.
+ *
+ * This module converts a raw configuration file into 
+ * a sequence of typed tokens that can be consumed
+ * by the configuration parser.
  */
 namespace config{
 	Tokenizer::Tokenizer(std::string& source)
