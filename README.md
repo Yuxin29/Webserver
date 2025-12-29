@@ -210,34 +210,23 @@ server {
 
 ### Error Handling
 
-Custom error pages per status code
-Standard HTTP error responses:
+The server provides custom error pages and standard HTTP responses for common client and server errors:
 
-- 301 Moved Permanently
-- 400 Bad Request
-- 403 Forbidden
-- 404 Not Found
-- 405 Method Not Allowed
-- 408 Request Timeout
-- 413 Payload Too Large
-- 414 URI Too Long
-- 431  Request Header Fields Too Large
-- 500 Internal Server Error
-
-Configuration and runtime errors are clearly separated.
+- Redirection errors (3xx): 301
+- Client errors (4xx): 400, 403, 404, 405, 408, 413, 414, 431
+* Server errors (5xx): 500
+Not all HTTP status codes are implemented due to the project scope.
+Additional codes can be added easily if needed.
 
 ## Build & Run
 
 ```
 make
 ./webserv congiguration/config.conf
-```
-The server will start listening according to the configuration file.
-
-```
 ./webserv
 ```
-The server will start listening according to the default config file(congiguration/simple.conf).
+The server will start listening according to the spesified configuration file.
+If not specified, the server will start listening according to the default config file(congiguration/simple.conf).
 
 ## Testing
 
@@ -254,6 +243,6 @@ The server will start listening according to the default config file(congigurati
 
 ## Authors
 
-- Server: [Team member A](https://github.com/lsurco-t)
-- HTTP & response handling: [Team member B](https://github.com/Yuxin29)
-- Configuration & CGI: [Team member C](https://github.com/Lin-0096)
+- Server: [Lucio](https://github.com/lsurco-t)
+- HTTP & response handling: [Yuxin Wu](https://github.com/Yuxin29)
+- Configuration & CGI: [Lin Liu](https://github.com/Lin-0096)
