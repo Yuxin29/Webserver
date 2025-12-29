@@ -6,6 +6,12 @@
 #include "HttpRequest.hpp"
 #include <iostream>
 
+/**
+ * @brief Construct a new CGI::CGI object
+ * 
+ * @param req 
+ * @param lc 
+ */
 CGI::CGI(const HttpRequest& req, const config::LocationConfig& lc)
 :_cgiPass(lc.cgiPass),
 _cgiExt(lc.cgiExt),
@@ -39,6 +45,12 @@ _serverName("")
         _serverName = _header.at("host");
 }
 
+/**
+ * @brief 
+ * 
+ * @return true 
+ * @return false 
+ */
 bool CGI::isAllowedCgi()const
 {
 	if (_cgiPass.empty())
@@ -50,6 +62,14 @@ bool CGI::isAllowedCgi()const
 	return true;
 }
 
+
+/**
+ * @brief 
+ * 
+ * 
+ * 
+ * @return std::string 
+ */
 std::string CGI::execute()
 {
 	int	stdin_pipe[2];

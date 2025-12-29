@@ -9,6 +9,14 @@
 #include "HttpRequestParser.hpp"
 #include "HttpResponseHandler.hpp"
 
+/**
+ * @brief 
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
 class Server {
 	public:
 		enum ClientStatus {

@@ -7,6 +7,15 @@
 #include <vector>
 #include <cstring>
 
+
+
+/**
+ * @brief 
+ * 
+ * 
+ * 
+ * 
+ */
 class Webserver {
 	private:
 	    static constexpr int CONNECTION_TIMEOUT = 60;

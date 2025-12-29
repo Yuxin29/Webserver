@@ -4,6 +4,12 @@
 #include <stdexcept>
 #include <iostream>
 
+/**
+ * @brief 
+ * 
+ * 
+ * 
+ */
 namespace config{
 	Tokenizer::Tokenizer(std::string& source)
 	:_source(source),_pos(0),_line(1),_col(1){}

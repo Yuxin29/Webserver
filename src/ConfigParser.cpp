@@ -5,6 +5,12 @@
 #include <iostream>
 #include <filesystem>
 
+/**
+ * @brief 
+ * 
+ * 
+ * 
+ */
 namespace config{
 	Parser::Parser(const std::string& filename)
 	:_pos(0)

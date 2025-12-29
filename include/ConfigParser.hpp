@@ -5,6 +5,13 @@
 #include <map>
 #include "ConfigTokenizer.hpp"
 
+/**
+ * @brief 
+ * 
+ * 
+ * 
+ * 
+ */
 namespace config{
 	struct LocationNode
 	{

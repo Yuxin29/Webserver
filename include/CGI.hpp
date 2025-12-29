@@ -5,6 +5,10 @@
 #include "ConfigBuilder.hpp"
 #include "HttpRequest.hpp"
 
+/**
+ * @brief		
+ * 
+ */
 class CGI
 {
 private:

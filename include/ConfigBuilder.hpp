@@ -6,6 +6,11 @@
 #include <vector>
 #include <map>
 
+/**
+ * @brief 
+ * 
+ * 
+ */
 namespace config
 {
 	struct LocationConfig

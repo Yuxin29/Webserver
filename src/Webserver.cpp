@@ -8,11 +8,20 @@ using namespace utils;
 
 static volatile sig_atomic_t signalRunning = 1;
 
+/**
+ * @brief 
+ * 
+ * @param sig 
+ */
 static void signalHandler(int sig){
 	(void)sig;
 	signalRunning = 0;
 }
 
+/**
+ * @brief Construct a new Webserver:: Webserver object
+ * 
+ */
 Webserver::Webserver() : _running(false){
 	signal(SIGINT, signalHandler);
 	signal(SIGTERM, signalHandler);
@@ -23,6 +32,10 @@ Webserver::Webserver() : _running(false){
 	}
 }
 
+/**
+ * @brief Destroy the Webserver:: Webserver object
+ * 
+ */
 Webserver::~Webserver(){
 	stopWebserver();
 	if (_epollFd >= 0){
@@ -30,7 +43,10 @@ Webserver::~Webserver(){
 	}
 }
 
-/* This creates the necessary servers, grouping them by host:port. Call Server::Start to bind ips and create listening sockets.*/
+/**
+ * @brief This creates the necessary servers, grouping them by host:port. Call Server::Start to bind ips and create listening sockets.
+ * 
+ */
 int Webserver::createServers(const std::vector<ServerConfig>& config){
 	std::map<std::string, std::vector<config::ServerConfig>> bindGroups;
 	for (size_t i = 0; i < config.size(); i++){
@@ -74,7 +90,10 @@ int Webserver::createServers(const std::vector<ServerConfig>& config){
 	return SUCCESS;
 }
 
-/* Main loop running during server execution. It handles Epoll events, manages server and client connections.*/
+/**
+ * @brief Main loop running during server execution. It handles Epoll events, manages server and client connections
+ * 
+ */
 int Webserver::runWebserver(){
 	_running = true;
 	const int MAX_EVENTS = 64;
@@ -114,6 +133,10 @@ int Webserver::runWebserver(){
 	return SUCCESS;
 }
 
+/**
+ * @brief 
+ * 
+ */
 void Webserver::stopWebserver(){
 	_running = false;
 	closeAllClients();
@@ -122,10 +145,22 @@ void Webserver::stopWebserver(){
 	}
 }
 
+/**
+ * @brief 
+ * 
+ * @param fd 
+ * @return true 
+ * @return false 
+ */
 bool Webserver::isListeningSocket(int fd) const {
 	return _listenFdToServerIndex.find(fd) != _listenFdToServerIndex.end();
 }
 
+/**
+ * @brief 
+ * 
+ * @param listenFd 
+ */
 void Webserver::handleNewConnection(int listenFd){
 	const auto& it = _listenFdToServerIndex.find(listenFd);
 	if (it == _listenFdToServerIndex.end()){
@@ -139,6 +174,11 @@ void Webserver::handleNewConnection(int listenFd){
 	addClientToPoll(clientFd, serverIndex);
 }
 
+/**
+ * @brief 
+ * 
+ * @param clientFd 
+ */
 void Webserver::handleClientRequest(int clientFd){
 	auto it = _clientFdToServerIndex.find(clientFd);
 	if (it == _clientFdToServerIndex.end()){
@@ -172,6 +212,11 @@ void Webserver::handleClientRequest(int clientFd){
 	}
 }
 
+/**
+ * @brief 
+ * 
+ * @param clientFd 
+ */
 void Webserver::handleClientWrite(int clientFd){
 	auto it = _clientFdToServerIndex.find(clientFd);
 	if (it == _clientFdToServerIndex.end()){
@@ -197,6 +242,12 @@ void Webserver::handleClientWrite(int clientFd){
 	}
 }
 
+/**
+ * @brief 
+ * 
+ * @param clientFd 
+ * @param events 
+ */
 void Webserver::modifyClientEvents(int clientFd, uint32_t events){
 	struct epoll_event ev;
 	ev.events = events;
@@ -207,6 +258,12 @@ void Webserver::modifyClientEvents(int clientFd, uint32_t events){
 	}
 }
 
+/**
+ * @brief 
+ * 
+ * @param clientFd 
+ * @param serverIndex 
+ */
 void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 	struct epoll_event ev;
 	ev.events = EPOLLIN;
@@ -220,6 +277,11 @@ void Webserver::addClientToPoll(int clientFd, size_t serverIndex){
 	_lastActivity[clientFd] = time(NULL);
 }
 
+/**
+ * @brief 
+ * 
+ * @param fd 
+ */
 void Webserver::removeFdFromPoll(int fd){
 	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) < 0){
 		if (errno != ENOENT && errno != EBADF){
@@ -229,6 +291,11 @@ void Webserver::removeFdFromPoll(int fd){
 	}
 }
 
+/**
+ * @brief 
+ * 
+ * @param clientFd 
+ */
 void Webserver::removeClientFd(int clientFd){
 	_lastActivity.erase(clientFd);
 	const auto& it = _clientFdToServerIndex.find(clientFd);
@@ -241,6 +308,10 @@ void Webserver::removeClientFd(int clientFd){
 	close (clientFd);
 }
 
+/**
+ * @brief 
+ * 
+ */
 void Webserver::closeAllClients(void){
 	for (const auto& [fd, serverIndex] : _clientFdToServerIndex){
 		(void)serverIndex;
@@ -249,6 +320,10 @@ void Webserver::closeAllClients(void){
 	_clientFdToServerIndex.clear();
 }
 
+/**
+ * @brief 
+ * 
+ */
 void Webserver::checkIdleConnections(){
 	time_t now = time(NULL);
 	std::vector<int> toRemove;
@@ -266,6 +341,13 @@ void Webserver::checkIdleConnections(){
 	}
 }
 
+/**
+ * @brief 
+ * 
+ * @param clientFd 
+ * @return true 
+ * @return false 
+ */
 bool Webserver::isFdWriting(int clientFd) const {
 	auto it = _clientFdToServerIndex.find(clientFd);
 	if (it == _clientFdToServerIndex.end()){
@@ -274,12 +356,24 @@ bool Webserver::isFdWriting(int clientFd) const {
 	return _servers[it->second].hasWriteBuffer(clientFd);
 }
 
+/**
+ * @brief 
+ * 
+ * @param event 
+ * @return true 
+ * @return false 
+ */
 bool Webserver::hasError(const epoll_event& event) const {
 	return (event.events & EPOLLHUP) ||
 		   (event.events & EPOLLERR) ||
 		   (event.events & EPOLLRDHUP);
 }
 
+/**
+ * @brief 
+ * 
+ * @param clientFd 
+ */
 void Webserver::sendTimeoutResponse(int clientFd){
 	std::string body;
 	std::ifstream file("sites/static/errors/408.html");
@@ -289,9 +383,9 @@ void Webserver::sendTimeoutResponse(int clientFd){
 		buffer << file.rdbuf();
 		body = buffer.str();
 		file.close();
-	} else {
-		body = "<h1>408 Request Timeout</h1>";
 	}
+	else
+		body = "<h1>408 Request Timeout</h1>";
 	std::string response = "HTTP/1.1 408 Request Timeout\r\n";
 	response += "Content-Length: " + std::to_string(body.size()) + "\r\n";
 	response += "Content-Type: text/html\r\n";

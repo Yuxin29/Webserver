@@ -6,6 +6,13 @@
 using namespace config;
 using namespace utils;
 
+/**
+ * @brief 
+ * 
+ * @param argc 
+ * @param argv 
+ * @return int 
+ */
 int main(int argc, char **argv){
 	try {
 		std::vector<ServerConfig> configs;

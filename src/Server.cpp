@@ -2,6 +2,13 @@
 
 using namespace config;
 
+/**
+ * @brief Construct a new Server:: Server object
+ * 
+ * @param host 
+ * @param port 
+ * @param serverBlocks 
+ */
 Server::Server(const std::string& host, int port,
 	const std::vector<ServerConfig>& serverBlocks)
 	: _host(host), _listenFd(NOT_VALID_FD), _port(port), _virtualHosts(serverBlocks), _addr(){
@@ -12,10 +19,19 @@ Server::Server(const std::string& host, int port,
 		_addr.sin_port = htons(_port);
 }
 
+/**
+ * @brief Destroy the Server:: Server object
+ * 
+ */
 Server::~Server(){
 	shutdown();
 }
 
+/**
+ * @brief Construct a new Server:: Server object
+ * 
+ * @param other 
+ */
 Server::Server(Server&& other) noexcept
 	: _host(std::move(other._host)), _listenFd(other._listenFd), _port(other._port),
 		 _virtualHosts(std::move(other._virtualHosts)), _addr(other._addr),
@@ -24,6 +40,11 @@ Server::Server(Server&& other) noexcept
 		other._listenFd = NOT_VALID_FD;
 }
 
+/**
+ * @brief 
+ * 
+ * @return Server::StartResult 
+ */
 Server::StartResult Server::start(){
 	_listenFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (_listenFd < 0){
