@@ -7,14 +7,8 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 
-/**
- * @brief 
- * 
- * 
- * 
- * 
- * 
- */
+using namespace config;
+
 class Server {
 	public:
 		/// Possible statuses after handling a client request.

@@ -1,7 +1,5 @@
 #include "Server.hpp"
 
-using namespace config;
-
 /* ========================================== */
 /*  2 public helper methods for  WriteBuffer  */
 /* ========================================== */
@@ -58,9 +56,8 @@ Server::Server(const std::string& host, int port, const std::vector<ServerConfig
 : _host(host), _listenFd(NOT_VALID_FD), _port(port), _virtualHosts(serverBlocks), _addr()
 {
 		_addr.sin_family = AF_INET;
-		if (inet_pton(AF_INET, _host.c_str(), &_addr.sin_addr) <= 0){
+		if (inet_pton(AF_INET, _host.c_str(), &_addr.sin_addr) <= 0)
 			throw std::runtime_error("Invalid Ip address: " + _host);
-		}
 		_addr.sin_port = htons(_port);
 }
 
@@ -88,11 +85,6 @@ Server::~Server(){
 /* ==================================== */
 /*  startup and shutdown of the server  */
 /* ==================================== */
-/**
- * @brief 
- * 
- * @return Server::StartResult 
- */
 Server::StartResult Server::start(){
 	_listenFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (_listenFd < 0){
@@ -119,10 +111,6 @@ Server::StartResult Server::start(){
 	return Server::START_SUCCESS;
 }
 
-/**
- * @brief Shutdown the server and close the listening socket
- * 
- */
 void Server::shutdown(){
 	if (_listenFd != NOT_VALID_FD){
 		std::cout << "Stopping servers listening on port: " << _port << std::endl;
@@ -171,9 +159,8 @@ int  Server::acceptConnection(void){
 Server::ClientStatus Server::handleClient(int clientFd){
 	char buffer[8192];
 	ssize_t nBytes = recv(clientFd, buffer, sizeof(buffer), 0);
-	if (nBytes < 0){
+	if (nBytes < 0)
 		return CLIENT_INCOMPLETE;
-	}
 	if (nBytes == 0){
 		cleanMaps(clientFd);
 		return CLIENT_ERROR;
@@ -186,7 +173,6 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	std::string chunk(buffer, nBytes);
 	HttpRequest request = parser.parseHttpRequest(chunk);
 	if (parser.getState() == ERROR) {
-
 		HttpResponse error_res = makeErrorResponse(parser.getErrStatus(), getDefaultVhost());
 		std::string error_res_string = error_res.buildResponseString();
 		ssize_t sent = send(clientFd, error_res_string.c_str(), error_res_string.size(), 0);
@@ -216,9 +202,8 @@ Server::ClientStatus Server::handleClient(int clientFd){
 	std::string responseString = response.buildResponseString();
 	bool keepAlive = response.isKeepAlive();
 	ssize_t sent = send(clientFd, responseString.c_str(), responseString.size(), 0);
-	if (sent < 0){
+	if (sent < 0)
 		sent = 0;
-	}
 	if ((size_t)sent < responseString.size()){
 		_writeBuffers[clientFd].data = responseString.substr(sent);
 		_writeBuffers[clientFd].sent = 0;
@@ -246,26 +231,22 @@ Server::ClientStatus Server::handleClient(int clientFd){
  */
 Server::ClientStatus Server::handleClientWrite(int clientFd) {
 	auto it = _writeBuffers.find(clientFd);
-	if (it == _writeBuffers.end()){
+	if (it == _writeBuffers.end())
 		return CLIENT_ERROR;
-	}
 	WriteBuffer& buffer = it->second;
 	const char* dataPtr = buffer.data.c_str() + buffer.sent;
 	size_t remaining = buffer.remainingToSend();
-
 	ssize_t bytesSent = send(clientFd, dataPtr, remaining, 0);
-	if (bytesSent < 0){
+	if (bytesSent < 0)
 		return CLIENT_WRITING;
-	}
 	buffer.sent += bytesSent;
 	if (buffer.isComplete()){
 		bool keepAlive = buffer.keepAlive;
 		_writeBuffers.erase(clientFd);
-		if (keepAlive){
+		if (keepAlive)
 			_parsers[clientFd] = HttpParser();
-		} else {
+		else
 			cleanMaps(clientFd);
-		}
 		return keepAlive ? CLIENT_KEEP_ALIVE : CLIENT_COMPLETE;
 	}
 	return CLIENT_WRITING;
@@ -279,7 +260,6 @@ void  Server::cleanMaps(int clientFd){
 	_requestCount.erase(clientFd);
 	_writeBuffers.erase(clientFd);
 }
-
 
 bool Server::hasWriteBuffer(int clientFd) const {
     return _writeBuffers.find(clientFd) != _writeBuffers.end();

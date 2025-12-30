@@ -1,11 +1,5 @@
 #pragma once
 
-#include <map>
-#include <string>
-#include <sstream>
-#include <fstream>
-#include <iostream>
-
 #include "ConfigBuilder.hpp"
 #include "CGI.hpp"
 
@@ -66,7 +60,6 @@ public:
     const std::map<std::string, std::string>&  getHeaders() const           { return _responseHeaders; }
     bool                                       isKeepAlive() const          { return _keepConnectionAlive; }
     bool                                       isRequestComplete() const    { return _requestComplete; }
-
     // --------------------
     //        Setters
     // --------------------
@@ -77,7 +70,6 @@ public:
     void        addHeader(const std::string& k, const std::string& v)       { _responseHeaders[k] = v; }
     void        setKeepAlive(const bool &alive)                             { _keepConnectionAlive = alive; }
     void        setRequestComplete(const bool &complete)                    { _requestComplete = complete; }
-
     // --------------------
     //    Constructors
     // --------------------
@@ -91,7 +83,6 @@ public:
     _body = body;
     _responseHeaders = responseHeaders;
     _keepConnectionAlive = alive; _requestComplete = complete;}
-
     // --------------------
     //   Serialization
     // --------------------

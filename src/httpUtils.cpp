@@ -1,7 +1,5 @@
 #include "httpUtils.hpp"
 
-namespace fs = std::filesystem;
-
 namespace httpUtils{
 
    // Helper: Check if path has common CGI extension

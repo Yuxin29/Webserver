@@ -1,12 +1,14 @@
 #pragma once
 
+#include "ConfigBuilder.hpp"
+#include "HttpResponse.hpp"
+
 #include <filesystem>
 #include <algorithm>
 #include <ctime>
 #include <sys/stat.h>
 
-#include "ConfigBuilder.hpp"
-#include "HttpResponse.hpp"
+namespace fs = std::filesystem;
 
 namespace httpUtils {
     bool                            isMethodAllowed(const config::LocationConfig* loc, const std::string& method);

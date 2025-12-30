@@ -13,9 +13,7 @@
  */
 std::string HttpResponse::buildResponseString(){
     std::ostringstream response;
-
     response << _version << " " << _status << " " << _reason << "\r\n";
-
     bool hasContentLength = false;
 
     for (const auto &header : _responseHeaders) {
@@ -24,9 +22,8 @@ std::string HttpResponse::buildResponseString(){
         response << header.first << ": " << header.second << "\r\n";
     }
 
-    if (!hasContentLength) {
+    if (!hasContentLength)
         response << "Content-Length: " << _body.size() << "\r\n";
-    }
 
     if (_responseHeaders.find("Connection") == _responseHeaders.end()) {
         if (_keepConnectionAlive)
@@ -122,12 +119,10 @@ HttpResponse makeErrorResponse(int status, const config::ServerConfig* vh)
 HttpResponse makeRedirect301(const std::string& location, const config::ServerConfig* vh)
 {
    std::string body;
-   if (vh && vh->errorPages.count(301)) {
+   if (vh && vh->errorPages.count(301))
       body = loadFile(vh->errorPages.at(301));
-   }
-   if (body.empty()){
+   if (body.empty())
       body = "<h1>301 Moved Permanently</h1>";
-   }
    std::map<std::string, std::string> headers;
    headers["Location"] = location;
 

@@ -1,12 +1,12 @@
 #pragma once
 
+#include "HttpRequest.hpp"
+#include "httpUtils.hpp"
+
 #include <iostream>
 #include <sstream>
 #include <set>
 #include <vector>
-
-#include "HttpRequest.hpp"
-#include "httpUtils.hpp"
 
 using namespace httpUtils;
 

@@ -1,18 +1,5 @@
 #include "Webserver.hpp"
-#include "ConfigBuilder.hpp"
-#include "Server.hpp"
 
-#include "utils.hpp"
-using namespace config;
-using namespace utils;
-
-/**
- * @brief 
- * 
- * @param argc 
- * @param argv 
- * @return int 
- */
 int main(int argc, char **argv){
 	try {
 		std::vector<ServerConfig> configs;
@@ -26,18 +13,16 @@ int main(int argc, char **argv){
 			std::vector<ServerNode> servers = parser.parse();
 			configs = ConfigBuilder::build(servers);
 		}
-		else {
+		else
 			return returnErrorMessage(WRONG_ARGUMENTS);
-		}
 		Webserver miniNginx;
-		if (miniNginx.createServers(configs) == FAILURE){
+		if (miniNginx.createServers(configs) == FAILURE)
 			return returnErrorMessage(FAILED_TO_CREATE_SERVERS);
-		}
-		if (miniNginx.runWebserver() == FAILURE){
+		if (miniNginx.runWebserver() == FAILURE)
 			return returnErrorMessage(ERROR_RUNNING_SERVERS);
-		}
 		return SUCCESS;
-	} catch (const std::exception& e){
+	} 
+	catch (const std::exception& e){
 		std::cerr << "Error: " << e.what() << std::endl;
 		return FAILURE;
 	}

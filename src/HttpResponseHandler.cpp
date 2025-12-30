@@ -1,9 +1,5 @@
 
 #include "HttpResponseHandler.hpp"
-#include <iostream>
-
-namespace fs = std::filesystem;
-
 
 static bool extractMultipartFile(const HttpRequest& req, std::string& outFileData, std::string& outFileName)
 {
@@ -41,21 +37,17 @@ static bool extractMultipartFile(const HttpRequest& req, std::string& outFileDat
    if (filenamePos != std::string::npos) {
       filenamePos += 10;
       size_t filenameEnd = headers.find("\"", filenamePos);
-      if (filenameEnd != std::string::npos) {
+      if (filenameEnd != std::string::npos)
          outFileName = headers.substr(filenamePos, filenameEnd - filenamePos);
-      }
    }
     
-   if (outFileName.empty()) {
+   if (outFileName.empty())
       outFileName = "upload_" + std::to_string(time(NULL)) + ".dat";
-   }
 
 	size_t dataStart = headersEnd + 4;
    size_t markerPos = body.find( marker, dataStart);
 	if (markerPos == std::string::npos)
-	{
 		return false;
-	}
 
 	size_t dataEnd = markerPos;
 	if (dataEnd >= 2 && body.compare(dataEnd - 2, 2, "\r\n") == 0)
@@ -92,9 +84,8 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
    if (pos == std::string::npos){
       pos = out.find("\n\n");
       sepLen = 2;
-      if (pos == std::string::npos){
+      if (pos == std::string::npos)
          return makeErrorResponse(500, vh);
-      }
    }
    std::string headersString = out.substr(0, pos);
    std::string bodyString = out.substr(pos + sepLen);
@@ -107,7 +98,6 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
    while (std::getline(ss, line)) {
       if (!line.empty() && line.back() == '\r')
          line.pop_back();
-
       size_t dd = line.find(":");
       std::string key = line.substr(0, dd);
       std::string val = line.substr(dd + 1);
@@ -118,15 +108,13 @@ HttpResponse HttpResponseHandler::parseCGIOutput(const std::string& out, const H
          statusCode = val.substr(0, space);
          statusMsg  = val.substr(space + 1);
       }
-      else {
+      else
          headersMap[key] = val;
-      }
    }
 
    headersMap["Content-Length"] = std::to_string(bodyString.size());
-   if (headersMap.find("Content-Type") == headersMap.end()) {
+   if (headersMap.find("Content-Type") == headersMap.end())
       headersMap["Content-Type"] = "text/html; charset=UTF-8";
-   }
 
    return HttpResponse("HTTP/1.1", std::stoi(statusCode), statusMsg, bodyString, headersMap, httpUtils::shouldKeepAlive(req), true);
 }
@@ -174,19 +162,16 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    std::string fullUri = req.getPath();
    std::string uri = fullUri;
    size_t queryPos = fullUri.find('?');
-   if (queryPos != std::string::npos) {
+   if (queryPos != std::string::npos)
       uri = fullUri.substr(0, queryPos);
-   }
 
    if (httpUtils::isCgiRequest(req, *vh)){
       const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "GET");
-      if (!lc){
+      if (!lc)
          return makeErrorResponse(403, vh);
-      }
       CGI cgi(req, *lc);
-      if (!cgi.isAllowedCgi()){
+      if (!cgi.isAllowedCgi())
         return makeErrorResponse(403, vh);
-      }
       std::string cgi_output = cgi.execute();
       if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
          return makeErrorResponse(500, vh);
@@ -199,14 +184,12 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
 
    if (lc->path.length() > 1 && lc->path.back() == '/' && !uri.empty() && uri.back() != '/') {
       std::string locWithoutSlash = lc->path.substr(0, lc->path.length() - 1);
-      if (uri == locWithoutSlash) {
+      if (uri == locWithoutSlash)
          uri += "/";
-      }
    }
 
-   if (!lc->redirect.empty()) {
+   if (!lc->redirect.empty())
       return makeRedirect301(lc->redirect, vh);
-   }
 
    std::string fullpath = httpUtils::mapUriToPath(lc, uri);
    struct stat st;
@@ -216,7 +199,6 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
       {
          if (uri.empty() || uri.back() != '/')
             return makeRedirect301(uri + "/", vh);
-
          if (!httpUtils::isMethodAllowed(lc, "GET"))
             return makeErrorResponse(405, vh);
 
@@ -270,9 +252,7 @@ HttpResponse HttpResponseHandler::handleGET(HttpRequest& req, const config::Serv
    headers["Expires"] = "0";
    if (forceDownload) {
       size_t lastSlash = fullpath.find_last_of('/');
-      std::string filename = (lastSlash != std::string::npos)
-         ? fullpath.substr(lastSlash + 1)
-         : "download";
+      std::string filename = (lastSlash != std::string::npos) ? fullpath.substr(lastSlash + 1) : "download";
       headers["content-disposition"] = "attachment; filename=\"" + filename + "\"";
    }
    return HttpResponse("HTTP/1.1", 200, "OK", body, headers, shouldKeepAlive(req), true);
@@ -304,32 +284,24 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 	std::string fullUri = req.getPath();
 	std::string uri = fullUri;
 	size_t queryPos = fullUri.find('?');
-	if (queryPos != std::string::npos) {
+	if (queryPos != std::string::npos) 
 		uri = fullUri.substr(0, queryPos);
-	}
    const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
-   if (!lc){
+   if (!lc)
       return makeErrorResponse(403, vh);
-   }
-
-   if (req.getBody().size() > lc->clientMaxBodySize){
+   if (req.getBody().size() > lc->clientMaxBodySize)
       return makeErrorResponse(413, vh);
-   }
 
 	if (httpUtils::isCgiRequest(req, *vh)){
 		const config::LocationConfig* lc = httpUtils::findLocationConfig(vh, uri, "POST");
-		if (!lc){
+		if (!lc)
 			return makeErrorResponse(403, vh);
-		}
-
-      if (!httpUtils::isMethodAllowed(lc, "POST")){
+      if (!httpUtils::isMethodAllowed(lc, "POST"))
          return makeErrorResponse(405, vh);
-      }
 
 		CGI cgi(req, *lc);
-		if (!cgi.isAllowedCgi()){
+		if (!cgi.isAllowedCgi())
 		   return makeErrorResponse(403, vh);
-		}
 
 		std::string cgi_output = cgi.execute();
 		if (cgi_output.empty() || cgi_output == "CGI_EXECUTE_FAILED")
@@ -337,9 +309,8 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 		return parseCGIOutput(cgi_output, req, vh);
 	}
 
-   if (!httpUtils::isMethodAllowed(lc, "POST")){
+   if (!httpUtils::isMethodAllowed(lc, "POST"))
       return makeErrorResponse(405, vh);
-   }
 
 	std::string ct;
 	if (req.getHeaders().count("content-type"))
@@ -348,17 +319,14 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
 	{
 		std::string fileData;
       std::string fileName;
-		if (!extractMultipartFile(req, fileData, fileName)){
+		if (!extractMultipartFile(req, fileData, fileName))
          return makeErrorResponse(400, vh);
-      }
 
 		std::string fullPath = lc->upload_dir;
-      if (!fullPath.empty() && fullPath.back() != '/') {
+      if (!fullPath.empty() && fullPath.back() != '/')
          fullPath += "/";
-      }
-      if (access(fullPath.c_str(), W_OK) != 0){
+      if (access(fullPath.c_str(), W_OK) != 0)
          return makeErrorResponse(403, vh);
-      }
       fullPath += fileName;
 		std::ofstream ofs(fullPath.c_str(), std::ios::binary);
 		ofs.write(fileData.data(), fileData.size());
@@ -368,7 +336,6 @@ HttpResponse HttpResponseHandler::handlePOST(HttpRequest& req, const config::Ser
       headers["Content-Type"] = "text/plain";
       headers["Content-Length"] = std::to_string(responseBody.size());
       return HttpResponse("HTTP/1.1", 200, "Created", responseBody, headers, httpUtils::shouldKeepAlive(req), true);
-
 	}
 	std::string responseBody = "Received " + std::to_string(req.getBody().size()) + " bytes";
 	return HttpResponse("HTTP/1.1", 201, "Created", responseBody, std::map<std::string, std::string>(), httpUtils::shouldKeepAlive(req), true);

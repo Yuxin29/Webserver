@@ -50,7 +50,6 @@ public:
     const std::string&                         getVersion() const   { return _version;}
     const std::map<std::string, std::string>&  getHeaders() const   { return _requestHeaders;}
     const std::string&                         getBody() const      { return _body;}
-
     // --------------------
     //        Setters
     // --------------------

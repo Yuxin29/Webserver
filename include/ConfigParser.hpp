@@ -1,11 +1,11 @@
 #pragma once
 
+#include "ConfigTokenizer.hpp"
+
 #include <map>
 #include <fstream>
-#include <sstream> //std::stringstream
+#include <sstream>
 #include <filesystem>
-
-#include "ConfigTokenizer.hpp"
 
 namespace config{
 	// Represents a location block in the configuration file.

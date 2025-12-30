@@ -1,9 +1,6 @@
 
 #include "Webserver.hpp"
 
-using namespace config;
-using namespace utils;
-
 static volatile sig_atomic_t signalRunning = 1;
 
 // ==========================================================
@@ -45,13 +42,11 @@ void Webserver::handleNewConnection(int listenFd){
 // ==========================================================
 void Webserver::handleClientRequest(int clientFd){
 	auto it = _clientFdToServerIndex.find(clientFd);
-	if (it == _clientFdToServerIndex.end()){
+	if (it == _clientFdToServerIndex.end())
 		return;
-	}
 	time_t now = time(NULL);
 	size_t serverIndex = it->second;
 	Server::ClientStatus status = _servers[serverIndex].handleClient(clientFd);
-
 	switch (status){
 	case Server::CLIENT_INCOMPLETE:
 		if (now - _lastActivity[clientFd] > CONNECTION_TIMEOUT){
@@ -223,6 +218,7 @@ Webserver::~Webserver(){
 
 // ==========================================================
 // belows are public APIs
+// create server instances, runs main event loop, stops the websier and exits
 // ==========================================================
 int Webserver::createServers(const std::vector<ServerConfig>& config){
 	std::map<std::string, std::vector<config::ServerConfig>> bindGroups;

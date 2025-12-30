@@ -1,10 +1,13 @@
 #pragma once
 
 #include "Server.hpp"
-#include "ConfigBuilder.hpp"
 #include "utils.hpp"
+
 #include <sys/epoll.h>
 #include <csignal>
+
+// using namespace config;
+using namespace utils;
 
 /**
  * @class Webserver
@@ -59,11 +62,13 @@ class Webserver {
 	
 
 	public:
+		//constructors
 		explicit Webserver();
 		Webserver(const Webserver& other) = delete;
 		Webserver& operator=(const Webserver& other) = delete;
 		~Webserver();
 
+		// create server instances, runs main event loop, stops the websier and exits
 		int  createServers(const std::vector<config::ServerConfig>& config);
 		int  runWebserver(void);
 		void stopWebserver(void);

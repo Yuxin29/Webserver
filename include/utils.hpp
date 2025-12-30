@@ -1,9 +1,9 @@
 #pragma once
+
 #include <iostream>
 #include <sstream>
 
 namespace utils {
-
 	// General exit codes
 	constexpr int SUCCESS = 0;
 	constexpr int FAILURE = 1;

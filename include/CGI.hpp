@@ -6,10 +6,6 @@
 #include <sys/wait.h>
 #include <cstring>
 
-/**
- * @brief		
- * 
- */
 class CGI
 {
 private:

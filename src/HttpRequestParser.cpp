@@ -193,7 +193,6 @@ void HttpParser::parseStartLine(const std::string& startline){
 
     while (ss >> tmp)
         fields.push_back(tmp);
-
     if (fields.size() != 3){
         _errStatus = 400;
         _state = ERROR;
@@ -234,15 +233,13 @@ void HttpParser::parseHeaderLine(const std::string& headerline){
             _isChunked = false;
             _state = BODY;
         }
-        else {
+        else
             _state = DONE;
-        }
         return;
     }
     size_t dd = headerline.find(":");
-    if (dd == std::string::npos){
+    if (dd == std::string::npos)
         return;
-    }
     std::string key = headerline.substr(0, dd);
     std::string value = headerline.substr(dd + 1);
     key = trim_space(key);
@@ -299,9 +296,8 @@ void HttpParser::parseChunkedBody(size_t& pos)
         
         if (_currentChunkRead == _currentChunkSize)
         {
-            if (pos + 1 >= _buffer.size()){
+            if (pos + 1 >= _buffer.size())
                 return;
-            }
             if (_buffer.substr(pos, 2) == "\r\n")
             {
                 pos += 2;

@@ -7,14 +7,8 @@
  * @param lc 
  */
 CGI::CGI(const HttpRequest& req, const config::LocationConfig& lc)
-:_cgiPass(lc.cgiPass),
-_cgiExt(lc.cgiExt),
-_method(req.getMethod()),
-_query(""),
-_body(req.getBody()),
-_header(req.getHeaders()),
-_contentType(""),
-_serverName("")
+:_cgiPass(lc.cgiPass), _cgiExt(lc.cgiExt), _method(req.getMethod()), _query(""),
+_body(req.getBody()), _header(req.getHeaders()), _contentType(""), _serverName("")
 {
     std::string root = lc.root;
     if (root.ends_with("/"))
@@ -24,7 +18,6 @@ _serverName("")
     std::string locationUri = lc.path;
     if(root.find(locationUri) != std::string::npos)
         root = "./sites/cgi" ;
-
     if(pos != std::string::npos){
         _scriptPath = root + raw.substr(0, pos);
         _query = raw.substr(pos + 1);
@@ -39,12 +32,6 @@ _serverName("")
         _serverName = _header.at("host");
 }
 
-/**
- * @brief 
- * 
- * @return true 
- * @return false 
- */
 bool CGI::isAllowedCgi()const
 {
 	if (_cgiPass.empty())
@@ -56,14 +43,6 @@ bool CGI::isAllowedCgi()const
 	return true;
 }
 
-
-/**
- * @brief 
- * 
- * 
- * 
- * @return std::string 
- */
 std::string CGI::execute()
 {
 	int	stdin_pipe[2];

@@ -1,11 +1,9 @@
 #pragma once
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
 #include "HttpResponse.hpp"
 #include "httpUtils.hpp"
+
+#include <sys/types.h>
 
 using namespace httpUtils;
 
